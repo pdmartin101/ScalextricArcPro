@@ -124,7 +124,7 @@
                                     CornerRadius="3"
                                     Padding="6,4"
                                     Margin="0,1">
-                                <Grid ColumnDefinitions="22,*,Auto">
+                                <Grid ColumnDefinitions="22,Auto,*,Auto">
                                     <!-- Slot number -->
                                     <TextBlock Grid.Column="0"
                                                Text="{Binding SlotNumber, StringFormat='C{0}'}"
@@ -133,8 +133,28 @@
                                                Foreground="#0096FF"
                                                VerticalAlignment="Center"/>
 
+                                    <!-- Per-slot power control -->
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" Margin="4,0" VerticalAlignment="Center">
+                                        <TextBlock Text="P:"
+                                                   FontSize="9"
+                                                   Foreground="#666666"
+                                                   VerticalAlignment="Center"/>
+                                        <Slider Minimum="0"
+                                                Maximum="63"
+                                                Value="{Binding PowerLevel}"
+                                                Width="50"
+                                                VerticalAlignment="Center"
+                                                ToolTip.Tip="Power level for this controller (0-63)"/>
+                                        <TextBlock Text="{Binding PowerLevel}"
+                                                   FontSize="9"
+                                                   FontWeight="Bold"
+                                                   Foreground="#0096FF"
+                                                   VerticalAlignment="Center"
+                                                   Width="16"/>
+                                    </StackPanel>
+
                                     <!-- Throttle bar -->
-                                    <Grid Grid.Column="1" Margin="4,0">
+                                    <Grid Grid.Column="2" Margin="4,0">
                                         <Border Background="#E0E0E0"
                                                 CornerRadius="2"
                                                 Height="14"/>
@@ -156,7 +176,7 @@
                                     </Grid>
 
                                     <!-- Brake/Lane change/Lap indicators -->
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3">
+                                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="3">
                                         <Border Background="{Binding IsBrakePressed, Converter={x:Static vm:BoolToBrushConverter.BrakeInstance}}"
                                                 CornerRadius="2"
                                                 Padding="3,1"

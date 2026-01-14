@@ -80,6 +80,44 @@ Each slot's power byte encodes three values:
 
 **Example:** `0x3F` = power level 63, no flags. `0xBF` = power level 63 + ghost mode.
 
+### Final Power Calculation
+
+The powerbase calculates the actual motor power output using the following formulas:
+
+#### Standard Mode (Normal Racing)
+
+```
+Final Power = (PowerMultiplier / 63) × (ThrottleProfile[ThrottleValue] / 255) × 100%
+```
+
+Where:
+- **PowerMultiplier** (0-63): The per-slot power level from bytes 1-6 of the command
+- **ThrottleValue** (0-63): The current throttle input from the controller trigger
+- **ThrottleProfile[ThrottleValue]** (0-255): The value from the 96-position throttle profile curve
+
+**Example:** With PowerMultiplier=32, ThrottleValue=63, and a linear profile where ThrottleProfile[63]=170:
+- Final Power = (32/63) × (170/255) × 100% ≈ 33.8%
+
+#### Ghost Mode
+
+When ghost mode is enabled (bit 7 set), the calculation changes:
+
+```
+Final Power = ThrottleProfile[PowerMultiplier] / 255 × 100%
+```
+
+In ghost mode, the PowerMultiplier is used as an **index** into the throttle profile table rather than as a multiplier. This allows direct control of motor output without requiring controller input—useful for AI-controlled ghost cars.
+
+#### Practical Use
+
+| PowerMultiplier | Effect |
+|-----------------|--------|
+| 63 (max) | Car receives 100% of throttle profile output |
+| 32 (half) | Car receives ~51% of throttle profile output |
+| 0 | Car receives no power regardless of throttle |
+
+The power multiplier effectively acts as a "speed limiter" that scales down the maximum power available to each car. This is useful for handicapping faster drivers or balancing different car performances.
+
 ### Continuous Heartbeat Required
 
 The powerbase requires **continuous command packets** to maintain power. Send the command every 100-200ms to keep the track powered. If commands stop, the powerbase will cut power.

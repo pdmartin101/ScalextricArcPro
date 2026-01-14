@@ -125,7 +125,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Controllers.Clear();
         for (int i = 0; i < MaxControllers; i++)
         {
-            Controllers.Add(new ControllerViewModel { SlotNumber = i + 1 });
+            var powerLevel = _settings.SlotPowerLevels.Length > i ? _settings.SlotPowerLevels[i] : 63;
+            Controllers.Add(new ControllerViewModel { SlotNumber = i + 1, PowerLevel = powerLevel });
         }
     }
 
@@ -494,6 +495,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         // Save settings before disposing
         _settings.PowerLevel = PowerLevel;
+        for (int i = 0; i < Controllers.Count && i < _settings.SlotPowerLevels.Length; i++)
+        {
+            _settings.SlotPowerLevels[i] = Controllers[i].PowerLevel;
+        }
         _settings.Save();
 
         // Stop power heartbeat
@@ -623,7 +628,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             while (!cancellationToken.IsCancellationRequested && IsGattConnected && IsPowerEnabled)
             {
-                var command = ScalextricProtocol.CommandBuilder.CreatePowerOnCommand((byte)PowerLevel);
+                var command = BuildPowerCommand();
                 var success = await _bleMonitorService.WriteCharacteristicAwaitAsync(
                     ScalextricProtocol.Characteristics.Command, command);
 
@@ -651,6 +656,25 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 StatusText = $"Power heartbeat error: {ex.Message}";
             });
         }
+    }
+
+    /// <summary>
+    /// Builds a power command using per-controller power levels.
+    /// </summary>
+    private byte[] BuildPowerCommand()
+    {
+        var builder = new ScalextricProtocol.CommandBuilder
+        {
+            Type = ScalextricProtocol.CommandType.PowerOnRacing
+        };
+
+        // Set per-slot power levels from controller view models
+        for (int i = 0; i < Controllers.Count; i++)
+        {
+            builder.SetSlotPower(i + 1, (byte)Controllers[i].PowerLevel);
+        }
+
+        return builder.Build();
     }
 
     /// <summary>
@@ -917,6 +941,12 @@ public partial class ControllerViewModel : ObservableObject
 
     [ObservableProperty]
     private int _slotNumber;
+
+    /// <summary>
+    /// Power level for this controller (0-63). Used as a multiplier for track power.
+    /// </summary>
+    [ObservableProperty]
+    private int _powerLevel = 63;
 
     [ObservableProperty]
     private int _throttle;

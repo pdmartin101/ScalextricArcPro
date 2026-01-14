@@ -10,9 +10,14 @@ namespace ScalextricBleMonitor.Services;
 public class AppSettings
 {
     /// <summary>
-    /// Power level for track power (0-63).
+    /// Global power level for track power (0-63). Legacy, kept for backwards compatibility.
     /// </summary>
     public int PowerLevel { get; set; } = 63;
+
+    /// <summary>
+    /// Per-slot power levels (0-63). Array index 0 = slot 1, etc.
+    /// </summary>
+    public int[] SlotPowerLevels { get; set; } = [63, 63, 63, 63, 63, 63];
 
     /// <summary>
     /// Gets the path to the settings file.
@@ -43,6 +48,20 @@ public class AppSettings
                 {
                     // Validate loaded values
                     settings.PowerLevel = Math.Clamp(settings.PowerLevel, 0, 63);
+
+                    // Validate per-slot power levels
+                    if (settings.SlotPowerLevels == null || settings.SlotPowerLevels.Length != 6)
+                    {
+                        settings.SlotPowerLevels = [63, 63, 63, 63, 63, 63];
+                    }
+                    else
+                    {
+                        for (int i = 0; i < 6; i++)
+                        {
+                            settings.SlotPowerLevels[i] = Math.Clamp(settings.SlotPowerLevels[i], 0, 63);
+                        }
+                    }
+
                     return settings;
                 }
             }
