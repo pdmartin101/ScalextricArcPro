@@ -44,6 +44,18 @@ public class BleServicesDiscoveredEventArgs : EventArgs
 }
 
 /// <summary>
+/// Event args for characteristic notification data received.
+/// </summary>
+public class BleNotificationEventArgs : EventArgs
+{
+    public Guid ServiceUuid { get; init; }
+    public Guid CharacteristicUuid { get; init; }
+    public string? CharacteristicName { get; init; }
+    public byte[] Data { get; init; } = [];
+    public DateTime Timestamp { get; init; }
+}
+
+/// <summary>
 /// Interface for BLE monitoring service.
 /// Abstracts platform-specific BLE scanning to allow future cross-platform support.
 /// </summary>
@@ -63,6 +75,11 @@ public interface IBleMonitorService : IDisposable
     /// Raised when GATT services have been discovered.
     /// </summary>
     event EventHandler<BleServicesDiscoveredEventArgs>? ServicesDiscovered;
+
+    /// <summary>
+    /// Raised when notification data is received from a characteristic.
+    /// </summary>
+    event EventHandler<BleNotificationEventArgs>? NotificationReceived;
 
     /// <summary>
     /// Whether the service is currently scanning.
@@ -93,4 +110,9 @@ public interface IBleMonitorService : IDisposable
     /// Disconnects the GATT connection.
     /// </summary>
     void Disconnect();
+
+    /// <summary>
+    /// Subscribes to notifications on all characteristics that support Notify or Indicate.
+    /// </summary>
+    void SubscribeToAllNotifications();
 }

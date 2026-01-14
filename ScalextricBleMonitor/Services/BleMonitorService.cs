@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 #if WINDOWS
@@ -26,6 +27,7 @@ public class BleMonitorService : IBleMonitorService
     public event EventHandler<BleConnectionStateEventArgs>? ConnectionStateChanged;
     public event EventHandler<string>? StatusMessageChanged;
     public event EventHandler<BleServicesDiscoveredEventArgs>? ServicesDiscovered;
+    public event EventHandler<BleNotificationEventArgs>? NotificationReceived;
 
     public bool IsScanning { get; private set; }
     public bool IsGattConnected { get; private set; }
@@ -46,6 +48,7 @@ public class BleMonitorService : IBleMonitorService
     private BluetoothLEAdvertisementWatcher? _watcher;
     private BluetoothLEDevice? _connectedDevice;
     private readonly List<GattDeviceService> _gattServices = [];
+    private readonly List<(Guid ServiceUuid, GattCharacteristic Characteristic)> _subscribedCharacteristics = [];
 #endif
 
     // Well-known GATT service names
@@ -157,7 +160,121 @@ public class BleMonitorService : IBleMonitorService
 #endif
     }
 
+    public void SubscribeToAllNotifications()
+    {
 #if WINDOWS
+        if (!IsGattConnected)
+        {
+            RaiseStatusMessage("Cannot subscribe: not connected.");
+            return;
+        }
+        _ = SubscribeToAllNotificationsAsync();
+#endif
+    }
+
+#if WINDOWS
+    private async Task SubscribeToAllNotificationsAsync()
+    {
+        int subscribed = 0;
+        int failed = 0;
+
+        foreach (var service in _gattServices)
+        {
+            try
+            {
+                var charsResult = await service.GetCharacteristicsAsync(BluetoothCacheMode.Cached);
+                if (charsResult.Status != GattCommunicationStatus.Success)
+                    continue;
+
+                foreach (var characteristic in charsResult.Characteristics)
+                {
+                    var props = characteristic.CharacteristicProperties;
+                    bool canNotify = props.HasFlag(GattCharacteristicProperties.Notify);
+                    bool canIndicate = props.HasFlag(GattCharacteristicProperties.Indicate);
+
+                    if (!canNotify && !canIndicate)
+                        continue;
+
+                    try
+                    {
+                        // Determine which descriptor value to use
+                        var cccdValue = canNotify
+                            ? GattClientCharacteristicConfigurationDescriptorValue.Notify
+                            : GattClientCharacteristicConfigurationDescriptorValue.Indicate;
+
+                        var status = await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(cccdValue);
+
+                        if (status == GattCommunicationStatus.Success)
+                        {
+                            characteristic.ValueChanged += OnCharacteristicValueChanged;
+                            _subscribedCharacteristics.Add((service.Uuid, characteristic));
+                            subscribed++;
+
+                            var charName = GetCharacteristicName(characteristic.Uuid);
+                            System.Diagnostics.Debug.WriteLine($"Subscribed to {charName} ({characteristic.Uuid})");
+                        }
+                        else
+                        {
+                            failed++;
+                            System.Diagnostics.Debug.WriteLine($"Failed to subscribe to {characteristic.Uuid}: {status}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        failed++;
+                        System.Diagnostics.Debug.WriteLine($"Exception subscribing to {characteristic.Uuid}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error getting characteristics for service {service.Uuid}: {ex.Message}");
+            }
+        }
+
+        if (subscribed > 0)
+        {
+            RaiseStatusMessage($"Subscribed to {subscribed} notification(s)." + (failed > 0 ? $" ({failed} failed)" : ""));
+        }
+        else if (failed > 0)
+        {
+            RaiseStatusMessage($"Failed to subscribe to any notifications ({failed} failed).");
+        }
+        else
+        {
+            RaiseStatusMessage("No notifiable characteristics found.");
+        }
+    }
+
+    private void OnCharacteristicValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
+    {
+        try
+        {
+            // Read the data from the buffer
+            var reader = Windows.Storage.Streams.DataReader.FromBuffer(args.CharacteristicValue);
+            var data = new byte[args.CharacteristicValue.Length];
+            reader.ReadBytes(data);
+
+            // Find the service UUID for this characteristic
+            var serviceUuid = _subscribedCharacteristics
+                .FirstOrDefault(x => x.Characteristic.Uuid == sender.Uuid)
+                .ServiceUuid;
+
+            NotificationReceived?.Invoke(this, new BleNotificationEventArgs
+            {
+                ServiceUuid = serviceUuid,
+                CharacteristicUuid = sender.Uuid,
+                CharacteristicName = GetCharacteristicName(sender.Uuid),
+                Data = data,
+                Timestamp = DateTime.Now
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Error processing notification: {ex.Message}");
+        }
+    }
+
     private void OnAdvertisementReceived(
         BluetoothLEAdvertisementWatcher sender,
         BluetoothLEAdvertisementReceivedEventArgs args)
@@ -327,6 +444,17 @@ public class BleMonitorService : IBleMonitorService
     {
         var wasConnected = IsGattConnected;
         IsGattConnected = false;
+
+        // Unsubscribe from all characteristic notifications
+        foreach (var (_, characteristic) in _subscribedCharacteristics)
+        {
+            try
+            {
+                characteristic.ValueChanged -= OnCharacteristicValueChanged;
+            }
+            catch { /* ignore */ }
+        }
+        _subscribedCharacteristics.Clear();
 
         // Dispose all GATT services
         foreach (var service in _gattServices)

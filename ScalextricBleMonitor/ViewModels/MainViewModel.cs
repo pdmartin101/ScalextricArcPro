@@ -58,6 +58,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<ServiceViewModel> Services { get; } = [];
 
     /// <summary>
+    /// Live notification data received from the powerbase.
+    /// </summary>
+    public ObservableCollection<NotificationDataViewModel> NotificationLog { get; } = [];
+
+    private const int MaxNotificationLogEntries = 100;
+
+    /// <summary>
     /// Brush for the status indicator circle.
     /// Green = detected, Blue = GATT connected, Red = not found.
     /// </summary>
@@ -89,6 +96,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _bleMonitorService.ConnectionStateChanged += OnConnectionStateChanged;
         _bleMonitorService.StatusMessageChanged += OnStatusMessageChanged;
         _bleMonitorService.ServicesDiscovered += OnServicesDiscovered;
+        _bleMonitorService.NotificationReceived += OnNotificationReceived;
     }
 
     /// <summary>
@@ -156,7 +164,61 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
                 Services.Add(serviceVm);
             }
+
+            // Auto-subscribe to notifications after services are discovered
+            _bleMonitorService.SubscribeToAllNotifications();
         });
+    }
+
+    private void OnNotificationReceived(object? sender, BleNotificationEventArgs e)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            // Add new entry at the top
+            NotificationLog.Insert(0, new NotificationDataViewModel
+            {
+                Timestamp = e.Timestamp,
+                CharacteristicName = e.CharacteristicName ?? e.CharacteristicUuid.ToString(),
+                CharacteristicUuid = e.CharacteristicUuid,
+                RawData = e.Data,
+                HexData = BitConverter.ToString(e.Data).Replace("-", " "),
+                DecodedData = DecodeScalextricData(e.CharacteristicUuid, e.Data)
+            });
+
+            // Keep the log from growing too large
+            while (NotificationLog.Count > MaxNotificationLogEntries)
+            {
+                NotificationLog.RemoveAt(NotificationLog.Count - 1);
+            }
+        });
+    }
+
+    private static string DecodeScalextricData(Guid characteristicUuid, byte[] data)
+    {
+        if (data.Length == 0) return "(empty)";
+
+        // Try to decode based on known Scalextric data formats
+        // Throttle data: Bits 0-5 = throttle (0-63), Bit 6 = brake, Bit 7 = lane change
+        if (data.Length >= 1)
+        {
+            var parts = new System.Collections.Generic.List<string>();
+
+            foreach (var b in data)
+            {
+                int throttle = b & 0x3F;
+                bool brake = (b & 0x40) != 0;
+                bool laneChange = (b & 0x80) != 0;
+
+                var decoded = $"T:{throttle}";
+                if (brake) decoded += " BRK";
+                if (laneChange) decoded += " LC";
+                parts.Add(decoded);
+            }
+
+            return string.Join(" | ", parts);
+        }
+
+        return "(raw)";
     }
 
     public void Dispose()
@@ -167,6 +229,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _bleMonitorService.ConnectionStateChanged -= OnConnectionStateChanged;
         _bleMonitorService.StatusMessageChanged -= OnStatusMessageChanged;
         _bleMonitorService.ServicesDiscovered -= OnServicesDiscovered;
+        _bleMonitorService.NotificationReceived -= OnNotificationReceived;
         _bleMonitorService.Dispose();
 
         GC.SuppressFinalize(this);
@@ -202,4 +265,32 @@ public partial class CharacteristicViewModel : ObservableObject
     private string _properties = string.Empty;
 
     public string DisplayText => $"{Name} [{Properties}]";
+}
+
+/// <summary>
+/// View model for notification data received from a characteristic.
+/// </summary>
+public partial class NotificationDataViewModel : ObservableObject
+{
+    [ObservableProperty]
+    private DateTime _timestamp;
+
+    [ObservableProperty]
+    private string _characteristicName = string.Empty;
+
+    [ObservableProperty]
+    private Guid _characteristicUuid;
+
+    [ObservableProperty]
+    private byte[] _rawData = [];
+
+    [ObservableProperty]
+    private string _hexData = string.Empty;
+
+    [ObservableProperty]
+    private string _decodedData = string.Empty;
+
+    public string TimestampText => Timestamp.ToString("HH:mm:ss.fff");
+
+    public string DisplayText => $"[{TimestampText}] {CharacteristicName}: {HexData}";
 }
