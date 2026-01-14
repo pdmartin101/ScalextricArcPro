@@ -226,9 +226,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void UpdateControllerStates(byte[] data)
     {
-        for (int i = 0; i < data.Length && i < Controllers.Count; i++)
+        // First byte appears to be a header/status byte, controller data starts at index 1
+        // data[0] = header/status
+        // data[1] = Controller 1
+        // data[2] = Controller 2
+        // etc.
+        for (int i = 1; i < data.Length && (i - 1) < Controllers.Count; i++)
         {
-            Controllers[i].UpdateFromByte(data[i]);
+            Controllers[i - 1].UpdateFromByte(data[i]);
         }
     }
 
@@ -237,24 +242,34 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (data.Length == 0) return "(empty)";
 
         // Try to decode based on known Scalextric data formats
-        // Throttle data: Bits 0-5 = throttle (0-63), Bit 6 = brake, Bit 7 = lane change
-        if (data.Length >= 1)
+        // First byte is header/status, then controller data follows
+        // Controller data: Bits 0-5 = throttle (0-63), Bit 6 = brake, Bit 7 = lane change
+        if (data.Length >= 2)
         {
             var parts = new System.Collections.Generic.List<string>();
 
-            foreach (var b in data)
+            // First byte is header
+            parts.Add($"H:{data[0]:X2}");
+
+            // Remaining bytes are controller data
+            for (int i = 1; i < data.Length; i++)
             {
+                var b = data[i];
                 int throttle = b & 0x3F;
                 bool brake = (b & 0x40) != 0;
                 bool laneChange = (b & 0x80) != 0;
 
-                var decoded = $"T:{throttle}";
-                if (brake) decoded += " BRK";
-                if (laneChange) decoded += " LC";
+                var decoded = $"C{i}:T{throttle}";
+                if (brake) decoded += "+B";
+                if (laneChange) decoded += "+L";
                 parts.Add(decoded);
             }
 
             return string.Join(" | ", parts);
+        }
+        else if (data.Length == 1)
+        {
+            return $"H:{data[0]:X2}";
         }
 
         return "(raw)";
