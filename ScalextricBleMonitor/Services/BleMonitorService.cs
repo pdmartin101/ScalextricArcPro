@@ -28,6 +28,8 @@ public class BleMonitorService : IBleMonitorService
     public event EventHandler<string>? StatusMessageChanged;
     public event EventHandler<BleServicesDiscoveredEventArgs>? ServicesDiscovered;
     public event EventHandler<BleNotificationEventArgs>? NotificationReceived;
+    public event EventHandler<BleCharacteristicReadEventArgs>? CharacteristicValueRead;
+    public event EventHandler<BleCharacteristicWriteEventArgs>? CharacteristicWriteCompleted;
 
     public bool IsScanning { get; private set; }
     public bool IsGattConnected { get; private set; }
@@ -172,7 +174,230 @@ public class BleMonitorService : IBleMonitorService
 #endif
     }
 
+    public void ReadCharacteristic(Guid serviceUuid, Guid characteristicUuid)
+    {
 #if WINDOWS
+        if (!IsGattConnected)
+        {
+            CharacteristicValueRead?.Invoke(this, new BleCharacteristicReadEventArgs
+            {
+                ServiceUuid = serviceUuid,
+                CharacteristicUuid = characteristicUuid,
+                Success = false,
+                ErrorMessage = "Not connected"
+            });
+            return;
+        }
+        _ = ReadCharacteristicAsync(serviceUuid, characteristicUuid);
+#endif
+    }
+
+    public void WriteCharacteristic(Guid characteristicUuid, byte[] data)
+    {
+#if WINDOWS
+        if (!IsGattConnected)
+        {
+            CharacteristicWriteCompleted?.Invoke(this, new BleCharacteristicWriteEventArgs
+            {
+                CharacteristicUuid = characteristicUuid,
+                Success = false,
+                ErrorMessage = "Not connected"
+            });
+            return;
+        }
+        _ = WriteCharacteristicInternalAsync(characteristicUuid, data);
+#endif
+    }
+
+    public async Task<bool> WriteCharacteristicAwaitAsync(Guid characteristicUuid, byte[] data)
+    {
+#if WINDOWS
+        if (!IsGattConnected)
+        {
+            return false;
+        }
+        return await WriteCharacteristicInternalAsync(characteristicUuid, data);
+#else
+        await Task.CompletedTask;
+        return false;
+#endif
+    }
+
+#if WINDOWS
+    private async Task<bool> WriteCharacteristicInternalAsync(Guid characteristicUuid, byte[] data)
+    {
+        try
+        {
+            // Find the characteristic across all services
+            GattCharacteristic? targetCharacteristic = null;
+            foreach (var service in _gattServices)
+            {
+                var charsResult = await service.GetCharacteristicsAsync(BluetoothCacheMode.Cached);
+                if (charsResult.Status == GattCommunicationStatus.Success)
+                {
+                    targetCharacteristic = charsResult.Characteristics.FirstOrDefault(c => c.Uuid == characteristicUuid);
+                    if (targetCharacteristic != null) break;
+                }
+            }
+
+            if (targetCharacteristic == null)
+            {
+                CharacteristicWriteCompleted?.Invoke(this, new BleCharacteristicWriteEventArgs
+                {
+                    CharacteristicUuid = characteristicUuid,
+                    Success = false,
+                    ErrorMessage = "Characteristic not found"
+                });
+                return false;
+            }
+
+            // Check if writable
+            var props = targetCharacteristic.CharacteristicProperties;
+            bool canWrite = props.HasFlag(GattCharacteristicProperties.Write) ||
+                           props.HasFlag(GattCharacteristicProperties.WriteWithoutResponse);
+
+            if (!canWrite)
+            {
+                CharacteristicWriteCompleted?.Invoke(this, new BleCharacteristicWriteEventArgs
+                {
+                    CharacteristicUuid = characteristicUuid,
+                    Success = false,
+                    ErrorMessage = "Characteristic is not writable"
+                });
+                return false;
+            }
+
+            // Create buffer and write
+            var writer = new Windows.Storage.Streams.DataWriter();
+            writer.WriteBytes(data);
+            var buffer = writer.DetachBuffer();
+
+            var writeOption = props.HasFlag(GattCharacteristicProperties.Write)
+                ? GattWriteOption.WriteWithResponse
+                : GattWriteOption.WriteWithoutResponse;
+
+            var status = await targetCharacteristic.WriteValueAsync(buffer, writeOption);
+
+            var success = status == GattCommunicationStatus.Success;
+            CharacteristicWriteCompleted?.Invoke(this, new BleCharacteristicWriteEventArgs
+            {
+                CharacteristicUuid = characteristicUuid,
+                Success = success,
+                ErrorMessage = success ? null : $"Write failed: {status}"
+            });
+            return success;
+        }
+        catch (Exception ex)
+        {
+            CharacteristicWriteCompleted?.Invoke(this, new BleCharacteristicWriteEventArgs
+            {
+                CharacteristicUuid = characteristicUuid,
+                Success = false,
+                ErrorMessage = ex.Message
+            });
+            return false;
+        }
+    }
+
+    private async Task ReadCharacteristicAsync(Guid serviceUuid, Guid characteristicUuid)
+    {
+        try
+        {
+            // Find the service
+            var service = _gattServices.FirstOrDefault(s => s.Uuid == serviceUuid);
+            if (service == null)
+            {
+                CharacteristicValueRead?.Invoke(this, new BleCharacteristicReadEventArgs
+                {
+                    ServiceUuid = serviceUuid,
+                    CharacteristicUuid = characteristicUuid,
+                    Success = false,
+                    ErrorMessage = "Service not found"
+                });
+                return;
+            }
+
+            // Get characteristics
+            var charsResult = await service.GetCharacteristicsAsync(BluetoothCacheMode.Cached);
+            if (charsResult.Status != GattCommunicationStatus.Success)
+            {
+                CharacteristicValueRead?.Invoke(this, new BleCharacteristicReadEventArgs
+                {
+                    ServiceUuid = serviceUuid,
+                    CharacteristicUuid = characteristicUuid,
+                    Success = false,
+                    ErrorMessage = $"Failed to get characteristics: {charsResult.Status}"
+                });
+                return;
+            }
+
+            // Find the characteristic
+            var characteristic = charsResult.Characteristics.FirstOrDefault(c => c.Uuid == characteristicUuid);
+            if (characteristic == null)
+            {
+                CharacteristicValueRead?.Invoke(this, new BleCharacteristicReadEventArgs
+                {
+                    ServiceUuid = serviceUuid,
+                    CharacteristicUuid = characteristicUuid,
+                    Success = false,
+                    ErrorMessage = "Characteristic not found"
+                });
+                return;
+            }
+
+            // Check if readable
+            if (!characteristic.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Read))
+            {
+                CharacteristicValueRead?.Invoke(this, new BleCharacteristicReadEventArgs
+                {
+                    ServiceUuid = serviceUuid,
+                    CharacteristicUuid = characteristicUuid,
+                    Success = false,
+                    ErrorMessage = "Characteristic is not readable"
+                });
+                return;
+            }
+
+            // Read the value
+            var readResult = await characteristic.ReadValueAsync(BluetoothCacheMode.Uncached);
+            if (readResult.Status != GattCommunicationStatus.Success)
+            {
+                CharacteristicValueRead?.Invoke(this, new BleCharacteristicReadEventArgs
+                {
+                    ServiceUuid = serviceUuid,
+                    CharacteristicUuid = characteristicUuid,
+                    Success = false,
+                    ErrorMessage = $"Read failed: {readResult.Status}"
+                });
+                return;
+            }
+
+            // Extract the data
+            var reader = Windows.Storage.Streams.DataReader.FromBuffer(readResult.Value);
+            var data = new byte[readResult.Value.Length];
+            reader.ReadBytes(data);
+
+            CharacteristicValueRead?.Invoke(this, new BleCharacteristicReadEventArgs
+            {
+                ServiceUuid = serviceUuid,
+                CharacteristicUuid = characteristicUuid,
+                CharacteristicName = GetCharacteristicName(characteristicUuid),
+                Data = data,
+                Success = true
+            });
+        }
+        catch (Exception ex)
+        {
+            CharacteristicValueRead?.Invoke(this, new BleCharacteristicReadEventArgs
+            {
+                ServiceUuid = serviceUuid,
+                CharacteristicUuid = characteristicUuid,
+                Success = false,
+                ErrorMessage = ex.Message
+            });
+        }
+    }
+
     private async Task SubscribeToAllNotificationsAsync()
     {
         int subscribed = 0;

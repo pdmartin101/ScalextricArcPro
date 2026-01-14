@@ -1,5 +1,6 @@
 using System;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using ScalextricBleMonitor.ViewModels;
 
 namespace ScalextricBleMonitor;
@@ -32,5 +33,18 @@ public partial class MainWindow : Window
     {
         _viewModel.StopMonitoring();
         _viewModel.Dispose();
+    }
+
+    private void OnReadCharacteristicClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button button && button.DataContext is CharacteristicViewModel characteristic)
+        {
+            _viewModel.ReadCharacteristic(characteristic.ServiceUuid, characteristic.Uuid);
+        }
+    }
+
+    private void OnPowerToggleClick(object? sender, RoutedEventArgs e)
+    {
+        _viewModel.TogglePower();
     }
 }

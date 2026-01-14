@@ -1,6 +1,9 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -17,6 +20,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly IBleMonitorService _bleMonitorService;
     private bool _disposed;
+    private CancellationTokenSource? _powerHeartbeatCts;
 
     // Brush constants for connection states
     private static readonly ISolidColorBrush ConnectedBrush = new SolidColorBrush(Color.FromRgb(0, 200, 83));   // Green
@@ -41,6 +45,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(StatusIndicatorBrush))]
     [NotifyPropertyChangedFor(nameof(ConnectionStatusText))]
     private bool _isGattConnected;
+
+    /// <summary>
+    /// Indicates whether track power is enabled.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isPowerEnabled;
+
+    /// <summary>
+    /// Power level for all slots (0-63).
+    /// </summary>
+    [ObservableProperty]
+    private int _powerLevel = 63;
 
     /// <summary>
     /// Additional status information (e.g., last seen time, error messages).
@@ -114,6 +130,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _bleMonitorService.StatusMessageChanged += OnStatusMessageChanged;
         _bleMonitorService.ServicesDiscovered += OnServicesDiscovered;
         _bleMonitorService.NotificationReceived += OnNotificationReceived;
+        _bleMonitorService.CharacteristicValueRead += OnCharacteristicValueRead;
 
         InitializeControllers();
     }
@@ -142,6 +159,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
             IsConnected = e.IsConnected;
             IsGattConnected = e.IsGattConnected;
             DeviceName = e.DeviceName ?? string.Empty;
+
+            if (!e.IsGattConnected)
+            {
+                // Stop power heartbeat when GATT connection is lost
+                StopPowerHeartbeat();
+            }
 
             if (!e.IsConnected)
             {
@@ -185,6 +208,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     serviceVm.Characteristics.Add(new CharacteristicViewModel
                     {
                         Uuid = characteristic.Uuid,
+                        ServiceUuid = service.Uuid,
                         Name = characteristic.Name ?? characteristic.Uuid.ToString(),
                         Properties = characteristic.Properties
                     });
@@ -280,13 +304,251 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (_disposed) return;
         _disposed = true;
 
+        // Stop power heartbeat
+        _powerHeartbeatCts?.Cancel();
+        _powerHeartbeatCts?.Dispose();
+        _powerHeartbeatCts = null;
+
         _bleMonitorService.ConnectionStateChanged -= OnConnectionStateChanged;
         _bleMonitorService.StatusMessageChanged -= OnStatusMessageChanged;
         _bleMonitorService.ServicesDiscovered -= OnServicesDiscovered;
         _bleMonitorService.NotificationReceived -= OnNotificationReceived;
+        _bleMonitorService.CharacteristicValueRead -= OnCharacteristicValueRead;
         _bleMonitorService.Dispose();
 
         GC.SuppressFinalize(this);
+    }
+
+    private void OnCharacteristicValueRead(object? sender, BleCharacteristicReadEventArgs e)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            // Find the characteristic in our Services collection and update its value
+            foreach (var service in Services)
+            {
+                if (service.Uuid == e.ServiceUuid)
+                {
+                    foreach (var characteristic in service.Characteristics)
+                    {
+                        if (characteristic.Uuid == e.CharacteristicUuid)
+                        {
+                            if (e.Success)
+                            {
+                                characteristic.LastReadValue = e.Data;
+                                characteristic.LastReadHex = BitConverter.ToString(e.Data).Replace("-", " ");
+                                characteristic.LastReadText = TryDecodeAsText(e.Data);
+                                characteristic.LastReadError = null;
+                            }
+                            else
+                            {
+                                characteristic.LastReadValue = null;
+                                characteristic.LastReadHex = null;
+                                characteristic.LastReadText = null;
+                                characteristic.LastReadError = e.ErrorMessage;
+                            }
+                            return;
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    private static string? TryDecodeAsText(byte[] data)
+    {
+        if (data.Length == 0) return null;
+
+        // Check if it looks like printable ASCII
+        bool isPrintable = data.All(b => b >= 32 && b < 127);
+        if (isPrintable)
+        {
+            return System.Text.Encoding.ASCII.GetString(data);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Requests a read of the specified characteristic.
+    /// </summary>
+    public void ReadCharacteristic(Guid serviceUuid, Guid characteristicUuid)
+    {
+        _bleMonitorService.ReadCharacteristic(serviceUuid, characteristicUuid);
+    }
+
+    // Delay between BLE write operations to avoid flooding the connection
+    private const int BleWriteDelayMs = 50;
+
+    // Interval for sending power heartbeat commands (ms)
+    private const int PowerHeartbeatIntervalMs = 200;
+
+    /// <summary>
+    /// Enables track power with the current power level.
+    /// </summary>
+    public void EnablePower()
+    {
+        if (!IsGattConnected) return;
+
+        // Run the async enable operation without blocking
+        _ = EnablePowerAsync();
+    }
+
+    private async Task EnablePowerAsync()
+    {
+        StatusText = "Writing throttle profiles...";
+
+        // First write the throttle profiles for all slots sequentially
+        var profilesWritten = await WriteThrottleProfilesAsync();
+
+        if (!profilesWritten)
+        {
+            StatusText = "Failed to write throttle profiles";
+            return;
+        }
+
+        // Small delay before starting power
+        await Task.Delay(BleWriteDelayMs);
+
+        // Start the power heartbeat
+        IsPowerEnabled = true;
+        StatusText = $"Power enabled at level {PowerLevel}";
+
+        // Cancel any existing heartbeat
+        _powerHeartbeatCts?.Cancel();
+        _powerHeartbeatCts = new CancellationTokenSource();
+
+        // Start continuous power command sending
+        _ = PowerHeartbeatLoopAsync(_powerHeartbeatCts.Token);
+    }
+
+    /// <summary>
+    /// Continuously sends power commands to keep the track powered.
+    /// The powerbase requires periodic commands to maintain power.
+    /// </summary>
+    private async Task PowerHeartbeatLoopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested && IsGattConnected && IsPowerEnabled)
+            {
+                var command = ScalextricProtocol.CommandBuilder.CreatePowerOnCommand((byte)PowerLevel);
+                var success = await _bleMonitorService.WriteCharacteristicAwaitAsync(
+                    ScalextricProtocol.Characteristics.Command, command);
+
+                if (!success)
+                {
+                    // Write failed - connection may be lost
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        StatusText = "Power command failed - connection lost?";
+                    });
+                    break;
+                }
+
+                await Task.Delay(PowerHeartbeatIntervalMs, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Normal cancellation, ignore
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                StatusText = $"Power heartbeat error: {ex.Message}";
+            });
+        }
+    }
+
+    /// <summary>
+    /// Disables track power.
+    /// </summary>
+    public void DisablePower()
+    {
+        if (!IsGattConnected) return;
+
+        // Stop the heartbeat first
+        _powerHeartbeatCts?.Cancel();
+        _powerHeartbeatCts = null;
+
+        _ = DisablePowerAsync();
+    }
+
+    private async Task DisablePowerAsync()
+    {
+        StatusText = "Sending power off command...";
+        var command = ScalextricProtocol.CommandBuilder.CreatePowerOffCommand();
+        var success = await _bleMonitorService.WriteCharacteristicAwaitAsync(ScalextricProtocol.Characteristics.Command, command);
+
+        if (success)
+        {
+            IsPowerEnabled = false;
+            StatusText = "Power disabled";
+        }
+        else
+        {
+            IsPowerEnabled = false; // Still mark as disabled
+            StatusText = "Failed to send power off command";
+        }
+    }
+
+    /// <summary>
+    /// Toggles track power on/off.
+    /// </summary>
+    public void TogglePower()
+    {
+        if (IsPowerEnabled)
+            DisablePower();
+        else
+            EnablePower();
+    }
+
+    /// <summary>
+    /// Writes linear throttle profiles to all 6 slots sequentially with delays.
+    /// Each slot requires 6 blocks of 17 bytes (block index + 16 throttle values).
+    /// </summary>
+    private async Task<bool> WriteThrottleProfilesAsync()
+    {
+        if (!IsGattConnected) return false;
+
+        // Get the throttle curve blocks (6 blocks of 17 bytes each)
+        var blocks = ScalextricProtocol.ThrottleProfile.CreateLinearBlocks();
+
+        for (int slot = 1; slot <= 6; slot++)
+        {
+            var uuid = ScalextricProtocol.Characteristics.GetThrottleProfileForSlot(slot);
+
+            // Write all 6 blocks for this slot
+            for (int blockIndex = 0; blockIndex < ScalextricProtocol.ThrottleProfile.BlockCount; blockIndex++)
+            {
+                StatusText = $"Writing throttle profile slot {slot}, block {blockIndex + 1}/6...";
+
+                var success = await _bleMonitorService.WriteCharacteristicAwaitAsync(uuid, blocks[blockIndex]);
+
+                if (!success)
+                {
+                    StatusText = $"Failed to write throttle profile for slot {slot}, block {blockIndex}";
+                    return false;
+                }
+
+                // Delay between writes to avoid flooding the BLE connection
+                await Task.Delay(BleWriteDelayMs);
+            }
+        }
+
+        StatusText = "Throttle profiles written successfully";
+        return true;
+    }
+
+    /// <summary>
+    /// Stops the power heartbeat when connection is lost.
+    /// </summary>
+    private void StopPowerHeartbeat()
+    {
+        _powerHeartbeatCts?.Cancel();
+        _powerHeartbeatCts = null;
+        IsPowerEnabled = false;
     }
 }
 
@@ -313,12 +575,51 @@ public partial class CharacteristicViewModel : ObservableObject
     private Guid _uuid;
 
     [ObservableProperty]
+    private Guid _serviceUuid;
+
+    [ObservableProperty]
     private string _name = string.Empty;
 
     [ObservableProperty]
     private string _properties = string.Empty;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasReadValue))]
+    [NotifyPropertyChangedFor(nameof(ReadResultDisplay))]
+    private byte[]? _lastReadValue;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasReadValue))]
+    [NotifyPropertyChangedFor(nameof(ReadResultDisplay))]
+    private string? _lastReadHex;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ReadResultDisplay))]
+    private string? _lastReadText;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasReadValue))]
+    [NotifyPropertyChangedFor(nameof(ReadResultDisplay))]
+    private string? _lastReadError;
+
     public string DisplayText => $"{Name} [{Properties}]";
+
+    public bool IsReadable => Properties.Contains("R");
+
+    public bool HasReadValue => LastReadHex != null || LastReadError != null;
+
+    public string ReadResultDisplay
+    {
+        get
+        {
+            if (LastReadError != null) return $"Error: {LastReadError}";
+            if (LastReadHex != null)
+            {
+                return LastReadText != null ? $"{LastReadHex} \"{LastReadText}\"" : LastReadHex;
+            }
+            return string.Empty;
+        }
+    }
 }
 
 /// <summary>
@@ -432,6 +733,28 @@ public class ThrottleToWidthConverter : IValueConverter
             return (throttle / 63.0) * MaxWidth;
         }
         return 0.0;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts power enabled state to button text.
+/// </summary>
+public class PowerButtonTextConverter : IValueConverter
+{
+    public static readonly PowerButtonTextConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool isEnabled)
+        {
+            return isEnabled ? "POWER OFF" : "POWER ON";
+        }
+        return "POWER ON";
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

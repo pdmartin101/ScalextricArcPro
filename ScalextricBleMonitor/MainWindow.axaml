@@ -74,6 +74,45 @@
                                TextAlignment="Center"/>
                 </Border>
 
+                <!-- Power Control -->
+                <Border Background="#F5F5F5"
+                        CornerRadius="5"
+                        Padding="10"
+                        Margin="0,10,0,0"
+                        IsVisible="{Binding IsGattConnected}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Track Power"
+                                   FontWeight="SemiBold"
+                                   FontSize="12"
+                                   HorizontalAlignment="Center"/>
+
+                        <!-- Power Toggle Button -->
+                        <Button Content="{Binding IsPowerEnabled, Converter={x:Static vm:PowerButtonTextConverter.Instance}}"
+                                Click="OnPowerToggleClick"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center"
+                                Padding="10,8"
+                                FontWeight="Bold"/>
+
+                        <!-- Power Level Slider -->
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="Power:"
+                                       FontSize="11"
+                                       VerticalAlignment="Center"/>
+                            <Slider Minimum="0"
+                                    Maximum="63"
+                                    Value="{Binding PowerLevel}"
+                                    Width="100"
+                                    VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding PowerLevel}"
+                                       FontSize="11"
+                                       FontWeight="Bold"
+                                       VerticalAlignment="Center"
+                                       Width="20"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <!-- Controllers Status -->
                 <ItemsControl ItemsSource="{Binding Controllers}"
                               IsVisible="{Binding IsGattConnected}"
@@ -187,9 +226,23 @@
                                 </StackPanel>
                             </TreeDataTemplate>
                             <DataTemplate x:DataType="vm:CharacteristicViewModel">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock Text="C" FontWeight="Bold" Foreground="#00C853"/>
-                                    <TextBlock Text="{Binding DisplayText}"/>
+                                <StackPanel Spacing="2">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="C" FontWeight="Bold" Foreground="#00C853"/>
+                                        <TextBlock Text="{Binding DisplayText}"/>
+                                        <Button Content="Read"
+                                                FontSize="10"
+                                                Padding="6,2"
+                                                IsVisible="{Binding IsReadable}"
+                                                Click="OnReadCharacteristicClick"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding ReadResultDisplay}"
+                                               FontFamily="Consolas"
+                                               FontSize="10"
+                                               Foreground="#666666"
+                                               Margin="20,0,0,0"
+                                               IsVisible="{Binding HasReadValue}"
+                                               TextWrapping="Wrap"/>
                                 </StackPanel>
                             </DataTemplate>
                         </TreeView.DataTemplates>
