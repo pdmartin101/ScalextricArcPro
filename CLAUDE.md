@@ -57,9 +57,12 @@ ScalextricBleMonitor/
 - Lap detection uses Slot characteristic (0x3b0b) notifications
 - Dual-lane finish line sensors: t1 (bytes 2-5) for lane 1, t2 (bytes 6-9) for lane 2
 - Uses `Math.Max(t1, t2)` to detect whichever lane was crossed most recently
-- First timestamp change after connection is ignored (stale data)
+- `CurrentLap` property tracks which lap the car is currently on (not laps completed)
+- First crossing: CurrentLap → 1 (starting lap 1), baseline timestamp established
+- Second crossing: CurrentLap → 2 (finished lap 1), first valid lap time recorded
 - Lap time calculated as: `(newMaxTimestamp - previousMaxTimestamp) / 100.0` seconds
 - Best lap time tracked per controller (purple indicator, F1 style)
+- Lane indicator shows which lane (L1/L2) the car last crossed
 
 ### Platform Support
 

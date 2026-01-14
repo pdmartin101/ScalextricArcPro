@@ -20,8 +20,9 @@ The application automatically scans for Scalextric devices, establishes a GATT c
 | Auto-discovery | Scans for BLE advertisements containing "Scalextric" |
 | GATT Connection | Automatically connects and discovers services |
 | Controller Display | Shows throttle position (0-63), brake/lane change buttons per slot |
-| Lap Counting | Automatic lap detection via finish line sensor timestamps |
+| Lap Tracking | Current lap indicator showing which lap the car is on |
 | Lap Timing | Last lap time (green) and best lap time (purple, F1 style) per controller |
+| Lane Detection | Shows which lane (L1/L2) the car last crossed the finish line in |
 | Power Control | Enable/disable track power with adjustable level (0-63) |
 | Settings Persistence | Power level saved to JSON and restored on startup |
 | Characteristic Reader | Read values from any readable GATT characteristic |
@@ -234,18 +235,19 @@ The application uses a compact single-window design with pop-out windows for det
 │ ┌──────────────────────────────────────────────────────────────┐ │
 │ │ [POWER ON]  Level: ════════════════ 63    ●                 │ │
 │ ├──────────────────────────────────────────────────────────────┤ │
-│ │ C1 ████████████████████ 63  B:0 LC:0 L:5  12.34s  11.20s    │ │
-│ │ C2 ████████░░░░░░░░░░░░ 25  B:0 LC:0 L:3  13.45s  12.80s    │ │
-│ │ C3 ░░░░░░░░░░░░░░░░░░░░  0  B:0 LC:0 L:0    --      --      │ │
-│ │ C4 ░░░░░░░░░░░░░░░░░░░░  0  B:0 LC:0 L:0    --      --      │ │
-│ │ C5 ░░░░░░░░░░░░░░░░░░░░  0  B:0 LC:0 L:0    --      --      │ │
-│ │ C6 ░░░░░░░░░░░░░░░░░░░░  0  B:0 LC:0 L:0    --      --      │ │
+│ │ C1 ████████████████████ 63  B:0 LC:0 L:5  12.34s  11.20s L1 │ │
+│ │ C2 ████████░░░░░░░░░░░░ 25  B:0 LC:0 L:3  13.45s  12.80s L2 │ │
+│ │ C3 ░░░░░░░░░░░░░░░░░░░░  0  B:0 LC:0 L:0    --      --   -- │ │
+│ │ C4 ░░░░░░░░░░░░░░░░░░░░  0  B:0 LC:0 L:0    --      --   -- │ │
+│ │ C5 ░░░░░░░░░░░░░░░░░░░░  0  B:0 LC:0 L:0    --      --   -- │ │
+│ │ C6 ░░░░░░░░░░░░░░░░░░░░  0  B:0 LC:0 L:0    --      --   -- │ │
 │ └──────────────────────────────────────────────────────────────┘ │
 │              [GATT Services]  [Live Notifications]               │
 └──────────────────────────────────────────────────────────────────┘
 
-Legend: B=Brake count, LC=Lane change count, L=Lap count
+Legend: B=Brake count, LC=Lane change count, L=Current lap
         Green time = Last lap, Purple time = Best lap (F1 style)
+        L1/L2 = Current lane (grey indicator)
 ```
 
 ### Window Types
