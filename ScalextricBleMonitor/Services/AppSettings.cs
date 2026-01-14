@@ -20,6 +20,11 @@ public class AppSettings
     public int[] SlotPowerLevels { get; set; } = [63, 63, 63, 63, 63, 63];
 
     /// <summary>
+    /// When true, use individual per-slot power levels. When false, use global PowerLevel for all slots.
+    /// </summary>
+    public bool UsePerSlotPower { get; set; } = true;
+
+    /// <summary>
     /// Gets the path to the settings file.
     /// </summary>
     private static string SettingsFilePath

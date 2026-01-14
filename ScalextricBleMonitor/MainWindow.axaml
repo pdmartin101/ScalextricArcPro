@@ -75,7 +75,7 @@
                         Padding="10,8"
                         Margin="0,0,0,10"
                         IsVisible="{Binding IsGattConnected}">
-                    <Grid ColumnDefinitions="Auto,*,Auto">
+                    <Grid ColumnDefinitions="Auto,Auto,*,Auto">
                         <!-- Power button -->
                         <Button Grid.Column="0"
                                 Content="{Binding IsPowerEnabled, Converter={x:Static vm:PowerButtonTextConverter.Instance}}"
@@ -85,8 +85,18 @@
                                 FontSize="12"
                                 MinWidth="90"/>
 
-                        <!-- Power slider -->
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                        <!-- Per-slot toggle -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" Margin="12,0,0,0" VerticalAlignment="Center">
+                            <ToggleButton IsChecked="{Binding UsePerSlotPower}"
+                                          Content="{Binding UsePerSlotPower, Converter={x:Static vm:PerSlotToggleTextConverter.Instance}}"
+                                          Padding="8,4"
+                                          FontSize="10"
+                                          ToolTip.Tip="Toggle between global power level and per-slot power levels"/>
+                        </StackPanel>
+
+                        <!-- Global power slider (only visible when per-slot is disabled) -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8"
+                                    IsVisible="{Binding !UsePerSlotPower}">
                             <TextBlock Text="Level:"
                                        FontSize="11"
                                        VerticalAlignment="Center"
@@ -104,7 +114,7 @@
                         </StackPanel>
 
                         <!-- Power indicator -->
-                        <Ellipse Grid.Column="2"
+                        <Ellipse Grid.Column="3"
                                  Width="12" Height="12"
                                  VerticalAlignment="Center">
                             <Ellipse.Fill>
@@ -133,8 +143,9 @@
                                                Foreground="#0096FF"
                                                VerticalAlignment="Center"/>
 
-                                    <!-- Per-slot power control -->
-                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" Margin="4,0" VerticalAlignment="Center">
+                                    <!-- Per-slot power control (only visible in per-slot mode) -->
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" Margin="4,0" VerticalAlignment="Center"
+                                                IsVisible="{ReflectionBinding DataContext.UsePerSlotPower, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
                                         <TextBlock Text="P:"
                                                    FontSize="9"
                                                    Foreground="#666666"

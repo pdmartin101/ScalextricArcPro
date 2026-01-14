@@ -54,7 +54,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private bool _isPowerEnabled;
 
     /// <summary>
-    /// Power level for all slots (0-63).
+    /// When true, use individual per-slot power levels. When false, use global PowerLevel for all slots.
+    /// </summary>
+    [ObservableProperty]
+    private bool _usePerSlotPower = true;
+
+    /// <summary>
+    /// Global power level for all slots (0-63). Only used when UsePerSlotPower is false.
     /// </summary>
     [ObservableProperty]
     private int _powerLevel = 63;
@@ -168,6 +174,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // Load persisted settings
         _settings = AppSettings.Load();
         _powerLevel = _settings.PowerLevel;
+        _usePerSlotPower = _settings.UsePerSlotPower;
 
         InitializeControllers();
     }
@@ -495,6 +502,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         // Save settings before disposing
         _settings.PowerLevel = PowerLevel;
+        _settings.UsePerSlotPower = UsePerSlotPower;
         for (int i = 0; i < Controllers.Count && i < _settings.SlotPowerLevels.Length; i++)
         {
             _settings.SlotPowerLevels[i] = Controllers[i].PowerLevel;
@@ -668,10 +676,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Type = ScalextricProtocol.CommandType.PowerOnRacing
         };
 
-        // Set per-slot power levels from controller view models
-        for (int i = 0; i < Controllers.Count; i++)
+        if (UsePerSlotPower)
         {
-            builder.SetSlotPower(i + 1, (byte)Controllers[i].PowerLevel);
+            // Use individual per-slot power levels from controller view models
+            for (int i = 0; i < Controllers.Count; i++)
+            {
+                builder.SetSlotPower(i + 1, (byte)Controllers[i].PowerLevel);
+            }
+        }
+        else
+        {
+            // Use global power level for all slots
+            builder.SetAllPower((byte)PowerLevel);
         }
 
         return builder.Build();
@@ -1108,6 +1124,28 @@ public class PowerButtonTextConverter : IValueConverter
             return isEnabled ? "POWER OFF" : "POWER ON";
         }
         return "POWER ON";
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts UsePerSlotPower bool to toggle button text.
+/// </summary>
+public class PerSlotToggleTextConverter : IValueConverter
+{
+    public static readonly PerSlotToggleTextConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool usePerSlot)
+        {
+            return usePerSlot ? "Per-Slot" : "Global";
+        }
+        return "Per-Slot";
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
