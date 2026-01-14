@@ -74,6 +74,40 @@
                                TextAlignment="Center"/>
                 </Border>
 
+                <!-- Lane Change Counter -->
+                <Border Background="#E8F5E9"
+                        CornerRadius="5"
+                        Padding="10"
+                        Margin="0,5,0,0"
+                        IsVisible="{Binding IsGattConnected}">
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="Lane Changes"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   Foreground="#2E7D32"/>
+                        <TextBlock Text="{Binding TotalLaneChangeCount, StringFormat='Total: {0}'}"
+                                   FontSize="24"
+                                   FontWeight="Bold"
+                                   HorizontalAlignment="Center"
+                                   Foreground="#1B5E20"/>
+                        <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" Margin="0,5,0,0">
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding LaneChangeCount1, StringFormat='S1: {0}'}"
+                                       FontSize="10" Foreground="#388E3C" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding LaneChangeCount2, StringFormat='S2: {0}'}"
+                                       FontSize="10" Foreground="#388E3C" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding LaneChangeCount3, StringFormat='S3: {0}'}"
+                                       FontSize="10" Foreground="#388E3C" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding LaneChangeCount4, StringFormat='S4: {0}'}"
+                                       FontSize="10" Foreground="#388E3C" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LaneChangeCount5, StringFormat='S5: {0}'}"
+                                       FontSize="10" Foreground="#388E3C" HorizontalAlignment="Center"/>
+                            <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding LaneChangeCount6, StringFormat='S6: {0}'}"
+                                       FontSize="10" Foreground="#388E3C" HorizontalAlignment="Center"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <!-- Legend -->
                 <StackPanel Margin="0,10,0,0" Spacing="5">
                     <StackPanel Orientation="Horizontal" Spacing="8">

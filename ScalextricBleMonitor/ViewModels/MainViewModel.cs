@@ -64,6 +64,36 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private const int MaxNotificationLogEntries = 100;
 
+    // Track previous lane change state to detect edges (button press events)
+    private readonly bool[] _previousLaneChangeState = new bool[6]; // Up to 6 car slots
+
+    /// <summary>
+    /// Lane change press count for each car slot (1-6).
+    /// </summary>
+    [ObservableProperty]
+    private int _laneChangeCount1;
+
+    [ObservableProperty]
+    private int _laneChangeCount2;
+
+    [ObservableProperty]
+    private int _laneChangeCount3;
+
+    [ObservableProperty]
+    private int _laneChangeCount4;
+
+    [ObservableProperty]
+    private int _laneChangeCount5;
+
+    [ObservableProperty]
+    private int _laneChangeCount6;
+
+    /// <summary>
+    /// Total lane change presses across all slots.
+    /// </summary>
+    [ObservableProperty]
+    private int _totalLaneChangeCount;
+
     /// <summary>
     /// Brush for the status indicator circle.
     /// Green = detected, Blue = GATT connected, Red = not found.
@@ -127,8 +157,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (!e.IsConnected)
             {
                 Services.Clear();
+                ResetLaneChangeCounters();
             }
         });
+    }
+
+    private void ResetLaneChangeCounters()
+    {
+        LaneChangeCount1 = 0;
+        LaneChangeCount2 = 0;
+        LaneChangeCount3 = 0;
+        LaneChangeCount4 = 0;
+        LaneChangeCount5 = 0;
+        LaneChangeCount6 = 0;
+        TotalLaneChangeCount = 0;
+        Array.Clear(_previousLaneChangeState);
     }
 
     private void OnStatusMessageChanged(object? sender, string message)
@@ -174,6 +217,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         Dispatcher.UIThread.Post(() =>
         {
+            // Detect lane change button presses (rising edge)
+            DetectLaneChangePresses(e.Data);
+
             // Add new entry at the top
             NotificationLog.Insert(0, new NotificationDataViewModel
             {
@@ -191,6 +237,34 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 NotificationLog.RemoveAt(NotificationLog.Count - 1);
             }
         });
+    }
+
+    private void DetectLaneChangePresses(byte[] data)
+    {
+        for (int i = 0; i < data.Length && i < 6; i++)
+        {
+            bool currentLaneChange = (data[i] & 0x80) != 0;
+            bool previousLaneChange = _previousLaneChangeState[i];
+
+            // Detect rising edge (button was just pressed)
+            if (currentLaneChange && !previousLaneChange)
+            {
+                TotalLaneChangeCount++;
+
+                // Increment the specific slot counter
+                switch (i)
+                {
+                    case 0: LaneChangeCount1++; break;
+                    case 1: LaneChangeCount2++; break;
+                    case 2: LaneChangeCount3++; break;
+                    case 3: LaneChangeCount4++; break;
+                    case 4: LaneChangeCount5++; break;
+                    case 5: LaneChangeCount6++; break;
+                }
+            }
+
+            _previousLaneChangeState[i] = currentLaneChange;
+        }
     }
 
     private static string DecodeScalextricData(Guid characteristicUuid, byte[] data)
