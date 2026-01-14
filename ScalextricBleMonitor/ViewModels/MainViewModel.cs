@@ -1,5 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Globalization;
+using Avalonia.Data.Converters;
 using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -63,36 +65,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public ObservableCollection<NotificationDataViewModel> NotificationLog { get; } = [];
 
     private const int MaxNotificationLogEntries = 100;
-
-    // Track previous lane change state to detect edges (button press events)
-    private readonly bool[] _previousLaneChangeState = new bool[6]; // Up to 6 car slots
+    private const int MaxControllers = 6;
 
     /// <summary>
-    /// Lane change press count for each car slot (1-6).
+    /// Controller status for each slot (1-6).
     /// </summary>
-    [ObservableProperty]
-    private int _laneChangeCount1;
+    public ObservableCollection<ControllerViewModel> Controllers { get; } = [];
 
-    [ObservableProperty]
-    private int _laneChangeCount2;
-
-    [ObservableProperty]
-    private int _laneChangeCount3;
-
-    [ObservableProperty]
-    private int _laneChangeCount4;
-
-    [ObservableProperty]
-    private int _laneChangeCount5;
-
-    [ObservableProperty]
-    private int _laneChangeCount6;
-
-    /// <summary>
-    /// Total lane change presses across all slots.
-    /// </summary>
-    [ObservableProperty]
-    private int _totalLaneChangeCount;
+    private void InitializeControllers()
+    {
+        Controllers.Clear();
+        for (int i = 0; i < MaxControllers; i++)
+        {
+            Controllers.Add(new ControllerViewModel { SlotNumber = i + 1 });
+        }
+    }
 
     /// <summary>
     /// Brush for the status indicator circle.
@@ -127,6 +114,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _bleMonitorService.StatusMessageChanged += OnStatusMessageChanged;
         _bleMonitorService.ServicesDiscovered += OnServicesDiscovered;
         _bleMonitorService.NotificationReceived += OnNotificationReceived;
+
+        InitializeControllers();
     }
 
     /// <summary>
@@ -157,21 +146,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (!e.IsConnected)
             {
                 Services.Clear();
-                ResetLaneChangeCounters();
+                ResetControllers();
             }
         });
     }
 
-    private void ResetLaneChangeCounters()
+    private void ResetControllers()
     {
-        LaneChangeCount1 = 0;
-        LaneChangeCount2 = 0;
-        LaneChangeCount3 = 0;
-        LaneChangeCount4 = 0;
-        LaneChangeCount5 = 0;
-        LaneChangeCount6 = 0;
-        TotalLaneChangeCount = 0;
-        Array.Clear(_previousLaneChangeState);
+        foreach (var controller in Controllers)
+        {
+            controller.Reset();
+        }
     }
 
     private void OnStatusMessageChanged(object? sender, string message)
@@ -217,8 +202,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         Dispatcher.UIThread.Post(() =>
         {
-            // Detect lane change button presses (rising edge)
-            DetectLaneChangePresses(e.Data);
+            // Update controller states from data
+            UpdateControllerStates(e.Data);
 
             // Add new entry at the top
             NotificationLog.Insert(0, new NotificationDataViewModel
@@ -239,31 +224,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
         });
     }
 
-    private void DetectLaneChangePresses(byte[] data)
+    private void UpdateControllerStates(byte[] data)
     {
-        for (int i = 0; i < data.Length && i < 6; i++)
+        for (int i = 0; i < data.Length && i < Controllers.Count; i++)
         {
-            bool currentLaneChange = (data[i] & 0x80) != 0;
-            bool previousLaneChange = _previousLaneChangeState[i];
-
-            // Detect rising edge (button was just pressed)
-            if (currentLaneChange && !previousLaneChange)
-            {
-                TotalLaneChangeCount++;
-
-                // Increment the specific slot counter
-                switch (i)
-                {
-                    case 0: LaneChangeCount1++; break;
-                    case 1: LaneChangeCount2++; break;
-                    case 2: LaneChangeCount3++; break;
-                    case 3: LaneChangeCount4++; break;
-                    case 4: LaneChangeCount5++; break;
-                    case 5: LaneChangeCount6++; break;
-                }
-            }
-
-            _previousLaneChangeState[i] = currentLaneChange;
+            Controllers[i].UpdateFromByte(data[i]);
         }
     }
 
@@ -367,4 +332,137 @@ public partial class NotificationDataViewModel : ObservableObject
     public string TimestampText => Timestamp.ToString("HH:mm:ss.fff");
 
     public string DisplayText => $"[{TimestampText}] {CharacteristicName}: {HexData}";
+}
+
+/// <summary>
+/// View model for individual controller/slot status.
+/// </summary>
+public partial class ControllerViewModel : ObservableObject
+{
+    private bool _previousBrakeState;
+    private bool _previousLaneChangeState;
+
+    [ObservableProperty]
+    private int _slotNumber;
+
+    [ObservableProperty]
+    private int _throttle;
+
+    [ObservableProperty]
+    private bool _isBrakePressed;
+
+    [ObservableProperty]
+    private bool _isLaneChangePressed;
+
+    [ObservableProperty]
+    private int _brakeCount;
+
+    [ObservableProperty]
+    private int _laneChangeCount;
+
+    public string SlotLabel => $"Controller {SlotNumber}";
+
+    public void UpdateFromByte(byte data)
+    {
+        // Decode: Bits 0-5 = throttle (0-63), Bit 6 = brake, Bit 7 = lane change
+        Throttle = data & 0x3F;
+        bool currentBrake = (data & 0x40) != 0;
+        bool currentLaneChange = (data & 0x80) != 0;
+
+        // Detect rising edge for brake
+        if (currentBrake && !_previousBrakeState)
+        {
+            BrakeCount++;
+        }
+
+        // Detect rising edge for lane change
+        if (currentLaneChange && !_previousLaneChangeState)
+        {
+            LaneChangeCount++;
+        }
+
+        IsBrakePressed = currentBrake;
+        IsLaneChangePressed = currentLaneChange;
+
+        _previousBrakeState = currentBrake;
+        _previousLaneChangeState = currentLaneChange;
+    }
+
+    public void Reset()
+    {
+        Throttle = 0;
+        IsBrakePressed = false;
+        IsLaneChangePressed = false;
+        BrakeCount = 0;
+        LaneChangeCount = 0;
+        _previousBrakeState = false;
+        _previousLaneChangeState = false;
+    }
+}
+
+/// <summary>
+/// Converts throttle value (0-63) to a width for the progress bar.
+/// </summary>
+public class ThrottleToWidthConverter : IValueConverter
+{
+    public static readonly ThrottleToWidthConverter Instance = new();
+
+    private const double MaxWidth = 80; // Max width in pixels for the throttle bar
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is int throttle)
+        {
+            // Scale 0-63 to 0-MaxWidth
+            return (throttle / 63.0) * MaxWidth;
+        }
+        return 0.0;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts bool to brush for button indicators.
+/// </summary>
+public class BoolToBrushConverter : IValueConverter
+{
+    private static readonly ISolidColorBrush BrakeActiveColor = new SolidColorBrush(Color.FromRgb(244, 67, 54)); // Red
+    private static readonly ISolidColorBrush BrakeInactiveColor = new SolidColorBrush(Color.FromRgb(183, 28, 28)); // Dark red
+    private static readonly ISolidColorBrush LaneChangeActiveColor = new SolidColorBrush(Color.FromRgb(33, 150, 243)); // Blue
+    private static readonly ISolidColorBrush LaneChangeInactiveColor = new SolidColorBrush(Color.FromRgb(21, 101, 192)); // Dark blue
+
+    public static readonly BoolToBrushConverter BrakeInstance = new(true);
+    public static readonly BoolToBrushConverter LaneChangeInstance = new(false);
+
+    private readonly bool _isBrake;
+
+    public BoolToBrushConverter(bool isBrake = true)
+    {
+        _isBrake = isBrake;
+    }
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool isPressed)
+        {
+            if (_isBrake)
+            {
+                return isPressed ? BrakeActiveColor : BrakeInactiveColor;
+            }
+            else
+            {
+                return isPressed ? LaneChangeActiveColor : LaneChangeInactiveColor;
+            }
+        }
+        return _isBrake ? BrakeInactiveColor : LaneChangeInactiveColor;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
 }
