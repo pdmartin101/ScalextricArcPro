@@ -23,6 +23,7 @@ The application automatically scans for Scalextric devices, establishes a GATT c
 | Lap Counting | Automatic lap detection via finish line sensor timestamps |
 | Lap Timing | Last lap time (green) and best lap time (purple, F1 style) per controller |
 | Power Control | Enable/disable track power with adjustable level (0-63) |
+| Settings Persistence | Power level saved to JSON and restored on startup |
 | Characteristic Reader | Read values from any readable GATT characteristic |
 | Notification Log | Live stream of notification data with hex/decoded views |
 
@@ -77,7 +78,8 @@ ScalextricBleMonitor/
 └── Services/
     ├── IBleMonitorService.cs    # BLE service interface
     ├── BleMonitorService.cs     # Windows BLE implementation
-    └── ScalextricProtocol.cs    # Protocol constants and builders
+    ├── ScalextricProtocol.cs    # Protocol constants and builders
+    └── AppSettings.cs           # JSON settings persistence
 ```
 
 ### Design Patterns

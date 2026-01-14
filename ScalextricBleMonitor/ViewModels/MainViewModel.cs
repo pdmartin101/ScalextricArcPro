@@ -19,6 +19,7 @@ namespace ScalextricBleMonitor.ViewModels;
 public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly IBleMonitorService _bleMonitorService;
+    private readonly AppSettings _settings;
     private bool _disposed;
     private CancellationTokenSource? _powerHeartbeatCts;
 
@@ -162,6 +163,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _bleMonitorService.ServicesDiscovered += OnServicesDiscovered;
         _bleMonitorService.NotificationReceived += OnNotificationReceived;
         _bleMonitorService.CharacteristicValueRead += OnCharacteristicValueRead;
+
+        // Load persisted settings
+        _settings = AppSettings.Load();
+        _powerLevel = _settings.PowerLevel;
 
         InitializeControllers();
     }
@@ -486,6 +491,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+
+        // Save settings before disposing
+        _settings.PowerLevel = PowerLevel;
+        _settings.Save();
 
         // Stop power heartbeat
         _powerHeartbeatCts?.Cancel();

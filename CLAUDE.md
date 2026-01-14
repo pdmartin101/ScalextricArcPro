@@ -30,7 +30,8 @@ ScalextricBleMonitor/
 │   └── MainViewModel.cs      # MVVM view model with observable BLE state
 ├── Services/
 │   ├── IBleMonitorService.cs # BLE service interface (for future cross-platform)
-│   └── BleMonitorService.cs  # Windows BLE scanning implementation
+│   ├── BleMonitorService.cs  # Windows BLE scanning implementation
+│   └── AppSettings.cs        # JSON settings persistence (%LOCALAPPDATA%)
 ├── MainWindow.axaml(.cs)     # Main UI with status indicator
 ├── App.axaml(.cs)            # Application entry and lifecycle
 └── Program.cs                # Platform initialization
