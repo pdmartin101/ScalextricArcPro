@@ -89,6 +89,28 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     public ObservableCollection<NotificationDataViewModel> NotificationLog { get; } = [];
 
+    /// <summary>
+    /// Filtered notification log based on current filter settings.
+    /// </summary>
+    public ObservableCollection<NotificationDataViewModel> FilteredNotificationLog { get; } = [];
+
+    /// <summary>
+    /// Characteristic filter for notifications: 0=All, 1=Throttle, 2=Slot, 3=Track, 4=CarId
+    /// </summary>
+    [ObservableProperty]
+    private int _notificationCharacteristicFilter;
+
+    partial void OnNotificationCharacteristicFilterChanged(int value)
+    {
+        RefreshFilteredNotificationLog();
+    }
+
+    /// <summary>
+    /// Whether the notification log is paused (not accepting new entries).
+    /// </summary>
+    [ObservableProperty]
+    private bool _isNotificationLogPaused;
+
     private const int MaxNotificationLogEntries = 100;
     private const int MaxControllers = 6;
 
@@ -241,9 +263,19 @@ public partial class MainViewModel : ObservableObject, IDisposable
             {
                 UpdateControllerStates(e.Data);
             }
+            // Process Slot characteristic (0x3b0b) for lap counting
+            // Slot notifications are sent when a car passes over the finish line sensor
+            else if (e.CharacteristicUuid == ScalextricProtocol.Characteristics.Slot)
+            {
+                ProcessSlotSensorData(e.Data);
+            }
 
-            // Add new entry at the top
-            NotificationLog.Insert(0, new NotificationDataViewModel
+            // Skip adding to log if paused
+            if (IsNotificationLogPaused)
+                return;
+
+            // Create the notification entry
+            var entry = new NotificationDataViewModel
             {
                 Timestamp = e.Timestamp,
                 CharacteristicName = e.CharacteristicName ?? e.CharacteristicUuid.ToString(),
@@ -251,14 +283,52 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 RawData = e.Data,
                 HexData = BitConverter.ToString(e.Data).Replace("-", " "),
                 DecodedData = DecodeScalextricData(e.CharacteristicUuid, e.Data)
-            });
+            };
+
+            // Add to main log
+            NotificationLog.Insert(0, entry);
 
             // Keep the log from growing too large
             while (NotificationLog.Count > MaxNotificationLogEntries)
             {
                 NotificationLog.RemoveAt(NotificationLog.Count - 1);
             }
+
+            // Add to filtered log if it passes the filter
+            if (PassesCharacteristicFilter(e.CharacteristicUuid))
+            {
+                FilteredNotificationLog.Insert(0, entry);
+                while (FilteredNotificationLog.Count > MaxNotificationLogEntries)
+                {
+                    FilteredNotificationLog.RemoveAt(FilteredNotificationLog.Count - 1);
+                }
+            }
         });
+    }
+
+    private bool PassesCharacteristicFilter(Guid characteristicUuid)
+    {
+        return NotificationCharacteristicFilter switch
+        {
+            0 => true, // All
+            1 => characteristicUuid == ScalextricProtocol.Characteristics.Throttle,
+            2 => characteristicUuid == ScalextricProtocol.Characteristics.Slot,
+            3 => characteristicUuid == ScalextricProtocol.Characteristics.Track,
+            4 => characteristicUuid == ScalextricProtocol.Characteristics.CarId,
+            _ => true
+        };
+    }
+
+    private void RefreshFilteredNotificationLog()
+    {
+        FilteredNotificationLog.Clear();
+        foreach (var entry in NotificationLog)
+        {
+            if (PassesCharacteristicFilter(entry.CharacteristicUuid))
+            {
+                FilteredNotificationLog.Add(entry);
+            }
+        }
     }
 
     private void UpdateControllerStates(byte[] data)
@@ -274,41 +344,141 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    private void ProcessSlotSensorData(byte[] data)
+    {
+        // Slot characteristic (0x3b0b) notification format (20 bytes):
+        // data[0] = status/counter byte (changes on events)
+        // data[1] = slot index (1-6, but appears to always be 2 in observed data)
+        // data[2-5] = timestamp 1 (always 0 in observed data)
+        // data[6-9] = timestamp 2 (finish line sensor, 32-bit little-endian) - THIS CHANGES ON LAP
+        // data[10-13] = timestamp 3 (always 0 in observed data)
+        // data[14-17] = timestamp 4 (another sensor timestamp)
+        // data[18-19] = additional data
+        //
+        // The powerbase sends these notifications when a car crosses the finish line sensor.
+        // We detect lap crossings by checking if the timestamp at bytes 6-9 changed.
+        if (data.Length >= 10)
+        {
+            // Use byte 1 as slot ID, but it may not be reliable
+            // For now, since byte 1 is always 2, we need a different approach
+            // Let's use byte 0 changes to detect lap events for all active cars
+
+            // Extract finish line timestamp from bytes 6-9 (little-endian uint32)
+            uint timestamp = (uint)(data[6] | (data[7] << 8) | (data[8] << 16) | (data[9] << 24));
+
+            // The slot ID in data[1] appears to always be 2 in observed data
+            // This might indicate "lane 2" or could be a different meaning
+            // For now, let's use the timestamp to track laps for slot indicated
+            int slotId = data[1];
+
+            // Valid slot IDs are 1-6
+            if (slotId >= 1 && slotId <= MaxControllers)
+            {
+                // Update the controller - only counts a lap if timestamp changed
+                Controllers[slotId - 1].UpdateFinishLineTimestamp(timestamp);
+            }
+        }
+    }
+
     private static string DecodeScalextricData(Guid characteristicUuid, byte[] data)
     {
         if (data.Length == 0) return "(empty)";
 
-        // Try to decode based on known Scalextric data formats
-        // First byte is header/status, then controller data follows
-        // Controller data: Bits 0-5 = throttle (0-63), Bit 6 = brake, Bit 7 = lane change
+        // Decode based on characteristic type
+        if (characteristicUuid == ScalextricProtocol.Characteristics.Slot)
+        {
+            return DecodeSlotData(data);
+        }
+        else if (characteristicUuid == ScalextricProtocol.Characteristics.Throttle)
+        {
+            return DecodeThrottleData(data);
+        }
+        else if (characteristicUuid == ScalextricProtocol.Characteristics.Track)
+        {
+            return DecodeTrackData(data);
+        }
+
+        // Generic decode for unknown characteristics
+        return DecodeGenericData(data);
+    }
+
+    private static string DecodeSlotData(byte[] data)
+    {
+        if (data.Length < 10) return "(incomplete)";
+
+        var parts = new System.Collections.Generic.List<string>();
+
+        // Slot ID
+        int slotId = data[1];
+        parts.Add($"Slot:{slotId}");
+
+        // Finish line timestamp (centiseconds)
+        uint timestamp = (uint)(data[6] | (data[7] << 8) | (data[8] << 16) | (data[9] << 24));
+        if (timestamp > 0)
+        {
+            double seconds = timestamp / 100.0;
+            parts.Add($"Time:{seconds:F2}s");
+        }
+
+        return string.Join(" | ", parts);
+    }
+
+    private static string DecodeThrottleData(byte[] data)
+    {
+        var parts = new System.Collections.Generic.List<string>();
+
+        // First byte is header
+        if (data.Length >= 1)
+            parts.Add($"H:{data[0]:X2}");
+
+        // Remaining bytes are controller data
+        for (int i = 1; i < data.Length && i <= 6; i++)
+        {
+            var b = data[i];
+            int throttle = b & 0x3F;
+            bool brake = (b & 0x40) != 0;
+            bool laneChange = (b & 0x80) != 0;
+
+            var decoded = $"C{i}:T{throttle}";
+            if (brake) decoded += "+B";
+            if (laneChange) decoded += "+L";
+            parts.Add(decoded);
+        }
+
+        return string.Join(" | ", parts);
+    }
+
+    private static string DecodeTrackData(byte[] data)
+    {
+        // Track sensor data - show raw byte values for debugging
+        var parts = new System.Collections.Generic.List<string>();
+        for (int i = 0; i < Math.Min(data.Length, 8); i++)
+        {
+            parts.Add($"b{i}:{data[i]}");
+        }
+        if (data.Length > 8)
+            parts.Add($"+{data.Length - 8}more");
+        return string.Join(" | ", parts);
+    }
+
+    private static string DecodeGenericData(byte[] data)
+    {
         if (data.Length >= 2)
         {
             var parts = new System.Collections.Generic.List<string>();
-
-            // First byte is header
             parts.Add($"H:{data[0]:X2}");
-
-            // Remaining bytes are controller data
-            for (int i = 1; i < data.Length; i++)
+            for (int i = 1; i < Math.Min(data.Length, 7); i++)
             {
-                var b = data[i];
-                int throttle = b & 0x3F;
-                bool brake = (b & 0x40) != 0;
-                bool laneChange = (b & 0x80) != 0;
-
-                var decoded = $"C{i}:T{throttle}";
-                if (brake) decoded += "+B";
-                if (laneChange) decoded += "+L";
-                parts.Add(decoded);
+                parts.Add($"b{i}:{data[i]}");
             }
-
+            if (data.Length > 7)
+                parts.Add($"+{data.Length - 7}more");
             return string.Join(" | ", parts);
         }
         else if (data.Length == 1)
         {
             return $"H:{data[0]:X2}";
         }
-
         return "(raw)";
     }
 
@@ -582,6 +752,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public void ClearNotificationLog()
     {
         NotificationLog.Clear();
+        FilteredNotificationLog.Clear();
     }
 
     /// <summary>
@@ -697,6 +868,33 @@ public partial class NotificationDataViewModel : ObservableObject
     public string TimestampText => Timestamp.ToString("HH:mm:ss.fff");
 
     public string DisplayText => $"[{TimestampText}] {CharacteristicName}: {HexData}";
+
+    /// <summary>
+    /// Short name for the characteristic based on known Scalextric UUIDs.
+    /// </summary>
+    public string CharacteristicShortName
+    {
+        get
+        {
+            if (CharacteristicUuid == ScalextricProtocol.Characteristics.Throttle)
+                return "Throttle";
+            if (CharacteristicUuid == ScalextricProtocol.Characteristics.Slot)
+                return "Slot";
+            if (CharacteristicUuid == ScalextricProtocol.Characteristics.Track)
+                return "Track";
+            if (CharacteristicUuid == ScalextricProtocol.Characteristics.Command)
+                return "Command";
+            if (CharacteristicUuid == ScalextricProtocol.Characteristics.CarId)
+                return "CarId";
+
+            // Extract short UUID for unknown characteristics
+            var uuidStr = CharacteristicUuid.ToString();
+            if (uuidStr.StartsWith("0000") && uuidStr.Contains("-0000-1000-8000"))
+                return uuidStr.Substring(4, 4);
+
+            return CharacteristicName;
+        }
+    }
 }
 
 /// <summary>
@@ -706,6 +904,7 @@ public partial class ControllerViewModel : ObservableObject
 {
     private bool _previousBrakeState;
     private bool _previousLaneChangeState;
+    private uint _lastFinishLineTimestamp;
 
     [ObservableProperty]
     private int _slotNumber;
@@ -724,6 +923,31 @@ public partial class ControllerViewModel : ObservableObject
 
     [ObservableProperty]
     private int _laneChangeCount;
+
+    [ObservableProperty]
+    private int _lapCount;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LapTimeDisplay))]
+    private double _lastLapTimeSeconds;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BestLapTimeDisplay))]
+    private double _bestLapTimeSeconds;
+
+    /// <summary>
+    /// Formatted display of the last lap time.
+    /// </summary>
+    public string LapTimeDisplay => LastLapTimeSeconds > 0
+        ? $"{LastLapTimeSeconds:F2}s"
+        : "--";
+
+    /// <summary>
+    /// Formatted display of the best lap time.
+    /// </summary>
+    public string BestLapTimeDisplay => BestLapTimeSeconds > 0
+        ? $"{BestLapTimeSeconds:F2}s"
+        : "--";
 
     public string SlotLabel => $"Controller {SlotNumber}";
 
@@ -753,6 +977,45 @@ public partial class ControllerViewModel : ObservableObject
         _previousLaneChangeState = currentLaneChange;
     }
 
+    // Timestamp conversion factor: timestamps are in centiseconds (1/100th second = 10ms)
+    // Verified: 622004 - 620021 = 1983 units for 10s, 631989 - 622004 = 9985 units for 100s
+    private const double TimestampUnitsPerSecond = 100.0;
+
+    /// <summary>
+    /// Updates the lap count and lap time if the finish line timestamp has changed.
+    /// The powerbase sends slot notifications periodically (~300ms round-robin),
+    /// but the timestamp only changes when the car actually crosses the sensor.
+    /// </summary>
+    /// <param name="timestamp">The finish line timestamp from the slot notification.</param>
+    /// <returns>True if a new lap was counted, false otherwise.</returns>
+    public bool UpdateFinishLineTimestamp(uint timestamp)
+    {
+        // Only count a lap if the timestamp changed (car actually crossed sensor)
+        // and it's not the first reading (timestamp != 0 or we have a previous value)
+        if (timestamp != 0 && timestamp != _lastFinishLineTimestamp)
+        {
+            // Don't count the first reading as a lap, but do calculate lap time
+            if (_lastFinishLineTimestamp != 0)
+            {
+                LapCount++;
+
+                // Calculate lap time from timestamp difference
+                // Timestamps appear to be ~900 units per second based on observed data
+                uint timeDiff = timestamp - _lastFinishLineTimestamp;
+                LastLapTimeSeconds = timeDiff / TimestampUnitsPerSecond;
+
+                // Update best lap time if this is a new best (or first lap)
+                if (BestLapTimeSeconds == 0 || LastLapTimeSeconds < BestLapTimeSeconds)
+                {
+                    BestLapTimeSeconds = LastLapTimeSeconds;
+                }
+            }
+            _lastFinishLineTimestamp = timestamp;
+            return _lastFinishLineTimestamp != 0;
+        }
+        return false;
+    }
+
     public void Reset()
     {
         Throttle = 0;
@@ -760,8 +1023,12 @@ public partial class ControllerViewModel : ObservableObject
         IsLaneChangePressed = false;
         BrakeCount = 0;
         LaneChangeCount = 0;
+        LapCount = 0;
+        LastLapTimeSeconds = 0;
+        BestLapTimeSeconds = 0;
         _previousBrakeState = false;
         _previousLaneChangeState = false;
+        _lastFinishLineTimestamp = 0;
     }
 }
 

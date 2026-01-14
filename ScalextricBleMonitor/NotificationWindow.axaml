@@ -3,16 +3,17 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:ScalextricBleMonitor.ViewModels"
-        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="400"
+        mc:Ignorable="d" d:DesignWidth="950" d:DesignHeight="500"
         x:Class="ScalextricBleMonitor.NotificationWindow"
         x:DataType="vm:MainViewModel"
         Title="Live Notification Data"
-        Width="650" Height="450"
-        MinWidth="400" MinHeight="300"
+        Width="950" Height="500"
+        MinWidth="700" MinHeight="350"
         WindowStartupLocation="CenterOwner">
 
     <Grid Margin="10">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
@@ -24,38 +25,85 @@
                        FontSize="16"
                        FontWeight="SemiBold"
                        VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding NotificationLog.Count, StringFormat='({0} entries)'}"
+            <TextBlock Text="{Binding FilteredNotificationLog.Count, StringFormat='({0} entries)'}"
                        FontSize="12"
                        Foreground="Gray"
                        VerticalAlignment="Center"/>
         </StackPanel>
 
-        <!-- Notification Log -->
+        <!-- Filters -->
         <Border Grid.Row="1"
+                Background="#F0F0F0"
+                CornerRadius="4"
+                Padding="10,8"
+                Margin="0,0,0,10">
+            <StackPanel Orientation="Horizontal" Spacing="15">
+                <TextBlock Text="Filter:"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"/>
+
+                <!-- Characteristic filter -->
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                    <TextBlock Text="Characteristic:"
+                               FontSize="11"
+                               VerticalAlignment="Center"
+                               Foreground="#666666"/>
+                    <ComboBox x:Name="CharacteristicFilter"
+                              SelectedIndex="0"
+                              SelectionChanged="OnFilterChanged"
+                              MinWidth="120"
+                              FontSize="11">
+                        <ComboBoxItem Content="All"/>
+                        <ComboBoxItem Content="Throttle (3b09)"/>
+                        <ComboBoxItem Content="Slot (3b0b)"/>
+                        <ComboBoxItem Content="Track (3b0c)"/>
+                        <ComboBoxItem Content="Car ID (3b0d)"/>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Pause checkbox -->
+                <CheckBox x:Name="PauseCheckbox"
+                          Content="Pause"
+                          FontSize="11"
+                          VerticalAlignment="Center"
+                          IsCheckedChanged="OnPauseChanged"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Notification Log -->
+        <Border Grid.Row="2"
                 Background="#FAFAFA"
                 CornerRadius="8"
                 Padding="10">
             <Panel>
                 <!-- Notification Log List -->
-                <ListBox ItemsSource="{Binding NotificationLog}"
+                <ListBox x:Name="NotificationListBox"
+                         ItemsSource="{Binding FilteredNotificationLog}"
                          IsVisible="{Binding IsGattConnected}"
                          Background="Transparent"
                          BorderThickness="0">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:NotificationDataViewModel">
-                            <Grid ColumnDefinitions="90,*,Auto" Margin="0,2">
+                            <Grid ColumnDefinitions="85,70,450,*" Margin="0,2">
                                 <TextBlock Grid.Column="0"
                                            Text="{Binding TimestampText}"
                                            FontFamily="Consolas"
                                            FontSize="11"
                                            Foreground="#666666"/>
                                 <TextBlock Grid.Column="1"
+                                           Text="{Binding CharacteristicShortName}"
+                                           FontFamily="Consolas"
+                                           FontSize="11"
+                                           Foreground="#9C27B0"
+                                           FontWeight="SemiBold"/>
+                                <TextBlock Grid.Column="2"
                                            Text="{Binding HexData}"
                                            FontFamily="Consolas"
                                            FontSize="11"
                                            Foreground="#333333"
-                                           Margin="10,0"/>
-                                <TextBlock Grid.Column="2"
+                                           Margin="5,0"/>
+                                <TextBlock Grid.Column="3"
                                            Text="{Binding DecodedData}"
                                            FontFamily="Consolas"
                                            FontSize="11"
@@ -84,7 +132,7 @@
         </Border>
 
         <!-- Footer with Clear button -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
             <Button Content="Clear Log"
                     Click="OnClearLogClick"
                     Padding="15,8"/>

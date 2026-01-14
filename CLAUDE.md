@@ -51,6 +51,14 @@ ScalextricBleMonitor/
 5. Device considered lost after 5 seconds without advertisement
 6. UI updates via property change notifications to bound Ellipse/TextBlock elements
 
+### Lap Counting & Timing
+
+- Lap detection uses Slot characteristic (0x3b0b) notifications
+- Finish line timestamps are at bytes 6-9 (32-bit little-endian, centiseconds)
+- A lap is counted when the timestamp value changes (not on every notification)
+- Lap time calculated as: `(newTimestamp - previousTimestamp) / 100.0` seconds
+- Best lap time tracked per controller (purple indicator, F1 style)
+
 ### Platform Support
 
 Currently Windows-only (`net9.0-windows10.0.19041.0`). BLE code is wrapped in `#if WINDOWS` for future macOS/Linux support using InTheHand.BluetoothLE or similar.

@@ -155,7 +155,7 @@
                                                    VerticalAlignment="Center"/>
                                     </Grid>
 
-                                    <!-- Brake/Lane change indicators -->
+                                    <!-- Brake/Lane change/Lap indicators -->
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="3">
                                         <Border Background="{Binding IsBrakePressed, Converter={x:Static vm:BoolToBrushConverter.BrakeInstance}}"
                                                 CornerRadius="2"
@@ -171,6 +171,36 @@
                                                 Padding="3,1"
                                                 MinWidth="30">
                                             <TextBlock Text="{Binding LaneChangeCount, StringFormat='LC:{0}'}"
+                                                       FontSize="8"
+                                                       Foreground="White"
+                                                       HorizontalAlignment="Center"/>
+                                        </Border>
+                                        <Border Background="#FF9800"
+                                                CornerRadius="2"
+                                                Padding="3,1"
+                                                MinWidth="30"
+                                                ToolTip.Tip="Lap Count">
+                                            <TextBlock Text="{Binding LapCount, StringFormat='L:{0}'}"
+                                                       FontSize="8"
+                                                       Foreground="White"
+                                                       HorizontalAlignment="Center"/>
+                                        </Border>
+                                        <Border Background="#4CAF50"
+                                                CornerRadius="2"
+                                                Padding="3,1"
+                                                MinWidth="42"
+                                                ToolTip.Tip="Last Lap Time">
+                                            <TextBlock Text="{Binding LapTimeDisplay}"
+                                                       FontSize="8"
+                                                       Foreground="White"
+                                                       HorizontalAlignment="Center"/>
+                                        </Border>
+                                        <Border Background="#9C27B0"
+                                                CornerRadius="2"
+                                                Padding="3,1"
+                                                MinWidth="42"
+                                                ToolTip.Tip="Best Lap Time">
+                                            <TextBlock Text="{Binding BestLapTimeDisplay}"
                                                        FontSize="8"
                                                        Foreground="White"
                                                        HorizontalAlignment="Center"/>

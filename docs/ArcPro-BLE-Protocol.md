@@ -116,6 +116,38 @@ Each controller byte encodes:
 | 112 | SCP-3 Controller |
 | 255 | Disconnected |
 
+## Slot Notification (0x3b0b)
+
+The Slot characteristic sends notifications containing lap timing data when cars cross the finish line sensor.
+
+### Notification Format (20 bytes)
+
+| Byte | Description |
+|------|-------------|
+| 0 | Status/counter byte (changes on events) |
+| 1 | Slot index (1-6) |
+| 2-5 | Timestamp 1 (always 0 in observed data) |
+| 6-9 | Finish line timestamp (32-bit little-endian, centiseconds) |
+| 10-13 | Timestamp 3 (always 0 in observed data) |
+| 14-17 | Timestamp 4 (another sensor timestamp) |
+| 18-19 | Additional data |
+
+### Timestamp Format
+
+The finish line timestamp at bytes 6-9 is a 32-bit little-endian value in **centiseconds** (1/100th of a second = 10ms units).
+
+**Example:** A timestamp value of `622004` represents `6220.04` seconds since powerbase start.
+
+### Lap Detection
+
+The powerbase sends Slot notifications periodically (~300ms round-robin per slot), but the timestamp only changes when a car actually crosses the finish line sensor. To detect lap crossings:
+
+1. Monitor the timestamp at bytes 6-9
+2. A new lap is counted when the timestamp value changes
+3. Lap time = (new timestamp - previous timestamp) / 100.0 seconds
+
+**Note:** The slot ID in byte 1 may not always match the expected car. In observed data, it often reports slot 2 regardless of which car crosses.
+
 ## Throttle Profile Characteristics (0xff01-0xff06)
 
 Throttle profiles define the response curve mapping controller input to motor output. Each slot has its own characteristic.
