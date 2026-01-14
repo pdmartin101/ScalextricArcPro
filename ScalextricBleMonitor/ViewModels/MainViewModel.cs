@@ -58,6 +58,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private int _powerLevel = 63;
 
+    partial void OnPowerLevelChanged(int value)
+    {
+        // Update status text when power level changes while power is enabled
+        if (IsPowerEnabled)
+        {
+            StatusText = $"Power enabled at level {value}";
+        }
+    }
+
     /// <summary>
     /// Additional status information (e.g., last seen time, error messages).
     /// </summary>
@@ -226,8 +235,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         Dispatcher.UIThread.Post(() =>
         {
-            // Update controller states from data
-            UpdateControllerStates(e.Data);
+            // Only update controller states from the Throttle characteristic (0x3b09)
+            // Other characteristics like Track (0x3b0c) contain sensor/timing data, not controller input
+            if (e.CharacteristicUuid == ScalextricProtocol.Characteristics.Throttle)
+            {
+                UpdateControllerStates(e.Data);
+            }
 
             // Add new entry at the top
             NotificationLog.Insert(0, new NotificationDataViewModel
@@ -550,6 +563,42 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _powerHeartbeatCts = null;
         IsPowerEnabled = false;
     }
+
+    /// <summary>
+    /// Indicates whether the notification window is currently open.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isNotificationWindowOpen;
+
+    /// <summary>
+    /// Indicates whether the GATT services window is currently open.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isGattServicesWindowOpen;
+
+    /// <summary>
+    /// Clears the notification log.
+    /// </summary>
+    public void ClearNotificationLog()
+    {
+        NotificationLog.Clear();
+    }
+
+    /// <summary>
+    /// Called when the notification window is closed.
+    /// </summary>
+    public void OnNotificationWindowClosed()
+    {
+        IsNotificationWindowOpen = false;
+    }
+
+    /// <summary>
+    /// Called when the GATT services window is closed.
+    /// </summary>
+    public void OnGattServicesWindowClosed()
+    {
+        IsGattServicesWindowOpen = false;
+    }
 }
 
 /// <summary>
@@ -717,20 +766,18 @@ public partial class ControllerViewModel : ObservableObject
 }
 
 /// <summary>
-/// Converts throttle value (0-63) to a width for the progress bar.
+/// Converts throttle value (0-63) to a scale factor (0.0-1.0) for ScaleTransform.
 /// </summary>
-public class ThrottleToWidthConverter : IValueConverter
+public class ThrottleToScaleConverter : IValueConverter
 {
-    public static readonly ThrottleToWidthConverter Instance = new();
-
-    private const double MaxWidth = 80; // Max width in pixels for the throttle bar
+    public static readonly ThrottleToScaleConverter Instance = new();
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is int throttle)
         {
-            // Scale 0-63 to 0-MaxWidth
-            return (throttle / 63.0) * MaxWidth;
+            // Scale 0-63 to 0.0-1.0
+            return throttle / 63.0;
         }
         return 0.0;
     }
@@ -797,6 +844,31 @@ public class BoolToBrushConverter : IValueConverter
             }
         }
         return _isBrake ? BrakeInactiveColor : LaneChangeInactiveColor;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts power enabled state to indicator color.
+/// </summary>
+public class PowerIndicatorColorConverter : IValueConverter
+{
+    public static readonly PowerIndicatorColorConverter Instance = new();
+
+    private static readonly Color PowerOnColor = Color.FromRgb(76, 175, 80);   // Green
+    private static readonly Color PowerOffColor = Color.FromRgb(158, 158, 158); // Gray
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool isPowerOn)
+        {
+            return isPowerOn ? PowerOnColor : PowerOffColor;
+        }
+        return PowerOffColor;
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

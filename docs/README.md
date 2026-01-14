@@ -65,15 +65,17 @@ dotnet run --project ScalextricBleMonitor/ScalextricBleMonitor.csproj
 
 ```
 ScalextricBleMonitor/
-├── Program.cs                 # Application entry point
-├── App.axaml(.cs)            # Avalonia application configuration
-├── MainWindow.axaml(.cs)     # Main UI window and event handlers
+├── Program.cs                    # Application entry point
+├── App.axaml(.cs)               # Avalonia application configuration
+├── MainWindow.axaml(.cs)        # Main UI window (compact layout)
+├── GattServicesWindow.axaml(.cs) # GATT services browser window
+├── NotificationWindow.axaml(.cs) # Live notification log window
 ├── ViewModels/
-│   └── MainViewModel.cs      # MVVM view model with all UI state
+│   └── MainViewModel.cs         # MVVM view model with all UI state
 └── Services/
-    ├── IBleMonitorService.cs # BLE service interface
-    ├── BleMonitorService.cs  # Windows BLE implementation
-    └── ScalextricProtocol.cs # Protocol constants and builders
+    ├── IBleMonitorService.cs    # BLE service interface
+    ├── BleMonitorService.cs     # Windows BLE implementation
+    └── ScalextricProtocol.cs    # Protocol constants and builders
 ```
 
 ### Design Patterns
@@ -94,6 +96,13 @@ private bool _isConnected;
 [ObservableProperty]
 [NotifyPropertyChangedFor(nameof(StatusIndicatorBrush))]
 private bool _isGattConnected;
+
+// Partial methods for property change callbacks
+partial void OnPowerLevelChanged(int value)
+{
+    if (IsPowerEnabled)
+        StatusText = $"Power enabled at level {value}";
+}
 ```
 
 #### Service Abstraction
@@ -202,41 +211,45 @@ Protocol constants and builders:
 
 | Class | Purpose |
 |-------|---------|
-| `Characteristics` | GATT UUIDs (Command, Throttle, Profiles, etc.) |
+| `Characteristics` | GATT UUIDs (Command, Throttle, Track, Profiles, etc.) |
 | `CommandType` | Enum of command types (PowerOnRacing, etc.) |
 | `CommandBuilder` | Builds 20-byte command packets |
 | `ThrottleProfile` | Generates 96-value throttle curves |
 
 ## UI Layout
 
+The application uses a compact single-window design with pop-out windows for detailed views:
+
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                  Scalextric ARC Pro BLE Monitor             │
-├─────────────────┬───────────────────────────────────────────┤
-│  Left Panel     │  Right Panel                              │
-│                 │                                           │
-│  ┌───────────┐  │  GATT Services                           │
-│  │  Status   │  │  ├─ Service: Generic Access              │
-│  │  Circle   │  │  │  └─ C: Device Name [R]                │
-│  │  (color)  │  │  ├─ Service: 00003b00-...                │
-│  └───────────┘  │  │  ├─ C: Command [W]                    │
-│                 │  │  └─ C: Throttle [N] ← notifications   │
-│  GATT Connected │  │                                        │
-│                 │  ├────────────────────────────────────────│
-│  Track Power    │  │  Live Notification Data                │
-│  [POWER ON/OFF] │  │                                        │
-│  Power: ═══ 63  │  │  12:34:56.789  03 1F 00 00 00 00 00   │
-│                 │  │  12:34:56.889  03 20 00 00 00 00 00   │
-│  C1: ████░░ 32  │  │  12:34:56.989  03 21 40 00 00 00 00   │
-│  C2: ░░░░░░ 0   │  │                                        │
-│  C3: ░░░░░░ 0   │  │                                        │
-│                 │  │                                        │
-│  Legend:        │  │                                        │
-│  ● Red=Lost     │  │                                        │
-│  ● Green=Adv    │  │                                        │
-│  ● Blue=GATT    │  │                                        │
-└─────────────────┴───────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│ ● Scalextric ARC Pro BLE Monitor          ● ● ●    │
+│   GATT Connected  Scalextric ARC PRO                │
+├─────────────────────────────────────────────────────┤
+│ Power enabled at level 63                           │
+├─────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────┐ │
+│ │ [POWER ON]  Level: ════════════════ 63    ●    │ │
+│ ├─────────────────────────────────────────────────┤ │
+│ │ C1 ████████████████████████████████ 63  B:0 LC:0│ │
+│ │ C2 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0  B:0 LC:0│ │
+│ │ C3 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0  B:0 LC:0│ │
+│ │ C4 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0  B:0 LC:0│ │
+│ │ C5 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0  B:0 LC:0│ │
+│ │ C6 ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0  B:0 LC:0│ │
+│ └─────────────────────────────────────────────────┘ │
+│        [GATT Services]  [Live Notifications]        │
+└─────────────────────────────────────────────────────┘
 ```
+
+### Window Types
+
+| Window | Purpose |
+|--------|---------|
+| **MainWindow** | Compact view with connection status, power control, and controller display |
+| **GattServicesWindow** | Browse discovered GATT services and characteristics, read values |
+| **NotificationWindow** | Live stream of all BLE notifications with hex/decoded views |
+
+Each pop-out window is a singleton - only one instance can be open at a time.
 
 ## Protocol Implementation
 
@@ -247,7 +260,16 @@ See [ArcPro-BLE-Protocol.md](ArcPro-BLE-Protocol.md) for detailed protocol docum
 1. **Throttle Profiles**: Must be written before enabling power (96 values in 6 blocks per slot)
 2. **Heartbeat**: Power commands must be sent every 100-200ms to maintain track power
 3. **Write Timing**: 50ms delays between BLE writes to avoid connection flooding
-4. **Notification Data**: Controller bytes encode throttle (bits 0-5), brake (bit 6), lane change (bit 7)
+4. **Notification Filtering**: Only Throttle characteristic (0x3b09) updates controller display; Track characteristic (0x3b0c) contains sensor data
+
+### Notification Data
+
+Controller bytes from the Throttle characteristic encode:
+- Bits 0-5: Throttle position (0-63)
+- Bit 6: Brake button pressed
+- Bit 7: Lane change button pressed
+
+Track sensor data from the Track characteristic contains timing/lap information and should not be interpreted as controller input.
 
 ## Error Handling
 

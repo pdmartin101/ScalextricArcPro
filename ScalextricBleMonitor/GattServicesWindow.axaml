@@ -1,0 +1,89 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:ScalextricBleMonitor.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="500"
+        x:Class="ScalextricBleMonitor.GattServicesWindow"
+        x:DataType="vm:MainViewModel"
+        Title="GATT Services"
+        Width="550" Height="500"
+        MinWidth="400" MinHeight="300"
+        WindowStartupLocation="CenterOwner">
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="15" Margin="0,0,0,10">
+            <TextBlock Text="GATT Services"
+                       FontSize="16"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"/>
+            <TextBlock Text="{Binding Services.Count, StringFormat='({0} services)'}"
+                       FontSize="12"
+                       Foreground="Gray"
+                       VerticalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- GATT Services Panel -->
+        <Border Grid.Row="1"
+                Background="#FAFAFA"
+                CornerRadius="8"
+                Padding="10">
+            <Panel>
+                <!-- Services TreeView -->
+                <TreeView ItemsSource="{Binding Services}"
+                          IsVisible="{Binding IsGattConnected}">
+                    <TreeView.DataTemplates>
+                        <TreeDataTemplate x:DataType="vm:ServiceViewModel"
+                                          ItemsSource="{Binding Characteristics}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="S" FontWeight="Bold" Foreground="#0096FF"/>
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </TreeDataTemplate>
+                        <DataTemplate x:DataType="vm:CharacteristicViewModel">
+                            <StackPanel Spacing="2">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="C" FontWeight="Bold" Foreground="#00C853"/>
+                                    <TextBlock Text="{Binding DisplayText}"/>
+                                    <Button Content="Read"
+                                            FontSize="10"
+                                            Padding="6,2"
+                                            IsVisible="{Binding IsReadable}"
+                                            Click="OnReadCharacteristicClick"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding ReadResultDisplay}"
+                                           FontFamily="Consolas"
+                                           FontSize="10"
+                                           Foreground="#666666"
+                                           Margin="20,0,0,0"
+                                           IsVisible="{Binding HasReadValue}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </TreeView.DataTemplates>
+                </TreeView>
+
+                <!-- Placeholder when not connected -->
+                <StackPanel IsVisible="{Binding !IsGattConnected}"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            Spacing="10">
+                    <TextBlock Text="No GATT Connection"
+                               FontSize="14"
+                               Foreground="Gray"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="Services will appear here when connected"
+                               FontSize="12"
+                               Foreground="#AAAAAA"
+                               HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Panel>
+        </Border>
+    </Grid>
+</Window>
