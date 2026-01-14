@@ -361,34 +361,30 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         // Slot characteristic (0x3b0b) notification format (20 bytes):
         // data[0] = status/counter byte (changes on events)
-        // data[1] = slot index (1-6, but appears to always be 2 in observed data)
-        // data[2-5] = timestamp 1 (always 0 in observed data)
-        // data[6-9] = timestamp 2 (finish line sensor, 32-bit little-endian) - THIS CHANGES ON LAP
-        // data[10-13] = timestamp 3 (always 0 in observed data)
-        // data[14-17] = timestamp 4 (another sensor timestamp)
+        // data[1] = slot index (1-6)
+        // data[2-5] = t1: Lane 1 entry timestamp (32-bit little-endian, centiseconds)
+        // data[6-9] = t2: Lane 2 entry timestamp (32-bit little-endian, centiseconds)
+        // data[10-13] = t3: Lane 1 exit timestamp (t3 > t1 by a few tenths)
+        // data[14-17] = t4: Lane 2 exit timestamp (t4 > t2 by a few tenths)
         // data[18-19] = additional data
         //
-        // The powerbase sends these notifications when a car crosses the finish line sensor.
-        // We detect lap crossings by checking if the timestamp at bytes 6-9 changed.
+        // t1/t3 are a pair (lane 1 entry/exit), t2/t4 are a pair (lane 2 entry/exit).
+        // For lap timing, we use the entry timestamps t1 and t2.
         if (data.Length >= 10)
         {
-            // Use byte 1 as slot ID, but it may not be reliable
-            // For now, since byte 1 is always 2, we need a different approach
-            // Let's use byte 0 changes to detect lap events for all active cars
-
-            // Extract finish line timestamp from bytes 6-9 (little-endian uint32)
-            uint timestamp = (uint)(data[6] | (data[7] << 8) | (data[8] << 16) | (data[9] << 24));
-
-            // The slot ID in data[1] appears to always be 2 in observed data
-            // This might indicate "lane 2" or could be a different meaning
-            // For now, let's use the timestamp to track laps for slot indicated
             int slotId = data[1];
+
+            // Extract Lane 1 entry timestamp from bytes 2-5 (t1)
+            uint lane1Timestamp = (uint)(data[2] | (data[3] << 8) | (data[4] << 16) | (data[5] << 24));
+
+            // Extract Lane 2 entry timestamp from bytes 6-9 (t2)
+            uint lane2Timestamp = (uint)(data[6] | (data[7] << 8) | (data[8] << 16) | (data[9] << 24));
 
             // Valid slot IDs are 1-6
             if (slotId >= 1 && slotId <= MaxControllers)
             {
-                // Update the controller - only counts a lap if timestamp changed
-                Controllers[slotId - 1].UpdateFinishLineTimestamp(timestamp);
+                // Update the controller with both lane timestamps
+                Controllers[slotId - 1].UpdateFinishLineTimestamps(lane1Timestamp, lane2Timestamp);
             }
         }
     }
@@ -417,21 +413,34 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private static string DecodeSlotData(byte[] data)
     {
-        if (data.Length < 10) return "(incomplete)";
+        if (data.Length < 18) return $"(incomplete: {data.Length} bytes)";
 
         var parts = new System.Collections.Generic.List<string>();
 
-        // Slot ID
+        // Status byte and Slot ID
+        parts.Add($"St:{data[0]}");
         int slotId = data[1];
         parts.Add($"Slot:{slotId}");
 
-        // Finish line timestamp (centiseconds)
-        uint timestamp = (uint)(data[6] | (data[7] << 8) | (data[8] << 16) | (data[9] << 24));
-        if (timestamp > 0)
-        {
-            double seconds = timestamp / 100.0;
-            parts.Add($"Time:{seconds:F2}s");
-        }
+        // t1: Lane 1 entry timestamp (bytes 2-5, centiseconds)
+        uint t1 = (uint)(data[2] | (data[3] << 8) | (data[4] << 16) | (data[5] << 24));
+        double t1Seconds = t1 / 100.0;
+        parts.Add($"t1:{t1}({t1Seconds:F2}s)");
+
+        // t2: Lane 2 entry timestamp (bytes 6-9, centiseconds)
+        uint t2 = (uint)(data[6] | (data[7] << 8) | (data[8] << 16) | (data[9] << 24));
+        double t2Seconds = t2 / 100.0;
+        parts.Add($"t2:{t2}({t2Seconds:F2}s)");
+
+        // t3: Lane 1 exit timestamp (bytes 10-13, centiseconds) - t3 > t1 by a few tenths
+        uint t3 = (uint)(data[10] | (data[11] << 8) | (data[12] << 16) | (data[13] << 24));
+        double t3Seconds = t3 / 100.0;
+        parts.Add($"t3:{t3}({t3Seconds:F2}s)");
+
+        // t4: Lane 2 exit timestamp (bytes 14-17, centiseconds) - t4 > t2 by a few tenths
+        uint t4 = (uint)(data[14] | (data[15] << 8) | (data[16] << 16) | (data[17] << 24));
+        double t4Seconds = t4 / 100.0;
+        parts.Add($"t4:{t4}({t4Seconds:F2}s)");
 
         return string.Join(" | ", parts);
     }
@@ -953,7 +962,8 @@ public partial class ControllerViewModel : ObservableObject
 {
     private bool _previousBrakeState;
     private bool _previousLaneChangeState;
-    private uint _lastFinishLineTimestamp;
+    // Track the highest timestamp seen - whichever lane was crossed most recently has the higher value
+    private uint _lastMaxTimestamp;
 
     [ObservableProperty]
     private int _slotNumber;
@@ -1036,27 +1046,36 @@ public partial class ControllerViewModel : ObservableObject
     // Verified: 622004 - 620021 = 1983 units for 10s, 631989 - 622004 = 9985 units for 100s
     private const double TimestampUnitsPerSecond = 100.0;
 
+    // Track how many timestamp changes we've seen - first two are ignored (initial + first crossing)
+    private int _timestampChangeCount;
+
     /// <summary>
-    /// Updates the lap count and lap time if the finish line timestamp has changed.
-    /// The powerbase sends slot notifications periodically (~300ms round-robin),
-    /// but the timestamp only changes when the car actually crosses the sensor.
+    /// Updates the lap count and lap time based on finish line timestamps.
+    /// The powerbase has two finish line sensors (one per lane). Whichever lane
+    /// was crossed most recently will have the higher timestamp value.
+    /// We simply take the max of both timestamps - if it changed, a lap was completed.
     /// </summary>
-    /// <param name="timestamp">The finish line timestamp from the slot notification.</param>
+    /// <param name="lane1Timestamp">The finish line timestamp for lane 1 (bytes 2-5).</param>
+    /// <param name="lane2Timestamp">The finish line timestamp for lane 2 (bytes 6-9).</param>
     /// <returns>True if a new lap was counted, false otherwise.</returns>
-    public bool UpdateFinishLineTimestamp(uint timestamp)
+    public bool UpdateFinishLineTimestamps(uint lane1Timestamp, uint lane2Timestamp)
     {
-        // Only count a lap if the timestamp changed (car actually crossed sensor)
-        // and it's not the first reading (timestamp != 0 or we have a previous value)
-        if (timestamp != 0 && timestamp != _lastFinishLineTimestamp)
+        // Take the higher of the two timestamps - that's the lane that was most recently crossed
+        uint currentMaxTimestamp = Math.Max(lane1Timestamp, lane2Timestamp);
+
+        // If the max timestamp changed, the car crossed a finish line
+        if (currentMaxTimestamp != 0 && currentMaxTimestamp != _lastMaxTimestamp)
         {
-            // Don't count the first reading as a lap, but do calculate lap time
-            if (_lastFinishLineTimestamp != 0)
+            _timestampChangeCount++;
+
+            // Ignore the first timestamp change (stale data from when we first connect).
+            // 2nd onwards = valid lap completions (2nd crossing measured from 1st crossing)
+            if (_timestampChangeCount >= 2 && _lastMaxTimestamp != 0)
             {
                 LapCount++;
 
                 // Calculate lap time from timestamp difference
-                // Timestamps appear to be ~900 units per second based on observed data
-                uint timeDiff = timestamp - _lastFinishLineTimestamp;
+                uint timeDiff = currentMaxTimestamp - _lastMaxTimestamp;
                 LastLapTimeSeconds = timeDiff / TimestampUnitsPerSecond;
 
                 // Update best lap time if this is a new best (or first lap)
@@ -1065,9 +1084,11 @@ public partial class ControllerViewModel : ObservableObject
                     BestLapTimeSeconds = LastLapTimeSeconds;
                 }
             }
-            _lastFinishLineTimestamp = timestamp;
-            return _lastFinishLineTimestamp != 0;
+
+            _lastMaxTimestamp = currentMaxTimestamp;
+            return true;
         }
+
         return false;
     }
 
@@ -1083,7 +1104,8 @@ public partial class ControllerViewModel : ObservableObject
         BestLapTimeSeconds = 0;
         _previousBrakeState = false;
         _previousLaneChangeState = false;
-        _lastFinishLineTimestamp = 0;
+        _lastMaxTimestamp = 0;
+        _timestampChangeCount = 0;
     }
 }
 

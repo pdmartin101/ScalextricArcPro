@@ -55,9 +55,10 @@ ScalextricBleMonitor/
 ### Lap Counting & Timing
 
 - Lap detection uses Slot characteristic (0x3b0b) notifications
-- Finish line timestamps are at bytes 6-9 (32-bit little-endian, centiseconds)
-- A lap is counted when the timestamp value changes (not on every notification)
-- Lap time calculated as: `(newTimestamp - previousTimestamp) / 100.0` seconds
+- Dual-lane finish line sensors: t1 (bytes 2-5) for lane 1, t2 (bytes 6-9) for lane 2
+- Uses `Math.Max(t1, t2)` to detect whichever lane was crossed most recently
+- First timestamp change after connection is ignored (stale data)
+- Lap time calculated as: `(newMaxTimestamp - previousMaxTimestamp) / 100.0` seconds
 - Best lap time tracked per controller (purple indicator, F1 style)
 
 ### Platform Support

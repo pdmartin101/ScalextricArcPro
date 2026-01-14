@@ -160,31 +160,50 @@ The Slot characteristic sends notifications containing lap timing data when cars
 
 ### Notification Format (20 bytes)
 
+The notification contains **four timestamps** - entry and exit pairs for each lane:
+
 | Byte | Description |
 |------|-------------|
 | 0 | Status/counter byte (changes on events) |
 | 1 | Slot index (1-6) |
-| 2-5 | Timestamp 1 (always 0 in observed data) |
-| 6-9 | Finish line timestamp (32-bit little-endian, centiseconds) |
-| 10-13 | Timestamp 3 (always 0 in observed data) |
-| 14-17 | Timestamp 4 (another sensor timestamp) |
+| 2-5 | t1: Lane 1 entry timestamp (32-bit little-endian, centiseconds) |
+| 6-9 | t2: Lane 2 entry timestamp (32-bit little-endian, centiseconds) |
+| 10-13 | t3: Lane 1 exit timestamp (32-bit little-endian, centiseconds) |
+| 14-17 | t4: Lane 2 exit timestamp (32-bit little-endian, centiseconds) |
 | 18-19 | Additional data |
+
+### Timestamp Pairs
+
+The finish line sensor appears to detect both entry and exit of cars:
+- **t1 and t3** are a pair for Lane 1 (entry and exit). t3 > t1 by a few tenths of a second.
+- **t2 and t4** are a pair for Lane 2 (entry and exit). t4 > t2 by a few tenths of a second.
+
+For lap timing purposes, use the **entry timestamps** (t1 and t2).
+
+### Dual-Lane Finish Line Sensors
+
+The powerbase has **two finish line sensors**, one for each lane. When a car crosses the finish line:
+- If in lane 1: t1 (bytes 2-5) updates
+- If in lane 2: t2 (bytes 6-9) updates
+
+This is important for digital mode where cars can change lanes. To correctly track laps, applications must monitor **both** lane entry timestamps.
 
 ### Timestamp Format
 
-The finish line timestamp at bytes 6-9 is a 32-bit little-endian value in **centiseconds** (1/100th of a second = 10ms units).
+Timestamps are 32-bit little-endian values in **centiseconds** (1/100th of a second = 10ms units).
 
 **Example:** A timestamp value of `622004` represents `6220.04` seconds since powerbase start.
 
 ### Lap Detection
 
-The powerbase sends Slot notifications periodically (~300ms round-robin per slot), but the timestamp only changes when a car actually crosses the finish line sensor. To detect lap crossings:
+The powerbase sends Slot notifications periodically (~300ms round-robin per slot), but timestamps only change when a car actually crosses a finish line sensor. To detect lap crossings:
 
-1. Monitor the timestamp at bytes 6-9
-2. A new lap is counted when the timestamp value changes
-3. Lap time = (new timestamp - previous timestamp) / 100.0 seconds
+1. Monitor both lane entry timestamps t1 (bytes 2-5) and t2 (bytes 6-9) for each slot
+2. Take the maximum of t1 and t2 - this represents the most recent lane crossing
+3. A new lap is counted when this maximum timestamp changes
+4. Lap time = (new max timestamp - previous max timestamp) / 100.0 seconds
 
-**Note:** The slot ID in byte 1 may not always match the expected car. In observed data, it often reports slot 2 regardless of which car crosses.
+**Note:** The slot ID in byte 1 identifies which car/controller the notification is for.
 
 ## Throttle Profile Characteristics (0xff01-0xff06)
 
