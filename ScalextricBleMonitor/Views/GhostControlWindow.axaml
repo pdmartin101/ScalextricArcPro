@@ -112,10 +112,51 @@
                                                FontSize="11"
                                                Foreground="#666666"
                                                Margin="0,0,0,8"/>
-                                    <TextBlock Text="(Recording functionality coming soon)"
-                                               FontSize="12"
+
+                                    <!-- Lap Selection -->
+                                    <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,10">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="Lap:"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="12"
+                                                   Width="35"/>
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding AvailableRecordedLaps}"
+                                                  SelectedItem="{Binding SelectedRecordedLap}"
+                                                  MinWidth="200"
+                                                  ToolTip.Tip="Select a recorded lap to replay">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding DisplayName}"/>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </Grid>
+
+                                    <!-- Record Button -->
+                                    <Button Content="{Binding RecordButtonText}"
+                                            Command="{Binding ToggleRecordingCommand}"
+                                            HorizontalAlignment="Left"
+                                            Padding="15,8"
+                                            FontSize="12"
+                                            FontWeight="Bold"
+                                            ToolTip.Tip="Record a new lap - drive a complete lap to capture throttle data"/>
+
+                                    <!-- Recording status -->
+                                    <TextBlock Text="Recording... Complete a lap to save"
+                                               FontSize="11"
+                                               Foreground="#E53935"
+                                               FontStyle="Italic"
+                                               Margin="0,5,0,0"
+                                               IsVisible="{Binding IsRecording}"/>
+
+                                    <!-- No laps hint -->
+                                    <TextBlock Text="No recorded laps yet. Press Record and drive a lap!"
+                                               FontSize="11"
                                                Foreground="#999999"
-                                               FontStyle="Italic"/>
+                                               FontStyle="Italic"
+                                               Margin="0,5,0,0"
+                                               IsVisible="{Binding !AvailableRecordedLaps.Count}"/>
                                 </StackPanel>
 
                                 <!-- Throttle Profile -->

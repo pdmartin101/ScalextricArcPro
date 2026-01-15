@@ -17,6 +17,7 @@ public static class ServiceConfiguration
     {
         // Register services
         services.AddSingleton<IBleMonitorService, BleMonitorService>();
+        services.AddSingleton<IGhostRecordingService, GhostRecordingService>();
         services.AddSingleton<AppSettings>(_ => AppSettings.Load());
 
         // Register ViewModels

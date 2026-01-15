@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ScalextricBleMonitor.Models;
@@ -113,6 +114,61 @@ public partial class ControllerViewModel : ObservableObject
     /// </summary>
     public static IReadOnlyList<GhostSourceType> AvailableGhostSources { get; } =
         Enum.GetValues<GhostSourceType>();
+
+    /// <summary>
+    /// Whether lap recording is currently active for this slot.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RecordButtonText))]
+    [NotifyCanExecuteChangedFor(nameof(ToggleRecordingCommand))]
+    private bool _isRecording;
+
+    /// <summary>
+    /// Event raised when recording state changes.
+    /// </summary>
+    public event EventHandler<bool>? RecordingStateChanged;
+
+    partial void OnIsRecordingChanged(bool value)
+    {
+        RecordingStateChanged?.Invoke(this, value);
+    }
+
+    /// <summary>
+    /// Text for the record button based on recording state.
+    /// </summary>
+    public string RecordButtonText => IsRecording ? "● Stop" : "● Record";
+
+    /// <summary>
+    /// Collection of recorded laps available for this slot.
+    /// </summary>
+    public ObservableCollection<RecordedLap> AvailableRecordedLaps { get; } = [];
+
+    /// <summary>
+    /// The currently selected recorded lap for playback.
+    /// </summary>
+    [ObservableProperty]
+    private RecordedLap? _selectedRecordedLap;
+
+    /// <summary>
+    /// Event raised when the selected recorded lap changes.
+    /// </summary>
+    public event EventHandler<RecordedLap?>? SelectedRecordedLapChanged;
+
+    partial void OnSelectedRecordedLapChanged(RecordedLap? value)
+    {
+        SelectedRecordedLapChanged?.Invoke(this, value);
+    }
+
+    /// <summary>
+    /// Toggles recording state for this slot.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleRecording()
+    {
+        // The actual start/stop logic is handled by MainViewModel via the RecordingStateChanged event
+        // This command just toggles the visual state; MainViewModel coordinates with the recording service
+        IsRecording = !IsRecording;
+    }
 
     /// <summary>
     /// Throttle profile type for this slot. Determines the throttle response curve.

@@ -22,6 +22,7 @@ namespace ScalextricBleMonitor.ViewModels;
 public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly IBleMonitorService _bleMonitorService;
+    private readonly IGhostRecordingService _ghostRecordingService;
     private readonly AppSettings _settings;
     private IWindowService? _windowService;
     private bool _disposed;
@@ -185,6 +186,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     OnPropertyChanged(nameof(HasAnyGhostMode));
             };
 
+            // Subscribe to recording state changes
+            controller.RecordingStateChanged += OnControllerRecordingStateChanged;
+
+            // Populate available recorded laps from the service
+            foreach (var lap in _ghostRecordingService.GetRecordedLaps(i + 1))
+            {
+                controller.AvailableRecordedLaps.Add(lap);
+            }
+
             Controllers.Add(controller);
         }
     }
@@ -215,6 +225,44 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    private void OnControllerRecordingStateChanged(object? sender, bool isRecording)
+    {
+        if (sender is ControllerViewModel controller)
+        {
+            if (isRecording)
+            {
+                _ghostRecordingService.StartRecording(controller.SlotNumber);
+                Log.Information("Started recording for slot {SlotNumber}", controller.SlotNumber);
+            }
+            else
+            {
+                _ghostRecordingService.StopRecording(controller.SlotNumber);
+                Log.Information("Stopped recording for slot {SlotNumber}", controller.SlotNumber);
+            }
+        }
+    }
+
+    private void OnRecordingCompleted(object? sender, LapRecordingCompletedEventArgs e)
+    {
+        // Add the recorded lap to the appropriate controller's available laps
+        Dispatcher.UIThread.Post(() =>
+        {
+            var controller = Controllers.FirstOrDefault(c => c.SlotNumber == e.SlotNumber);
+            if (controller != null)
+            {
+                controller.AvailableRecordedLaps.Add(e.RecordedLap);
+                controller.IsRecording = false;
+
+                // Auto-select the newly recorded lap
+                controller.SelectedRecordedLap = e.RecordedLap;
+
+                Log.Information(
+                    "Recording completed for slot {SlotNumber}: {SampleCount} samples, {LapTime:F2}s",
+                    e.SlotNumber, e.RecordedLap.SampleCount, e.RecordedLap.LapTimeSeconds);
+            }
+        });
+    }
+
     /// <summary>
     /// Brush for the status indicator circle.
     /// Green = detected, Blue = GATT connected, Red = not found.
@@ -240,7 +288,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Creates a MainViewModel with default services. Used for design-time and simple instantiation.
     /// </summary>
-    public MainViewModel() : this(new BleMonitorService(), AppSettings.Load())
+    public MainViewModel() : this(new BleMonitorService(), new GhostRecordingService(), AppSettings.Load())
     {
     }
 
@@ -248,10 +296,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// Creates a MainViewModel with injected dependencies.
     /// </summary>
     /// <param name="bleMonitorService">The BLE monitoring service.</param>
+    /// <param name="ghostRecordingService">The ghost recording service.</param>
     /// <param name="settings">The application settings.</param>
-    public MainViewModel(IBleMonitorService bleMonitorService, AppSettings settings)
+    public MainViewModel(IBleMonitorService bleMonitorService, IGhostRecordingService ghostRecordingService, AppSettings settings)
     {
         _bleMonitorService = bleMonitorService;
+        _ghostRecordingService = ghostRecordingService;
         _settings = settings;
 
         _bleMonitorService.ConnectionStateChanged += OnConnectionStateChanged;
@@ -259,6 +309,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _bleMonitorService.ServicesDiscovered += OnServicesDiscovered;
         _bleMonitorService.NotificationReceived += OnNotificationReceived;
         _bleMonitorService.CharacteristicValueRead += OnCharacteristicValueRead;
+
+        // Subscribe to recording completion events
+        _ghostRecordingService.RecordingCompleted += OnRecordingCompleted;
 
         // Initialize from persisted settings
         _powerLevel = _settings.PowerLevel;
@@ -512,9 +565,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // data[1] = Controller 1
         // data[2] = Controller 2
         // etc.
+        var timestamp = DateTime.UtcNow;
         for (int i = 1; i < data.Length && (i - 1) < Controllers.Count; i++)
         {
-            Controllers[i - 1].UpdateFromByte(data[i]);
+            var controller = Controllers[i - 1];
+            controller.UpdateFromByte(data[i]);
+
+            // Feed throttle samples to the recording service if recording is active
+            if (_ghostRecordingService.IsRecording(controller.SlotNumber))
+            {
+                byte throttleValue = (byte)(data[i] & ScalextricProtocol.ThrottleData.ThrottleMask);
+                _ghostRecordingService.RecordThrottleSample(controller.SlotNumber, throttleValue, timestamp);
+            }
         }
     }
 
@@ -534,8 +596,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // Valid slot IDs are 1-6
             if (slotId >= 1 && slotId <= MaxControllers)
             {
+                var controller = Controllers[slotId - 1];
+
                 // Update the controller with both lane timestamps
-                Controllers[slotId - 1].UpdateFinishLineTimestamps(lane1Timestamp, lane2Timestamp);
+                bool lapCompleted = controller.UpdateFinishLineTimestamps(lane1Timestamp, lane2Timestamp);
+
+                // Notify recording service if a lap was completed while recording
+                if (lapCompleted && _ghostRecordingService.IsRecording(slotId))
+                {
+                    _ghostRecordingService.NotifyLapCompleted(slotId, controller.LastLapTimeSeconds);
+                }
             }
         }
     }
@@ -596,6 +666,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _bleMonitorService.NotificationReceived -= OnNotificationReceived;
         _bleMonitorService.CharacteristicValueRead -= OnCharacteristicValueRead;
         _bleMonitorService.Dispose();
+
+        _ghostRecordingService.RecordingCompleted -= OnRecordingCompleted;
 
         GC.SuppressFinalize(this);
     }
