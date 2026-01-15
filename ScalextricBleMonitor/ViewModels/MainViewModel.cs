@@ -28,6 +28,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private bool _disposed;
     private CancellationTokenSource? _powerHeartbeatCts;
 
+    // Timing calibration fields for measuring slot notification delays
+    // After power-on, we capture the first slot notification to estimate powerbase t=0
+    private bool _awaitingFirstSlotNotification;
+    private DateTime? _estimatedPowerbaseT0;  // Wall-clock time when powerbase clock was at t=0
+
     // Brush constants for connection states
     private static readonly ISolidColorBrush ConnectedBrush = new SolidColorBrush(Color.FromRgb(0, 200, 83));   // Green
     private static readonly ISolidColorBrush DisconnectedBrush = new SolidColorBrush(Color.FromRgb(220, 53, 69)); // Red
@@ -242,6 +247,20 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    private void OnRecordingStarted(object? sender, LapRecordingStartedEventArgs e)
+    {
+        // Update controller to show actively recording (after first finish line crossing)
+        Dispatcher.UIThread.Post(() =>
+        {
+            var controller = Controllers.FirstOrDefault(c => c.SlotNumber == e.SlotNumber);
+            if (controller != null)
+            {
+                controller.IsActivelyRecording = true;
+                Log.Information("Lap started for slot {SlotNumber} - actively recording throttle samples", e.SlotNumber);
+            }
+        });
+    }
+
     private void OnRecordingCompleted(object? sender, LapRecordingCompletedEventArgs e)
     {
         // Add the recorded lap to the appropriate controller's available laps
@@ -252,6 +271,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             {
                 controller.AvailableRecordedLaps.Add(e.RecordedLap);
                 controller.IsRecording = false;
+                controller.IsActivelyRecording = false;
 
                 // Auto-select the newly recorded lap
                 controller.SelectedRecordedLap = e.RecordedLap;
@@ -310,7 +330,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _bleMonitorService.NotificationReceived += OnNotificationReceived;
         _bleMonitorService.CharacteristicValueRead += OnCharacteristicValueRead;
 
-        // Subscribe to recording completion events
+        // Subscribe to recording events
+        _ghostRecordingService.RecordingStarted += OnRecordingStarted;
         _ghostRecordingService.RecordingCompleted += OnRecordingCompleted;
 
         // Initialize from persisted settings
@@ -593,6 +614,57 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // Extract Lane 2 entry timestamp (t2)
             uint lane2Timestamp = ReadUInt32LittleEndian(data, ScalextricProtocol.SlotData.Lane2EntryOffset);
 
+            // Extract Lane 1 exit timestamp (t3) and Lane 2 exit timestamp (t4) if data is long enough
+            uint lane1ExitTimestamp = 0;
+            uint lane2ExitTimestamp = 0;
+            if (data.Length >= 18)
+            {
+                lane1ExitTimestamp = ReadUInt32LittleEndian(data, ScalextricProtocol.SlotData.Lane1ExitOffset);
+                lane2ExitTimestamp = ReadUInt32LittleEndian(data, ScalextricProtocol.SlotData.Lane2ExitOffset);
+            }
+
+            // Capture wall-clock time when notification arrived
+            var notificationArrivalTime = DateTime.UtcNow;
+            var rawTimeSec = notificationArrivalTime.TimeOfDay.TotalSeconds;
+
+            // Convert powerbase timestamps (centiseconds) to seconds
+            double t1Sec = lane1Timestamp / 100.0;
+            double t2Sec = lane2Timestamp / 100.0;
+            double t3Sec = lane1ExitTimestamp / 100.0;
+            double t4Sec = lane2ExitTimestamp / 100.0;
+
+            // Use max of t1 and t2 as the most recent lane crossing timestamp
+            double maxTimestampSec = Math.Max(t1Sec, t2Sec);
+
+            // Timing calibration: capture first slot notification after power-on
+            // We use the first notification regardless of t1/t2 values - the powerbase sends
+            // notifications periodically (~300ms) and we want to capture the clock value immediately
+            if (_awaitingFirstSlotNotification)
+            {
+                // First notification after power-on
+                // Estimate when powerbase clock was at t=0:
+                // wallClockAtT0 = notificationArrivalTime - maxTimestamp (assuming minimal delay)
+                // If t1 and t2 are both 0, then t=0 is approximately now
+                _estimatedPowerbaseT0 = notificationArrivalTime.AddSeconds(-maxTimestampSec);
+                _awaitingFirstSlotNotification = false;
+
+                Log.Information("TIMING: First slot notification received. t1={T1:F2}s t2={T2:F2}s (max={MaxTs:F2}s) arrived at raw={RawTime:F3}s",
+                    t1Sec, t2Sec, maxTimestampSec, rawTimeSec);
+                Log.Information("TIMING: Estimated powerbase t=0 at wall-clock {T0:HH:mm:ss.fff}",
+                    _estimatedPowerbaseT0.Value);
+            }
+
+            // Calculate and log notification delay if we have calibration and a non-zero timestamp
+            // (delay calculation only makes sense when we have an actual crossing event)
+            double? estimatedDelaySec = null;
+            if (_estimatedPowerbaseT0.HasValue && maxTimestampSec > 0)
+            {
+                // Expected wall-clock time for this event = t0 + powerbase timestamp
+                var expectedArrivalTime = _estimatedPowerbaseT0.Value.AddSeconds(maxTimestampSec);
+                // Actual delay = when we received it - when the event actually happened
+                estimatedDelaySec = (notificationArrivalTime - expectedArrivalTime).TotalSeconds;
+            }
+
             // Valid slot IDs are 1-6
             if (slotId >= 1 && slotId <= MaxControllers)
             {
@@ -604,7 +676,21 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 // Notify recording service if a lap was completed while recording
                 if (lapCompleted && _ghostRecordingService.IsRecording(slotId))
                 {
-                    _ghostRecordingService.NotifyLapCompleted(slotId, controller.LastLapTimeSeconds);
+                    // Calculate the true event time using calibration
+                    // trueEventTime = estimatedT0 + maxTimestamp (powerbase clock value)
+                    DateTime trueEventTime;
+                    if (_estimatedPowerbaseT0.HasValue && maxTimestampSec > 0)
+                    {
+                        trueEventTime = _estimatedPowerbaseT0.Value.AddSeconds(maxTimestampSec);
+                    }
+                    else
+                    {
+                        // Fallback if calibration not available - use notification arrival time
+                        trueEventTime = notificationArrivalTime;
+                        Log.Warning("TIMING: No calibration available for lap recording, using notification time as fallback");
+                    }
+
+                    _ghostRecordingService.NotifyLapCompleted(slotId, controller.LastLapTimeSeconds, trueEventTime);
                 }
             }
         }
@@ -667,6 +753,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _bleMonitorService.CharacteristicValueRead -= OnCharacteristicValueRead;
         _bleMonitorService.Dispose();
 
+        _ghostRecordingService.RecordingStarted -= OnRecordingStarted;
         _ghostRecordingService.RecordingCompleted -= OnRecordingCompleted;
 
         GC.SuppressFinalize(this);
@@ -794,6 +881,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         // Small delay before starting power
         await Task.Delay(BleWriteDelayMs);
+
+        // Reset timing calibration - wait for first slot notification after power-on
+        // This allows us to estimate when powerbase clock started (t=0)
+        _awaitingFirstSlotNotification = true;
+        _estimatedPowerbaseT0 = null;
+        Log.Information("TIMING: Power-on initiated, awaiting first slot notification for calibration");
 
         // Start the power heartbeat
         IsPowerEnabled = true;

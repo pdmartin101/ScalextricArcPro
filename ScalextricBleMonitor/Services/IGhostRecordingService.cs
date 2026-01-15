@@ -21,26 +21,51 @@ public class LapRecordingCompletedEventArgs : EventArgs
 }
 
 /// <summary>
+/// Event args when a lap recording starts (first finish line crossing).
+/// </summary>
+public class LapRecordingStartedEventArgs : EventArgs
+{
+    /// <summary>
+    /// The slot number (1-6) that started recording.
+    /// </summary>
+    public int SlotNumber { get; init; }
+}
+
+/// <summary>
 /// Service for recording throttle data during laps for ghost car playback.
 /// Records throttle samples from controller input and creates RecordedLap objects.
+///
+/// Recording follows a two-phase process:
+/// 1. After StartRecording(), waits for first finish line crossing (lap START)
+/// 2. Records throttle samples until second finish line crossing (lap END)
+///
+/// This ensures complete laps are captured rather than partial ones.
 /// </summary>
 public interface IGhostRecordingService
 {
     /// <summary>
-    /// Raised when a lap recording is completed (car crosses finish line while recording).
+    /// Raised when lap recording actually starts (first finish line crossing).
+    /// This indicates the car crossed the finish line and sample recording has begun.
+    /// </summary>
+    event EventHandler<LapRecordingStartedEventArgs>? RecordingStarted;
+
+    /// <summary>
+    /// Raised when a lap recording is completed (car crosses finish line for second time).
     /// </summary>
     event EventHandler<LapRecordingCompletedEventArgs>? RecordingCompleted;
 
     /// <summary>
     /// Checks if recording is active for a specific slot.
+    /// Returns true if waiting for lap start OR actively recording.
     /// </summary>
     /// <param name="slotNumber">The slot number (1-6).</param>
-    /// <returns>True if recording is active for the slot.</returns>
+    /// <returns>True if recording is active (either phase) for the slot.</returns>
     bool IsRecording(int slotNumber);
 
     /// <summary>
     /// Starts recording throttle data for the specified slot.
-    /// Recording will continue until the next lap completion or StopRecording is called.
+    /// The service will wait for the first finish line crossing (lap start),
+    /// then record samples until the second crossing (lap end).
     /// </summary>
     /// <param name="slotNumber">The slot number (1-6) to record.</param>
     void StartRecording(int slotNumber);
@@ -55,6 +80,7 @@ public interface IGhostRecordingService
     /// <summary>
     /// Records a throttle sample for the specified slot.
     /// Call this method when throttle notification data is received.
+    /// Samples are only recorded after the first finish line crossing.
     /// </summary>
     /// <param name="slotNumber">The slot number (1-6).</param>
     /// <param name="throttleValue">The throttle value (0-63).</param>
@@ -62,12 +88,14 @@ public interface IGhostRecordingService
     void RecordThrottleSample(int slotNumber, byte throttleValue, DateTime timestamp);
 
     /// <summary>
-    /// Notifies the service that a lap was completed for the specified slot.
-    /// If recording is active, this finalizes the recording and raises RecordingCompleted.
+    /// Notifies the service that a finish line was crossed for the specified slot.
+    /// First crossing: marks lap start and begins recording samples.
+    /// Second crossing: finalizes recording and raises RecordingCompleted.
     /// </summary>
     /// <param name="slotNumber">The slot number (1-6).</param>
-    /// <param name="lapTimeSeconds">The lap time in seconds.</param>
-    void NotifyLapCompleted(int slotNumber, double lapTimeSeconds);
+    /// <param name="lapTimeSeconds">The lap time in seconds (from powerbase timestamps).</param>
+    /// <param name="trueEventTime">The delay-adjusted wall-clock time when the event actually occurred.</param>
+    void NotifyLapCompleted(int slotNumber, double lapTimeSeconds, DateTime trueEventTime);
 
     /// <summary>
     /// Gets all recorded laps for the specified slot.

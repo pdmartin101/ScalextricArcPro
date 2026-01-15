@@ -143,12 +143,13 @@
                                             ToolTip.Tip="Record a new lap - drive a complete lap to capture throttle data"/>
 
                                     <!-- Recording status -->
-                                    <TextBlock Text="Recording... Complete a lap to save"
+                                    <TextBlock Text="{Binding RecordingStatusText}"
                                                FontSize="11"
                                                Foreground="#E53935"
                                                FontStyle="Italic"
                                                Margin="0,5,0,0"
-                                               IsVisible="{Binding IsRecording}"/>
+                                               IsVisible="{Binding IsRecording}"
+                                               ToolTip.Tip="Cross the finish line to start recording, then complete the full lap"/>
 
                                     <!-- No laps hint -->
                                     <TextBlock Text="No recorded laps yet. Press Record and drive a lap!"

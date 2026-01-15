@@ -205,6 +205,56 @@ The powerbase sends Slot notifications periodically (~300ms round-robin per slot
 
 **Note:** The slot ID in byte 1 identifies which car/controller the notification is for.
 
+### Timing and Notification Delays
+
+#### Timestamp Origin (t=0)
+The slot message timestamps (t1-t4) reset to zero when track power is enabled. The powerbase's internal clock starts counting from the moment the power-on sequence completes.
+
+#### Notification Delay (Confirmed)
+Slot notifications are delayed by **0-1.8 seconds** from when the car actually crossed the finish line. This delay varies per notification.
+
+However, the timestamps *within* the notification (t1-t4) represent the **actual crossing time** according to the powerbase's internal clock, not when the notification was sent. This has been confirmed by testing:
+- Lap times calculated from raw slot notification timestamps showed ~0.9s error
+- Lap times calculated from delay-adjusted timestamps matched actual lap times exactly
+
+#### Calculating Notification Delay
+
+To measure notification delay, calibrate against the powerbase's internal clock:
+
+**Step 1: Establish t=0 reference (on power-on)**
+```
+When first slot notification arrives after power-on:
+    maxTimestamp = max(t1, t2) from the notification
+    estimatedT0 = wallClockNow - maxTimestamp
+```
+
+**Step 2: Calculate delay for each subsequent notification**
+```
+When slot notification arrives:
+    maxTimestamp = max(t1, t2)
+    expectedArrivalTime = estimatedT0 + maxTimestamp
+    delay = wallClockNow - expectedArrivalTime
+```
+
+**Example:**
+- First notification after power-on: t1=0.00s, t2=0.00s, arrives at 10:25:43.000
+- `estimatedT0 = 10:25:43.000`
+- Later notification: t1=15.50s, t2=0.00s, arrives at 10:25:59.700
+- `expectedArrivalTime = 10:25:43.000 + 15.50s = 10:25:58.500`
+- `delay = 10:25:59.700 - 10:25:58.500 = 1.2s`
+
+#### Throttle Notification Timing
+It is unclear whether throttle notifications (0x3b09) experience similar delays:
+- Throttle notifications may also be delayed relative to actual controller input
+- If delays exist, they could be up to 1.8s like slot notifications
+- The throttle notification does NOT include an internal timestamp
+
+#### Implications for Lap Recording
+When recording throttle data for ghost car playback, timing alignment is critical:
+- **Current approach:** Use wall-clock timestamps (`DateTime.UtcNow`) for throttle samples
+- **Potential issue:** If throttle notifications are delayed differently than slot notifications, the recorded samples may not align correctly with track position
+- **Solution:** Scale recorded throttle timestamps to match the actual lap duration (from powerbase t1-t4 difference), ensuring throttle positions align with track positions during playback
+
 ## Throttle Profile Characteristics (0xff01-0xff06)
 
 Throttle profiles define the response curve mapping controller input to motor output. Each slot has its own characteristic.

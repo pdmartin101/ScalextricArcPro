@@ -116,12 +116,20 @@ public partial class ControllerViewModel : ObservableObject
         Enum.GetValues<GhostSourceType>();
 
     /// <summary>
-    /// Whether lap recording is currently active for this slot.
+    /// Whether lap recording is currently active for this slot (waiting or recording).
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(RecordButtonText))]
+    [NotifyPropertyChangedFor(nameof(RecordingStatusText))]
     [NotifyCanExecuteChangedFor(nameof(ToggleRecordingCommand))]
     private bool _isRecording;
+
+    /// <summary>
+    /// Whether actively recording samples (after lap start, before lap end).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RecordingStatusText))]
+    private bool _isActivelyRecording;
 
     /// <summary>
     /// Event raised when recording state changes.
@@ -131,12 +139,22 @@ public partial class ControllerViewModel : ObservableObject
     partial void OnIsRecordingChanged(bool value)
     {
         RecordingStateChanged?.Invoke(this, value);
+        // Reset active recording state when overall recording stops
+        if (!value)
+            IsActivelyRecording = false;
     }
 
     /// <summary>
     /// Text for the record button based on recording state.
     /// </summary>
     public string RecordButtonText => IsRecording ? "● Stop" : "● Record";
+
+    /// <summary>
+    /// Status text shown during recording phases.
+    /// </summary>
+    public string RecordingStatusText => IsActivelyRecording
+        ? "Recording... Complete the lap to save"
+        : "Waiting for lap start... Cross the finish line";
 
     /// <summary>
     /// Collection of recorded laps available for this slot.
