@@ -14,7 +14,8 @@ This document tracks identified code quality issues and their resolution status.
 | 2 | High Priority | 5 | 5 | 0 |
 | 3 | Medium Priority | 7 | 7 | 0 |
 | 4 | Low Priority | 7 | 7 | 0 |
-| **Total** | | **23** | **23** | **0** |
+| 5 | MVVM Architecture | 5 | 5 | 0 |
+| **Total** | | **28** | **28** | **0** |
 
 ---
 
@@ -314,6 +315,62 @@ uint timeDiff = currentMaxTimestamp >= _lastMaxTimestamp
 
 ---
 
+## Phase 5: MVVM Architecture Improvements
+
+### 5.1 ✅ Dependency Injection Container
+**Impact:** Improved testability and loose coupling
+**Details:** Services manually instantiated in constructors.
+
+**Resolution:** Added Microsoft.Extensions.DependencyInjection. Created `ServiceConfiguration.cs` for DI container setup. `App.axaml.cs` builds container on startup. `MainViewModel` receives `IBleMonitorService` and `AppSettings` via constructor injection.
+
+---
+
+### 5.2 ✅ RelayCommand Pattern
+**Impact:** All user actions as testable commands
+**Details:** Click handlers in code-behind instead of commands.
+
+**Resolution:** Added `[RelayCommand]` attribute to:
+- `MainViewModel.TogglePower()` → `TogglePowerCommand`
+- `MainViewModel.ClearNotificationLog()` → `ClearNotificationLogCommand`
+- `MainViewModel.ShowGattServices()` → `ShowGattServicesCommand`
+- `MainViewModel.ShowNotifications()` → `ShowNotificationsCommand`
+- `CharacteristicViewModel.Read()` → `ReadCommand`
+
+Updated all XAML to use `Command="{Binding ...Command}"` bindings.
+
+---
+
+### 5.3 ✅ Window Service Abstraction
+**Impact:** Window management testable and decoupled from Views
+**Details:** Window creation/management in code-behind.
+
+**Resolution:** Created `IWindowService` interface and `WindowService` implementation. Handles child window lifecycle (show/focus/close), single-instance pattern, and cleanup on main window close.
+
+---
+
+### 5.4 ✅ Minimal Code-Behind
+**Impact:** All business logic in ViewModels
+**Details:** Event handlers and logic in code-behind files.
+
+**Resolution:** Reduced all code-behind files to only `InitializeComponent()`:
+- `MainWindow.axaml.cs`: DI resolution, window service setup, lifecycle events only
+- `NotificationWindow.axaml.cs`: InitializeComponent only (11 lines)
+- `GattServicesWindow.axaml.cs`: InitializeComponent only (11 lines)
+
+Removed all Click handlers, OnClosed handlers, and filter change handlers.
+
+---
+
+### 5.5 ✅ Two-Way Bindings for UI State
+**Impact:** Cleaner separation of concerns
+**Details:** ComboBox/CheckBox state managed via event handlers.
+
+**Resolution:** Changed to two-way bindings:
+- `NotificationCharacteristicFilter` - ComboBox SelectedIndex
+- `IsNotificationLogPaused` - CheckBox IsChecked
+
+---
+
 ## Architecture Improvements (Future)
 
 These are larger refactoring efforts to consider after critical issues are resolved:
@@ -324,6 +381,15 @@ These are larger refactoring efforts to consider after critical issues are resol
 4. **Split MainViewModel** - Separate connection, power, and race concerns (Partial: PowerManagementViewModel was created but duplicated logic; removed as MainViewModel already handles power management)
 5. **Add Unit Tests** - Test protocol builders, settings, lap timing logic ✅ (Done: 52 tests in ScalextricBleMonitor.Tests)
 6. **Implement Structured Logging** - Replace Debug.WriteLine with Serilog ✅ (Done: LoggingConfiguration.cs, all Debug.WriteLine replaced with Serilog)
+
+## Potential Future Enhancements
+
+| Enhancement | Description | Effort |
+|-------------|-------------|--------|
+| Throttle profile selector | UI to select from powerbase's predefined throttle profiles | Low |
+| Multiple powerbase support | Connect to more than one device | High |
+| Data logging and export | Record race sessions to file | Medium |
+| Cross-platform BLE | macOS/Linux via InTheHand.BluetoothLE | High |
 
 ---
 
@@ -357,6 +423,12 @@ These are larger refactoring efforts to consider after critical issues are resol
 | 2026-01-15 | Future.4 | Reverted: PowerManagementViewModel.cs removed - duplicated logic already in MainViewModel |
 | 2026-01-15 | Future.5 | Implemented: Added 52 unit tests covering LapTimingEngine, ScalextricProtocol, and AppSettings |
 | 2026-01-15 | Future.6 | Implemented: Added Serilog structured logging, replaced all Debug.WriteLine calls |
+| 2026-01-15 | 5.1 | Implemented: Added DI container (Microsoft.Extensions.DependencyInjection), ServiceConfiguration.cs |
+| 2026-01-15 | 5.2 | Implemented: Added [RelayCommand] to TogglePower, ClearNotificationLog, ShowGattServices, ShowNotifications, Read |
+| 2026-01-15 | 5.3 | Implemented: Created IWindowService and WindowService for window management abstraction |
+| 2026-01-15 | 5.4 | Implemented: Reduced all code-behind to InitializeComponent only, removed all Click/OnClosed handlers |
+| 2026-01-15 | 5.5 | Implemented: Changed ComboBox/CheckBox to two-way bindings |
+| 2026-01-15 | Docs | Updated: CLAUDE.md and docs/README.md with new MVVM architecture documentation |
 
 ---
 
