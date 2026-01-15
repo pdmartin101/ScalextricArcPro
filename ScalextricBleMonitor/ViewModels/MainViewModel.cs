@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
@@ -121,6 +122,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private const int MaxNotificationLogEntries = 100;
     private const int MaxControllers = 6;
 
+    // Notification batching to reduce UI dispatcher load at high notification rates (20-100Hz)
+    private const int NotificationBatchIntervalMs = 50; // Flush batched notifications every 50ms
+    private readonly ConcurrentQueue<BleNotificationEventArgs> _notificationBatch = new();
+    private Timer? _notificationBatchTimer;
+
     /// <summary>
     /// Controller status for each slot (1-6).
     /// </summary>
@@ -178,6 +184,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _usePerSlotPower = _settings.UsePerSlotPower;
 
         InitializeControllers();
+
+        // Start notification batch timer to reduce UI dispatcher load
+        _notificationBatchTimer = new Timer(
+            FlushNotificationBatch,
+            null,
+            NotificationBatchIntervalMs,
+            NotificationBatchIntervalMs);
     }
 
     /// <summary>
@@ -309,53 +322,78 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void OnNotificationReceived(object? sender, BleNotificationEventArgs e)
     {
+        // Queue notification for batched processing to reduce UI dispatcher load
+        _notificationBatch.Enqueue(e);
+    }
+
+    /// <summary>
+    /// Flushes batched notifications to the UI thread.
+    /// Called periodically by the batch timer to aggregate multiple notifications
+    /// into a single UI update, reducing dispatcher load at high notification rates.
+    /// </summary>
+    private void FlushNotificationBatch(object? state)
+    {
+        // Collect all pending notifications
+        var batch = new System.Collections.Generic.List<BleNotificationEventArgs>();
+        while (_notificationBatch.TryDequeue(out var notification))
+        {
+            batch.Add(notification);
+        }
+
+        if (batch.Count == 0)
+            return;
+
+        // Process entire batch in a single UI dispatcher call
         Dispatcher.UIThread.Post(() =>
         {
-            // Only update controller states from the Throttle characteristic (0x3b09)
-            // Other characteristics like Track (0x3b0c) contain sensor/timing data, not controller input
-            if (e.CharacteristicUuid == ScalextricProtocol.Characteristics.Throttle)
+            foreach (var e in batch)
             {
-                UpdateControllerStates(e.Data);
+                // Only update controller states from the Throttle characteristic (0x3b09)
+                // Other characteristics like Track (0x3b0c) contain sensor/timing data, not controller input
+                if (e.CharacteristicUuid == ScalextricProtocol.Characteristics.Throttle)
+                {
+                    UpdateControllerStates(e.Data);
+                }
+                // Process Slot characteristic (0x3b0b) for lap counting
+                // Slot notifications are sent when a car passes over the finish line sensor
+                else if (e.CharacteristicUuid == ScalextricProtocol.Characteristics.Slot)
+                {
+                    ProcessSlotSensorData(e.Data);
+                }
+
+                // Skip adding to log if paused
+                if (IsNotificationLogPaused)
+                    continue;
+
+                // Create the notification entry
+                var entry = new NotificationDataViewModel
+                {
+                    Timestamp = e.Timestamp,
+                    CharacteristicName = e.CharacteristicName ?? e.CharacteristicUuid.ToString(),
+                    CharacteristicUuid = e.CharacteristicUuid,
+                    RawData = e.Data,
+                    HexData = BitConverter.ToString(e.Data).Replace("-", " "),
+                    DecodedData = ScalextricProtocolDecoder.Decode(e.CharacteristicUuid, e.Data)
+                };
+
+                // Add to main log
+                NotificationLog.Insert(0, entry);
+
+                // Add to filtered log if it passes the filter
+                if (PassesCharacteristicFilter(e.CharacteristicUuid))
+                {
+                    FilteredNotificationLog.Insert(0, entry);
+                }
             }
-            // Process Slot characteristic (0x3b0b) for lap counting
-            // Slot notifications are sent when a car passes over the finish line sensor
-            else if (e.CharacteristicUuid == ScalextricProtocol.Characteristics.Slot)
-            {
-                ProcessSlotSensorData(e.Data);
-            }
 
-            // Skip adding to log if paused
-            if (IsNotificationLogPaused)
-                return;
-
-            // Create the notification entry
-            var entry = new NotificationDataViewModel
-            {
-                Timestamp = e.Timestamp,
-                CharacteristicName = e.CharacteristicName ?? e.CharacteristicUuid.ToString(),
-                CharacteristicUuid = e.CharacteristicUuid,
-                RawData = e.Data,
-                HexData = BitConverter.ToString(e.Data).Replace("-", " "),
-                DecodedData = ScalextricProtocolDecoder.Decode(e.CharacteristicUuid, e.Data)
-            };
-
-            // Add to main log
-            NotificationLog.Insert(0, entry);
-
-            // Keep the log from growing too large
+            // Trim logs after batch processing
             while (NotificationLog.Count > MaxNotificationLogEntries)
             {
                 NotificationLog.RemoveAt(NotificationLog.Count - 1);
             }
-
-            // Add to filtered log if it passes the filter
-            if (PassesCharacteristicFilter(e.CharacteristicUuid))
+            while (FilteredNotificationLog.Count > MaxNotificationLogEntries)
             {
-                FilteredNotificationLog.Insert(0, entry);
-                while (FilteredNotificationLog.Count > MaxNotificationLogEntries)
-                {
-                    FilteredNotificationLog.RemoveAt(FilteredNotificationLog.Count - 1);
-                }
+                FilteredNotificationLog.RemoveAt(FilteredNotificationLog.Count - 1);
             }
         });
     }
@@ -452,6 +490,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _powerHeartbeatCts?.Cancel();
         _powerHeartbeatCts?.Dispose();
         _powerHeartbeatCts = null;
+
+        // Stop notification batch timer
+        _notificationBatchTimer?.Dispose();
+        _notificationBatchTimer = null;
 
         // Send power-off commands to stop any ghost cars before disconnecting
         // This must happen before we dispose the BLE service

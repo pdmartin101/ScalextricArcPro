@@ -12,9 +12,9 @@ This document tracks identified code quality issues and their resolution status.
 |-------|-------------|-------|-------|-----------|
 | 1 | Critical Issues | 4 | 4 | 0 |
 | 2 | High Priority | 5 | 5 | 0 |
-| 3 | Medium Priority | 7 | 3 | 4 |
+| 3 | Medium Priority | 7 | 7 | 0 |
 | 4 | Low Priority | 7 | 2 | 5 |
-| **Total** | | **23** | **14** | **9** |
+| **Total** | | **23** | **18** | **5** |
 
 ---
 
@@ -198,36 +198,44 @@ uint timeDiff = currentMaxTimestamp >= _lastMaxTimestamp
 
 ---
 
-### 3.4 ❌ High-Frequency UI Dispatch
+### 3.4 ✅ High-Frequency UI Dispatch
 **Location:** `MainViewModel.cs` - `OnNotificationReceived()`
 **Impact:** Potential UI thread saturation at high notification rates (20-100Hz)
 
 **Fix:** Implement notification batching with configurable interval.
 
+**Resolution:** Added `ConcurrentQueue<BleNotificationEventArgs>` and a 50ms batch timer. Notifications are queued and flushed in batches to reduce UI dispatcher load.
+
 ---
 
-### 3.5 ❌ DateTime.Now for Timeout Detection
+### 3.5 ✅ DateTime.Now for Timeout Detection
 **Location:** `BleMonitorService.cs` - `CheckDeviceTimeout()`
 **Impact:** Can be affected by system clock changes
 
 **Fix:** Use `Stopwatch` or `Environment.TickCount64` instead.
 
+**Resolution:** Added `Stopwatch _lastSeenStopwatch` field. Timeout detection now uses `_lastSeenStopwatch.Elapsed` instead of `DateTime.Now` subtraction. DateTime kept for display purposes only.
+
 ---
 
-### 3.6 ❌ Overly Broad Exception Catching
+### 3.6 ✅ Overly Broad Exception Catching
 **Location:** `BleMonitorService.cs` - cleanup methods
 **Impact:** Silent failures during cleanup, harder to debug
 **Details:** `catch { }` with no logging.
 
 **Fix:** Add Debug.WriteLine or structured logging in catch blocks.
 
+**Resolution:** Replaced empty `catch { }` blocks with `catch (Exception ex)` and added `Debug.WriteLine` logging for each error case in `DisconnectInternal`.
+
 ---
 
-### 3.7 ❌ Missing ConfigureAwait(false) in Service Layer
+### 3.7 ✅ Missing ConfigureAwait(false) in Service Layer
 **Location:** `BleMonitorService.cs` - all async methods
 **Impact:** Potential deadlocks, unnecessary context switches
 
 **Fix:** Add `.ConfigureAwait(false)` to all awaits in service code.
+
+**Resolution:** Added `.ConfigureAwait(false)` to all await calls in `BleMonitorService.cs`, including `WriteCharacteristicInternalAsync`, `ReadCharacteristicAsync`, `SubscribeToAllNotificationsInternalAsync`, `ConnectAndDiscoverServicesAsync`, `WithTimeoutAsync`, and `RunFireAndForget`.
 
 ---
 
@@ -326,6 +334,10 @@ These are larger refactoring efforts to consider after critical issues are resol
 | 2026-01-15 | 3.1 | Fixed: Created `BuildCommandWithAllSlotsZeroed` helper to reduce duplication in command building |
 | 2026-01-15 | 3.2 | Fixed: Created `SendPowerOffSequenceAsync` shared method for power-off sequences |
 | 2026-01-15 | 3.3 | Fixed: Created `Services/ScalextricProtocolDecoder.cs` static class; MainViewModel now delegates protocol decoding |
+| 2026-01-15 | 3.4 | Fixed: Implemented notification batching with 50ms timer and ConcurrentQueue to reduce UI dispatcher load |
+| 2026-01-15 | 3.5 | Fixed: Replaced DateTime.Now with Stopwatch for timeout detection in BleMonitorService |
+| 2026-01-15 | 3.6 | Fixed: Added Debug.WriteLine logging to empty catch blocks in DisconnectInternal |
+| 2026-01-15 | 3.7 | Fixed: Added ConfigureAwait(false) to all async awaits in BleMonitorService |
 
 ---
 

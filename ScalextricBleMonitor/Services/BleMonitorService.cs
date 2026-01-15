@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 
@@ -37,7 +38,9 @@ public class BleMonitorService : IBleMonitorService
     private bool _isDeviceDetected;
     private string? _lastDeviceName;
     private ulong? _lastBluetoothAddress;
-    private DateTime? _lastSeenTime;
+    // Use Stopwatch instead of DateTime.Now for timeout detection (immune to system clock changes)
+    private readonly Stopwatch _lastSeenStopwatch = new();
+    private DateTime? _lastSeenTime; // Kept for display purposes only
     private Timer? _timeoutTimer;
     private bool _disposed;
     private bool _isConnecting;
@@ -238,9 +241,9 @@ public class BleMonitorService : IBleMonitorService
         {
             return false;
         }
-        return await WriteCharacteristicInternalAsync(characteristicUuid, data);
+        return await WriteCharacteristicInternalAsync(characteristicUuid, data).ConfigureAwait(false);
 #else
-        await Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
         return false;
 #endif
     }
@@ -254,7 +257,7 @@ public class BleMonitorService : IBleMonitorService
             GattCharacteristic? targetCharacteristic = null;
             foreach (var service in _gattServices)
             {
-                var charsResult = await service.GetCharacteristicsAsync(BluetoothCacheMode.Cached);
+                var charsResult = await service.GetCharacteristicsAsync(BluetoothCacheMode.Cached).AsTask().ConfigureAwait(false);
                 if (charsResult.Status == GattCommunicationStatus.Success)
                 {
                     targetCharacteristic = charsResult.Characteristics.FirstOrDefault(c => c.Uuid == characteristicUuid);
@@ -300,7 +303,7 @@ public class BleMonitorService : IBleMonitorService
 
             var status = await WithTimeoutAsync(
                 targetCharacteristic.WriteValueAsync(buffer, writeOption).AsTask(),
-                "WriteValue");
+                "WriteValue").ConfigureAwait(false);
 
             var success = status == GattCommunicationStatus.Success;
             CharacteristicWriteCompleted?.Invoke(this, new BleCharacteristicWriteEventArgs
@@ -342,7 +345,7 @@ public class BleMonitorService : IBleMonitorService
             }
 
             // Get characteristics
-            var charsResult = await service.GetCharacteristicsAsync(BluetoothCacheMode.Cached);
+            var charsResult = await service.GetCharacteristicsAsync(BluetoothCacheMode.Cached).AsTask().ConfigureAwait(false);
             if (charsResult.Status != GattCommunicationStatus.Success)
             {
                 CharacteristicValueRead?.Invoke(this, new BleCharacteristicReadEventArgs
@@ -385,7 +388,7 @@ public class BleMonitorService : IBleMonitorService
             // Read the value
             var readResult = await WithTimeoutAsync(
                 characteristic.ReadValueAsync(BluetoothCacheMode.Uncached).AsTask(),
-                "ReadValue");
+                "ReadValue").ConfigureAwait(false);
             if (readResult.Status != GattCommunicationStatus.Success)
             {
                 CharacteristicValueRead?.Invoke(this, new BleCharacteristicReadEventArgs
@@ -433,7 +436,7 @@ public class BleMonitorService : IBleMonitorService
         {
             try
             {
-                var charsResult = await service.GetCharacteristicsAsync(BluetoothCacheMode.Cached);
+                var charsResult = await service.GetCharacteristicsAsync(BluetoothCacheMode.Cached).AsTask().ConfigureAwait(false);
                 if (charsResult.Status != GattCommunicationStatus.Success)
                     continue;
 
@@ -453,7 +456,7 @@ public class BleMonitorService : IBleMonitorService
                             ? GattClientCharacteristicConfigurationDescriptorValue.Notify
                             : GattClientCharacteristicConfigurationDescriptorValue.Indicate;
 
-                        var status = await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(cccdValue);
+                        var status = await characteristic.WriteClientCharacteristicConfigurationDescriptorAsync(cccdValue).AsTask().ConfigureAwait(false);
 
                         if (status == GattCommunicationStatus.Success)
                         {
@@ -539,7 +542,8 @@ public class BleMonitorService : IBleMonitorService
             if (!string.IsNullOrEmpty(localName) &&
                 localName.Contains("Scalextric", StringComparison.OrdinalIgnoreCase))
             {
-                // Update last seen info
+                // Update last seen info (stopwatch for timeout, DateTime for display)
+                _lastSeenStopwatch.Restart();
                 _lastSeenTime = DateTime.Now;
                 _lastDeviceName = localName;
                 _lastBluetoothAddress = args.BluetoothAddress;
@@ -583,17 +587,17 @@ public class BleMonitorService : IBleMonitorService
                 if (attempt > 1)
                 {
                     RaiseStatusMessage($"Retrying connection (attempt {attempt}/{MaxConnectionAttempts})...");
-                    await Task.Delay(RetryDelay);
+                    await Task.Delay(RetryDelay).ConfigureAwait(false);
                 }
                 else
                 {
                     RaiseStatusMessage("Connecting to device...");
                     // Small delay on first attempt to let BLE stack settle
-                    await Task.Delay(100);
+                    await Task.Delay(100).ConfigureAwait(false);
                 }
 
                 // Get the device
-                _connectedDevice = await BluetoothLEDevice.FromBluetoothAddressAsync(bluetoothAddress);
+                _connectedDevice = await BluetoothLEDevice.FromBluetoothAddressAsync(bluetoothAddress).AsTask().ConfigureAwait(false);
                 if (_connectedDevice == null)
                 {
                     System.Diagnostics.Debug.WriteLine($"Attempt {attempt}: Device not found");
@@ -607,7 +611,7 @@ public class BleMonitorService : IBleMonitorService
                 RaiseStatusMessage("Discovering GATT services...");
                 var gattResult = await WithTimeoutAsync(
                     _connectedDevice.GetGattServicesAsync(BluetoothCacheMode.Uncached).AsTask(),
-                    "GetGattServices");
+                    "GetGattServices").ConfigureAwait(false);
 
                 if (gattResult.Status != GattCommunicationStatus.Success)
                 {
@@ -632,7 +636,7 @@ public class BleMonitorService : IBleMonitorService
                     // Get characteristics for this service
                     var charsResult = await WithTimeoutAsync(
                         service.GetCharacteristicsAsync(BluetoothCacheMode.Uncached).AsTask(),
-                        "GetCharacteristics");
+                        "GetCharacteristics").ConfigureAwait(false);
                     if (charsResult.Status == GattCommunicationStatus.Success)
                     {
                         foreach (var characteristic in charsResult.Characteristics)
@@ -709,14 +713,24 @@ public class BleMonitorService : IBleMonitorService
             {
                 characteristic.ValueChanged -= OnCharacteristicValueChanged;
             }
-            catch { /* ignore */ }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error unsubscribing from characteristic: {ex.Message}");
+            }
         }
         _subscribedCharacteristics.Clear();
 
         // Dispose all GATT services
         foreach (var service in _gattServices)
         {
-            try { service.Dispose(); } catch { /* ignore */ }
+            try
+            {
+                service.Dispose();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error disposing GATT service: {ex.Message}");
+            }
         }
         _gattServices.Clear();
 
@@ -728,7 +742,10 @@ public class BleMonitorService : IBleMonitorService
                 _connectedDevice.ConnectionStatusChanged -= OnConnectionStatusChanged;
                 _connectedDevice.Dispose();
             }
-            catch { /* ignore */ }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error disposing BLE device: {ex.Message}");
+            }
             _connectedDevice = null;
         }
 
@@ -792,17 +809,17 @@ public class BleMonitorService : IBleMonitorService
         // Don't timeout if we have an active GATT connection - rely on GATT disconnect events instead
         if (IsGattConnected) return;
 
-        if (_isDeviceDetected && _lastSeenTime.HasValue)
+        // Use Stopwatch.Elapsed for timeout detection (immune to system clock changes)
+        if (_isDeviceDetected && _lastSeenStopwatch.IsRunning)
         {
-            var timeSinceLastSeen = DateTime.Now - _lastSeenTime.Value;
-            if (timeSinceLastSeen > DeviceTimeoutDuration)
+            if (_lastSeenStopwatch.Elapsed > DeviceTimeoutDuration)
             {
                 _isDeviceDetected = false;
 #if WINDOWS
                 DisconnectInternal(raiseEvents: false);
 #endif
                 RaiseConnectionStateChanged();
-                RaiseStatusMessage($"Device lost. Last seen: {_lastSeenTime.Value:HH:mm:ss}");
+                RaiseStatusMessage($"Device lost. Last seen: {_lastSeenTime?.ToString("HH:mm:ss") ?? "unknown"}");
             }
         }
     }
@@ -840,7 +857,7 @@ public class BleMonitorService : IBleMonitorService
         using var cts = new CancellationTokenSource(BleOperationTimeout);
         try
         {
-            return await task.WaitAsync(cts.Token);
+            return await task.WaitAsync(cts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -858,11 +875,11 @@ public class BleMonitorService : IBleMonitorService
         {
             try
             {
-                await asyncAction();
+                await asyncAction().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error in {operationName}: {ex.Message}");
+                Debug.WriteLine($"Error in {operationName}: {ex.Message}");
                 RaiseStatusMessage($"Error: {ex.Message}");
             }
         });
