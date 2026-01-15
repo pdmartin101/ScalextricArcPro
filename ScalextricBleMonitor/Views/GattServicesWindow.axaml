@@ -55,7 +55,7 @@
                                             FontSize="10"
                                             Padding="6,2"
                                             IsVisible="{Binding IsReadable}"
-                                            Click="OnReadCharacteristicClick"/>
+                                            Command="{Binding ReadCommand}"/>
                                 </StackPanel>
                                 <TextBlock Text="{Binding ReadResultDisplay}"
                                            FontFamily="Consolas"

@@ -320,7 +320,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                         Uuid = characteristic.Uuid,
                         ServiceUuid = service.Uuid,
                         Name = characteristic.Name ?? characteristic.Uuid.ToString(),
-                        Properties = characteristic.Properties
+                        Properties = characteristic.Properties,
+                        ReadAction = ReadCharacteristic
                     });
                 }
 

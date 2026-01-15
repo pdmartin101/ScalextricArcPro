@@ -49,9 +49,7 @@
                                FontSize="11"
                                VerticalAlignment="Center"
                                Foreground="#666666"/>
-                    <ComboBox x:Name="CharacteristicFilter"
-                              SelectedIndex="0"
-                              SelectionChanged="OnFilterChanged"
+                    <ComboBox SelectedIndex="{Binding NotificationCharacteristicFilter}"
                               MinWidth="120"
                               FontSize="11">
                         <ComboBoxItem Content="All"/>
@@ -63,11 +61,10 @@
                 </StackPanel>
 
                 <!-- Pause checkbox -->
-                <CheckBox x:Name="PauseCheckbox"
-                          Content="Pause"
+                <CheckBox Content="Pause"
                           FontSize="11"
                           VerticalAlignment="Center"
-                          IsCheckedChanged="OnPauseChanged"/>
+                          IsChecked="{Binding IsNotificationLogPaused}"/>
             </StackPanel>
         </Border>
 

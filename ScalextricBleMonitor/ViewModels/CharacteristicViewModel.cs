@@ -1,5 +1,6 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using ScalextricBleMonitor.Models;
 
 namespace ScalextricBleMonitor.ViewModels;
@@ -12,6 +13,21 @@ public partial class CharacteristicViewModel : ObservableObject
 {
     // Underlying domain model
     private readonly GattCharacteristic _model = new();
+
+    /// <summary>
+    /// Action to invoke when reading this characteristic.
+    /// Set by the parent ViewModel to handle the read operation.
+    /// </summary>
+    public Action<Guid, Guid>? ReadAction { get; set; }
+
+    /// <summary>
+    /// Command to read this characteristic's value.
+    /// </summary>
+    [RelayCommand]
+    private void Read()
+    {
+        ReadAction?.Invoke(ServiceUuid, Uuid);
+    }
 
     /// <summary>
     /// Gets the underlying GattCharacteristic model.
