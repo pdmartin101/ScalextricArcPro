@@ -1,5 +1,5 @@
-using System;
 using CommunityToolkit.Mvvm.ComponentModel;
+using ScalextricBleMonitor.Services;
 
 namespace ScalextricBleMonitor.ViewModels;
 
@@ -10,10 +10,9 @@ public partial class ControllerViewModel : ObservableObject
 {
     private bool _previousBrakeState;
     private bool _previousLaneChangeState;
-    // Track the highest timestamp seen - whichever lane was crossed most recently has the higher value
-    private uint _lastMaxTimestamp;
-    // Track whether we've established a valid baseline timestamp
-    private bool _hasBaselineTimestamp;
+
+    // Lap timing is delegated to a separate engine for testability
+    private readonly LapTimingEngine _lapTimingEngine = new();
 
     [ObservableProperty]
     private int _slotNumber;
@@ -111,79 +110,27 @@ public partial class ControllerViewModel : ObservableObject
         _previousLaneChangeState = currentLaneChange;
     }
 
-    // Timestamp conversion factor: timestamps are in centiseconds (1/100th second = 10ms)
-    // Verified: 622004 - 620021 = 1983 units for 10s, 631989 - 622004 = 9985 units for 100s
-    private const double TimestampUnitsPerSecond = 100.0;
-
     /// <summary>
     /// Updates the lap count and lap time based on finish line timestamps.
-    /// The powerbase has two finish line sensors (one per lane). Whichever lane
-    /// was crossed most recently will have the higher timestamp value.
-    /// We simply take the max of both timestamps - if it changed, a lap was completed.
+    /// Delegates to LapTimingEngine for the actual timing logic.
     /// </summary>
     /// <param name="lane1Timestamp">The finish line timestamp for lane 1 (bytes 2-5).</param>
     /// <param name="lane2Timestamp">The finish line timestamp for lane 2 (bytes 6-9).</param>
     /// <returns>True if a new lap was counted, false otherwise.</returns>
     public bool UpdateFinishLineTimestamps(uint lane1Timestamp, uint lane2Timestamp)
     {
-        // Take the higher of the two timestamps - that's the lane that was most recently crossed
-        uint currentMaxTimestamp = Math.Max(lane1Timestamp, lane2Timestamp);
+        var result = _lapTimingEngine.UpdateTimestamps(lane1Timestamp, lane2Timestamp);
 
-        // Ignore zero timestamps
-        if (currentMaxTimestamp == 0)
-            return false;
-
-        // First time seeing any timestamp: just store it as baseline, don't count a lap.
-        // The powerbase retains timestamps from previous sessions, so the first value
-        // we see is stale data - we need to wait for an actual crossing to detect a change.
-        if (!_hasBaselineTimestamp)
+        // Sync ViewModel properties from the engine state
+        if (result.LapCompleted)
         {
-            _lastMaxTimestamp = currentMaxTimestamp;
-            _hasBaselineTimestamp = true;
-            return false;
+            CurrentLap = result.CurrentLap;
+            CurrentLane = result.CrossedLane;
+            LastLapTimeSeconds = result.LapTimeSeconds;
+            BestLapTimeSeconds = result.BestLapTimeSeconds;
         }
 
-        // If the max timestamp changed, the car actually crossed a finish line
-        if (currentMaxTimestamp != _lastMaxTimestamp)
-        {
-            // Determine which lane was crossed (whichever has the higher timestamp)
-            int crossedLane = lane1Timestamp >= lane2Timestamp ? 1 : 2;
-
-            // Increment lap count first
-            // CurrentLap 0 -> 1: Starting lap 1 (first crossing)
-            // CurrentLap 1 -> 2: Finished lap 1, starting lap 2
-            // CurrentLap 2 -> 3: Finished lap 2, starting lap 3, etc.
-            CurrentLap++;
-
-            // Update current lane
-            CurrentLane = crossedLane;
-
-            // Only calculate lap time if we just finished a lap (CurrentLap >= 2)
-            // CurrentLap == 1 means we just started lap 1, no completed lap yet
-            if (CurrentLap >= 2)
-            {
-                // Handle timestamp overflow (uint wraps at ~497 days of continuous operation)
-                uint timeDiff = currentMaxTimestamp >= _lastMaxTimestamp
-                    ? currentMaxTimestamp - _lastMaxTimestamp
-                    : (uint.MaxValue - _lastMaxTimestamp) + currentMaxTimestamp + 1;
-                double lapTimeSeconds = timeDiff / TimestampUnitsPerSecond;
-
-                // Record lap time
-                LastLapTimeSeconds = lapTimeSeconds;
-
-                // Update best lap time if this is a new best
-                if (BestLapTimeSeconds == 0 || LastLapTimeSeconds < BestLapTimeSeconds)
-                {
-                    BestLapTimeSeconds = LastLapTimeSeconds;
-                }
-            }
-
-            // Update baseline for next lap
-            _lastMaxTimestamp = currentMaxTimestamp;
-            return true;
-        }
-
-        return false;
+        return result.LapCompleted;
     }
 
     public void Reset()
@@ -198,8 +145,9 @@ public partial class ControllerViewModel : ObservableObject
         BestLapTimeSeconds = 0;
         _previousBrakeState = false;
         _previousLaneChangeState = false;
-        _lastMaxTimestamp = 0;
-        _hasBaselineTimestamp = false;
         CurrentLane = 0;
+
+        // Reset the lap timing engine
+        _lapTimingEngine.Reset();
     }
 }
