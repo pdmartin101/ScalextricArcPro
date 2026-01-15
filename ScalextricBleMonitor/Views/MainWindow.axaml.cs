@@ -1,6 +1,6 @@
 using System;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
+using ScalextricBleMonitor.Services;
 using ScalextricBleMonitor.ViewModels;
 
 namespace ScalextricBleMonitor.Views;
@@ -8,8 +8,7 @@ namespace ScalextricBleMonitor.Views;
 public partial class MainWindow : Window
 {
     private readonly MainViewModel _viewModel;
-    private NotificationWindow? _notificationWindow;
-    private GattServicesWindow? _gattServicesWindow;
+    private readonly IWindowService _windowService;
 
     public MainWindow()
     {
@@ -18,6 +17,10 @@ public partial class MainWindow : Window
         // Create and set the view model
         _viewModel = new MainViewModel();
         DataContext = _viewModel;
+
+        // Create and set the window service
+        _windowService = new WindowService(this, () => _viewModel);
+        _viewModel.SetWindowService(_windowService);
 
         // Start monitoring when window is opened
         Opened += OnWindowOpened;
@@ -33,61 +36,10 @@ public partial class MainWindow : Window
 
     private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
-        // Close child windows if open
-        _notificationWindow?.Close();
-        _notificationWindow = null;
-        _gattServicesWindow?.Close();
-        _gattServicesWindow = null;
+        // Close child windows via service
+        _windowService.CloseAllWindows();
 
         _viewModel.StopMonitoring();
         _viewModel.Dispose();
-    }
-
-    private void OnViewGattServicesClick(object? sender, RoutedEventArgs e)
-    {
-        // Only allow one GATT services window at a time
-        if (_gattServicesWindow != null)
-        {
-            _gattServicesWindow.Activate();
-            return;
-        }
-
-        _gattServicesWindow = new GattServicesWindow
-        {
-            DataContext = _viewModel
-        };
-
-        _viewModel.IsGattServicesWindowOpen = true;
-
-        _gattServicesWindow.Closed += (_, _) =>
-        {
-            _gattServicesWindow = null;
-        };
-
-        _gattServicesWindow.Show(this);
-    }
-
-    private void OnViewNotificationsClick(object? sender, RoutedEventArgs e)
-    {
-        // Only allow one notification window at a time
-        if (_notificationWindow != null)
-        {
-            _notificationWindow.Activate();
-            return;
-        }
-
-        _notificationWindow = new NotificationWindow
-        {
-            DataContext = _viewModel
-        };
-
-        _viewModel.IsNotificationWindowOpen = true;
-
-        _notificationWindow.Closed += (_, _) =>
-        {
-            _notificationWindow = null;
-        };
-
-        _notificationWindow.Show(this);
     }
 }

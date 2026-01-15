@@ -23,6 +23,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly IBleMonitorService _bleMonitorService;
     private readonly AppSettings _settings;
+    private IWindowService? _windowService;
     private bool _disposed;
     private CancellationTokenSource? _powerHeartbeatCts;
 
@@ -866,6 +867,39 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     [ObservableProperty]
     private bool _isGattServicesWindowOpen;
+
+    /// <summary>
+    /// Sets the window service for managing child windows.
+    /// </summary>
+    /// <param name="windowService">The window service instance.</param>
+    public void SetWindowService(IWindowService windowService)
+    {
+        _windowService = windowService;
+        _windowService.GattServicesWindowClosed += (_, _) => IsGattServicesWindowOpen = false;
+        _windowService.NotificationWindowClosed += (_, _) => IsNotificationWindowOpen = false;
+    }
+
+    /// <summary>
+    /// Shows the GATT Services window.
+    /// </summary>
+    [RelayCommand]
+    private void ShowGattServices()
+    {
+        if (_windowService == null) return;
+        IsGattServicesWindowOpen = true;
+        _windowService.ShowGattServicesWindow();
+    }
+
+    /// <summary>
+    /// Shows the Live Notifications window.
+    /// </summary>
+    [RelayCommand]
+    private void ShowNotifications()
+    {
+        if (_windowService == null) return;
+        IsNotificationWindowOpen = true;
+        _windowService.ShowNotificationWindow();
+    }
 
     /// <summary>
     /// Clears the notification log.
