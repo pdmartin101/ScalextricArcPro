@@ -120,6 +120,11 @@ public class BleMonitorService : IBleMonitorService
     public void StopScanning()
     {
         ThrowIfDisposed();
+        StopScanningInternal();
+    }
+
+    private void StopScanningInternal()
+    {
         if (!IsScanning) return;
 
 #if WINDOWS
@@ -559,18 +564,18 @@ public class BleMonitorService : IBleMonitorService
         {
             if (_isConnecting || IsGattConnected) return;
             _isConnecting = true;
-            _connectionAttempts = 0;
+            Interlocked.Exchange(ref _connectionAttempts, 0);
         }
 
-        while (_connectionAttempts < MaxConnectionAttempts && !IsGattConnected && !_disposed)
+        while (Interlocked.CompareExchange(ref _connectionAttempts, 0, 0) < MaxConnectionAttempts && !IsGattConnected && !_disposed)
         {
-            _connectionAttempts++;
+            var attempt = Interlocked.Increment(ref _connectionAttempts);
 
             try
             {
-                if (_connectionAttempts > 1)
+                if (attempt > 1)
                 {
-                    RaiseStatusMessage($"Retrying connection (attempt {_connectionAttempts}/{MaxConnectionAttempts})...");
+                    RaiseStatusMessage($"Retrying connection (attempt {attempt}/{MaxConnectionAttempts})...");
                     await Task.Delay(RetryDelay);
                 }
                 else
@@ -584,7 +589,7 @@ public class BleMonitorService : IBleMonitorService
                 _connectedDevice = await BluetoothLEDevice.FromBluetoothAddressAsync(bluetoothAddress);
                 if (_connectedDevice == null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Attempt {_connectionAttempts}: Device not found");
+                    System.Diagnostics.Debug.WriteLine($"Attempt {attempt}: Device not found");
                     continue;
                 }
 
@@ -597,7 +602,7 @@ public class BleMonitorService : IBleMonitorService
 
                 if (gattResult.Status != GattCommunicationStatus.Success)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Attempt {_connectionAttempts}: GetGattServicesAsync failed: {gattResult.Status}");
+                    System.Diagnostics.Debug.WriteLine($"Attempt {attempt}: GetGattServicesAsync failed: {gattResult.Status}");
                     DisconnectInternal(raiseEvents: false);
                     continue;
                 }
@@ -637,7 +642,7 @@ public class BleMonitorService : IBleMonitorService
                 // Success!
                 IsGattConnected = true;
                 _isConnecting = false;
-                _connectionAttempts = 0;
+                Interlocked.Exchange(ref _connectionAttempts, 0);
 
                 RaiseConnectionStateChanged();
                 RaiseStatusMessage($"Connected! Found {discoveredServices.Count} services.");
@@ -652,7 +657,7 @@ public class BleMonitorService : IBleMonitorService
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Attempt {_connectionAttempts}: Exception: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Attempt {attempt}: Exception: {ex.Message}");
                 DisconnectInternal(raiseEvents: false);
             }
         }
@@ -839,9 +844,12 @@ public class BleMonitorService : IBleMonitorService
     public void Dispose()
     {
         if (_disposed) return;
+
+        // Stop scanning before setting disposed flag to avoid ThrowIfDisposed
+        StopScanningInternal();
+
         _disposed = true;
 
-        StopScanning();
 #if WINDOWS
         DisconnectInternal(raiseEvents: false);
 #endif
