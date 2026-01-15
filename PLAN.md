@@ -10,17 +10,17 @@ This document tracks identified code quality issues and their resolution status.
 
 | Phase | Description | Total | Fixed | Remaining |
 |-------|-------------|-------|-------|-----------|
-| 1 | Critical Issues | 4 | 0 | 4 |
+| 1 | Critical Issues | 4 | 1 | 3 |
 | 2 | High Priority | 5 | 0 | 5 |
 | 3 | Medium Priority | 7 | 0 | 7 |
 | 4 | Low Priority | 7 | 0 | 7 |
-| **Total** | | **23** | **0** | **23** |
+| **Total** | | **23** | **1** | **22** |
 
 ---
 
 ## Phase 1: Critical Issues (Must Fix)
 
-### 1.1 ❌ Resource Leaks - DataWriter/DataReader Not Disposed
+### 1.1 ✅ Resource Leaks - DataWriter/DataReader Not Disposed
 **Location:** `BleMonitorService.cs` lines ~271, ~376, ~479
 **Impact:** Memory leaks in long-running sessions
 **Details:** WinRT `DataWriter` and `DataReader` implement `IDisposable` but are never disposed.
@@ -294,7 +294,8 @@ These are larger refactoring efforts to consider after critical issues are resol
 | Date | Issue | Action |
 |------|-------|--------|
 | 2025-01-15 | Initial | Plan created with 23 identified issues |
+| 2026-01-15 | 1.1 | Fixed: Added `using` statements to DataWriter/DataReader in BleMonitorService.cs (lines 271, 376, 479) |
 
 ---
 
-*Last Updated: January 2025*
+*Last Updated: January 2026*

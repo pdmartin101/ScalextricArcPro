@@ -268,7 +268,7 @@ public class BleMonitorService : IBleMonitorService
             }
 
             // Create buffer and write
-            var writer = new Windows.Storage.Streams.DataWriter();
+            using var writer = new Windows.Storage.Streams.DataWriter();
             writer.WriteBytes(data);
             var buffer = writer.DetachBuffer();
 
@@ -373,7 +373,7 @@ public class BleMonitorService : IBleMonitorService
             }
 
             // Extract the data
-            var reader = Windows.Storage.Streams.DataReader.FromBuffer(readResult.Value);
+            using var reader = Windows.Storage.Streams.DataReader.FromBuffer(readResult.Value);
             var data = new byte[readResult.Value.Length];
             reader.ReadBytes(data);
 
@@ -476,7 +476,7 @@ public class BleMonitorService : IBleMonitorService
         try
         {
             // Read the data from the buffer
-            var reader = Windows.Storage.Streams.DataReader.FromBuffer(args.CharacteristicValue);
+            using var reader = Windows.Storage.Streams.DataReader.FromBuffer(args.CharacteristicValue);
             var data = new byte[args.CharacteristicValue.Length];
             reader.ReadBytes(data);
 
