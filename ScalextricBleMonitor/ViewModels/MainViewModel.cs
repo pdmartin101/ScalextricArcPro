@@ -867,9 +867,20 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             if (controller.IsGhostMode)
             {
-                // Ghost mode: use GhostThrottleLevel as direct throttle index
-                slot.PowerMultiplier = (byte)controller.GhostThrottleLevel;
+                // Ghost mode: determine throttle based on GhostSource
                 slot.GhostMode = true;
+
+                if (controller.GhostSource == GhostSourceType.FixedSpeed)
+                {
+                    // Fixed speed mode: use GhostThrottleLevel as constant throttle
+                    slot.PowerMultiplier = (byte)controller.GhostThrottleLevel;
+                }
+                else // RecordedLap
+                {
+                    // Recorded lap mode: use 0 throttle (car stopped) until playback is implemented
+                    // TODO: Phase 4-5 will implement playback service to provide interpolated throttle values
+                    slot.PowerMultiplier = 0;
+                }
             }
             else
             {
