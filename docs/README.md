@@ -65,6 +65,7 @@ dotnet run --project ScalextricBleMonitor/ScalextricBleMonitor.csproj
 | UI Framework | Avalonia UI | 11.3.x |
 | Theme | Fluent | - |
 | MVVM | CommunityToolkit.Mvvm | 8.4.0 |
+| Dependency Injection | Microsoft.Extensions.DependencyInjection | 9.0.0 |
 | BLE | Windows.Devices.Bluetooth (WinRT) | - |
 | Target Framework | .NET 9.0 | Windows 10.0.19041 |
 
@@ -73,15 +74,29 @@ dotnet run --project ScalextricBleMonitor/ScalextricBleMonitor.csproj
 ```
 ScalextricBleMonitor/
 ├── Program.cs                    # Application entry point
-├── App.axaml(.cs)               # Avalonia application configuration
-├── MainWindow.axaml(.cs)        # Main UI window (compact layout)
-├── GattServicesWindow.axaml(.cs) # GATT services browser window
-├── NotificationWindow.axaml(.cs) # Live notification log window
+├── App.axaml(.cs)               # Avalonia application configuration + DI bootstrap
+├── Models/
+│   ├── GattService.cs           # Pure domain model for GATT service
+│   └── GattCharacteristic.cs    # Pure domain model for GATT characteristic
 ├── ViewModels/
-│   └── MainViewModel.cs         # MVVM view model with all UI state
+│   ├── MainViewModel.cs         # Main MVVM view model
+│   ├── ControllerViewModel.cs   # Per-slot controller state & lap timing
+│   ├── ServiceViewModel.cs      # GATT service (wraps GattService model)
+│   ├── CharacteristicViewModel.cs # GATT characteristic (wraps model)
+│   └── NotificationDataViewModel.cs # Notification log entry
+├── Views/
+│   ├── MainWindow.axaml(.cs)    # Main UI window (minimal code-behind)
+│   ├── GattServicesWindow.axaml(.cs) # GATT services browser
+│   └── NotificationWindow.axaml(.cs) # Live notification log
+├── Converters/                   # UI value converters (6 converters)
+│   ├── BooleanToVisibilityConverter.cs
+│   └── ...
 └── Services/
-    ├── IBleMonitorService.cs    # BLE service interface
+    ├── IBleMonitorService.cs    # BLE service abstraction
     ├── BleMonitorService.cs     # Windows BLE implementation
+    ├── IWindowService.cs        # Window management abstraction
+    ├── WindowService.cs         # Window lifecycle management
+    ├── ServiceConfiguration.cs  # DI container configuration
     ├── ScalextricProtocol.cs    # Protocol constants and builders
     └── AppSettings.cs           # JSON settings persistence
 ```
@@ -90,42 +105,94 @@ ScalextricBleMonitor/
 
 #### MVVM (Model-View-ViewModel)
 
-The application uses the MVVM pattern with CommunityToolkit.Mvvm source generators:
+The application follows strict MVVM with clear layer separation:
 
-- **View**: `MainWindow.axaml` - XAML UI with compiled bindings
-- **ViewModel**: `MainViewModel.cs` - Observable properties and commands
-- **Model**: `BleMonitorService.cs` - BLE communication layer
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                          VIEWS                                   │
+│  MainWindow.axaml    GattServicesWindow.axaml                   │
+│  NotificationWindow.axaml                                        │
+│  • Compiled bindings (x:DataType)                               │
+│  • Minimal code-behind (InitializeComponent only)               │
+│  • All interactions via Commands                                │
+└─────────────────────────────────────────────────────────────────┘
+                              │ Bindings
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                       VIEWMODELS                                 │
+│  MainViewModel              ControllerViewModel                  │
+│  ServiceViewModel           CharacteristicViewModel              │
+│  NotificationDataViewModel                                       │
+│  • [ObservableProperty] source generators                       │
+│  • [RelayCommand] for all actions                               │
+│  • Wrap domain models                                           │
+└─────────────────────────────────────────────────────────────────┘
+                              │ Events/Callbacks
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        MODELS                                    │
+│  GattService (POCO)         GattCharacteristic (POCO)           │
+└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                       SERVICES                                   │
+│  IBleMonitorService → BleMonitorService                         │
+│  IWindowService → WindowService                                  │
+│  AppSettings, ScalextricProtocol                                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key MVVM Features:**
+
+- **Source Generators**: Uses CommunityToolkit.Mvvm `[ObservableProperty]` and `[RelayCommand]` attributes
+- **Compiled Bindings**: All XAML uses `x:DataType` for compile-time binding validation
+- **No Code-Behind Logic**: Views contain only `InitializeComponent()` - all logic in ViewModels
+- **Model Wrapping**: ViewModels wrap pure domain models (e.g., `ServiceViewModel` wraps `GattService`)
 
 ```csharp
-// Observable properties are generated from fields
-[ObservableProperty]
-private bool _isConnected;
-
+// Observable properties with dependent property notification
 [ObservableProperty]
 [NotifyPropertyChangedFor(nameof(StatusIndicatorBrush))]
 private bool _isGattConnected;
 
-// Partial methods for property change callbacks
-partial void OnPowerLevelChanged(int value)
+// Commands generated from methods
+[RelayCommand]
+private void TogglePower() { /* ... */ }
+
+// In XAML: Command="{Binding TogglePowerCommand}"
+```
+
+#### Dependency Injection
+
+Services are registered in `ServiceConfiguration.cs` and resolved via `App.Services`:
+
+```csharp
+public static IServiceCollection ConfigureServices(this IServiceCollection services)
 {
-    if (IsPowerEnabled)
-        StatusText = $"Power enabled at level {value}";
+    services.AddSingleton<IBleMonitorService, BleMonitorService>();
+    services.AddSingleton<AppSettings>(_ => AppSettings.Load());
+    services.AddSingleton<MainViewModel>();
+    return services;
 }
 ```
 
 #### Service Abstraction
 
-BLE functionality is abstracted behind `IBleMonitorService` for potential cross-platform support:
+BLE and window management are abstracted behind interfaces for testability:
 
 ```csharp
 public interface IBleMonitorService : IDisposable
 {
     event EventHandler<BleConnectionStateEventArgs>? ConnectionStateChanged;
     event EventHandler<BleNotificationEventArgs>? NotificationReceived;
-
     void StartScanning();
-    void StopScanning();
     Task<bool> WriteCharacteristicAwaitAsync(Guid uuid, byte[] data);
+}
+
+public interface IWindowService
+{
+    void ShowGattServicesWindow();
+    void ShowNotificationWindow();
+    void CloseAllWindows();
 }
 ```
 
@@ -138,12 +205,17 @@ Platform-specific code is wrapped in `#if WINDOWS` directives.
 ```
 Program.Main()
     └── App.axaml (FluentTheme)
-        └── MainWindow()
-            ├── MainViewModel() created
-            │   └── BleMonitorService() created
-            └── Window.Opened event
-                └── StartMonitoring()
-                    └── BluetoothLEAdvertisementWatcher.Start()
+        └── OnFrameworkInitializationCompleted()
+            ├── ServiceConfiguration.BuildServiceProvider()
+            │   ├── Register IBleMonitorService → BleMonitorService
+            │   ├── Register AppSettings (loaded from JSON)
+            │   └── Register MainViewModel
+            └── MainWindow()
+                ├── Resolve MainViewModel from DI
+                ├── Create WindowService (needs Window reference)
+                └── Window.Opened event
+                    └── StartMonitoring()
+                        └── BluetoothLEAdvertisementWatcher.Start()
 ```
 
 ### Connection Flow
@@ -188,7 +260,7 @@ Program.Main()
 
 ### MainViewModel
 
-The central state manager containing:
+The central state manager with commands and properties:
 
 | Property | Type | Description |
 |----------|------|-------------|
@@ -200,9 +272,16 @@ The central state manager containing:
 | `Services` | ObservableCollection | Discovered GATT services |
 | `NotificationLog` | ObservableCollection | Recent notifications |
 
+| Command | Description |
+|---------|-------------|
+| `TogglePowerCommand` | Toggle track power on/off |
+| `ClearNotificationLogCommand` | Clear notification log entries |
+| `ShowGattServicesCommand` | Open GATT services window |
+| `ShowNotificationsCommand` | Open notifications window |
+
 ### BleMonitorService
 
-Handles all BLE operations:
+Handles all BLE operations (implements `IBleMonitorService`):
 
 | Method | Description |
 |--------|-------------|
@@ -212,6 +291,16 @@ Handles all BLE operations:
 | `SubscribeToAllNotifications()` | Subscribe to all notify characteristics |
 | `ReadCharacteristic()` | Read characteristic value |
 | `WriteCharacteristicAwaitAsync()` | Write with async completion |
+
+### WindowService
+
+Manages child window lifecycle (implements `IWindowService`):
+
+| Method | Description |
+|--------|-------------|
+| `ShowGattServicesWindow()` | Show/focus GATT services window |
+| `ShowNotificationWindow()` | Show/focus notifications window |
+| `CloseAllWindows()` | Close all child windows |
 
 ### ScalextricProtocol
 
@@ -327,4 +416,4 @@ private static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(500);
 
 ---
 
-*Last Updated: January 2025*
+*Last Updated: January 2026*

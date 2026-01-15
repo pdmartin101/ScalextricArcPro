@@ -14,6 +14,9 @@ dotnet build ScalextricTest.sln -c Release
 # Run the application
 dotnet run --project ScalextricBleMonitor/ScalextricBleMonitor.csproj
 
+# Run tests
+dotnet test ScalextricBleMonitor.Tests/ScalextricBleMonitor.Tests.csproj
+
 # Clean build artifacts
 dotnet clean ScalextricTest.sln
 ```
@@ -30,60 +33,129 @@ ScalextricTest/
 ├── CLAUDE.md                             # AI assistant build instructions (this file)
 ├── PLAN.md                               # Code quality improvement plan with issue tracking
 ├── docs/
-│   ├── README.md                         # Comprehensive documentation (330+ lines)
+│   ├── README.md                         # Comprehensive documentation
 │   └── ArcPro-BLE-Protocol.md           # BLE protocol specification
-└── ScalextricBleMonitor/                 # Main application project
-    ├── ScalextricBleMonitor.csproj       # .NET 9.0 Windows project config
-    ├── Program.cs                        # Application entry point
-    ├── App.axaml(.cs)                    # Avalonia application bootstrap
-    ├── app.manifest                      # Windows application manifest
-    ├── MainWindow.axaml(.cs)             # Primary UI window + code-behind
-    ├── GattServicesWindow.axaml(.cs)     # GATT browser pop-out window
-    ├── NotificationWindow.axaml(.cs)     # Live notification viewer window
-    ├── ViewModels/
-    │   └── MainViewModel.cs              # MVVM ViewModel (~1,400 lines)
-    │       ├── MainViewModel             # Main view model class
-    │       ├── ServiceViewModel          # GATT service representation
-    │       ├── CharacteristicViewModel   # GATT characteristic representation
-    │       ├── NotificationDataViewModel # Notification log entry
-    │       ├── ControllerViewModel       # Per-slot controller state & lap timing
-    │       └── Value Converters (6)      # UI value converters
-    └── Services/
-        ├── IBleMonitorService.cs         # BLE service abstraction interface
-        ├── BleMonitorService.cs          # Windows BLE implementation (~800 lines)
-        ├── ScalextricProtocol.cs         # Protocol constants & command builders
-        └── AppSettings.cs                # JSON settings persistence (%LOCALAPPDATA%)
+├── ScalextricBleMonitor/                 # Main application project
+│   ├── ScalextricBleMonitor.csproj       # .NET 9.0 Windows project config
+│   ├── Program.cs                        # Application entry point
+│   ├── App.axaml(.cs)                    # Avalonia app bootstrap + DI container
+│   ├── app.manifest                      # Windows application manifest
+│   ├── Models/                           # Pure domain models (POCOs)
+│   │   ├── Controller.cs                 # Slot/controller state
+│   │   ├── LapRecord.cs                  # Lap timing data
+│   │   ├── GattService.cs                # BLE GATT service
+│   │   ├── GattCharacteristic.cs         # BLE GATT characteristic
+│   │   └── NotificationEntry.cs          # BLE notification log entry
+│   ├── ViewModels/                       # MVVM ViewModels
+│   │   ├── MainViewModel.cs              # Main application ViewModel (~920 lines)
+│   │   ├── ControllerViewModel.cs        # Per-slot controller state & lap timing
+│   │   ├── ServiceViewModel.cs           # GATT service wrapper
+│   │   ├── CharacteristicViewModel.cs    # GATT characteristic wrapper
+│   │   └── NotificationDataViewModel.cs  # Notification log entry wrapper
+│   ├── Views/                            # Avalonia UI windows
+│   │   ├── MainWindow.axaml(.cs)         # Primary UI window
+│   │   ├── GattServicesWindow.axaml(.cs) # GATT browser pop-out
+│   │   └── NotificationWindow.axaml(.cs) # Live notification viewer
+│   ├── Converters/                       # XAML value converters
+│   │   ├── PowerButtonTextConverter.cs
+│   │   ├── PowerIndicatorColorConverter.cs
+│   │   ├── PerSlotToggleTextConverter.cs
+│   │   ├── GhostModeTooltipConverter.cs
+│   │   ├── ThrottleToScaleConverter.cs
+│   │   └── BoolToBrushConverter.cs
+│   └── Services/                         # Application services
+│       ├── IBleMonitorService.cs         # BLE service interface
+│       ├── BleMonitorService.cs          # Windows BLE implementation
+│       ├── IWindowService.cs             # Window management interface
+│       ├── WindowService.cs              # Child window lifecycle
+│       ├── ScalextricProtocol.cs         # Protocol constants & builders
+│       ├── ScalextricProtocolDecoder.cs  # Protocol data decoding
+│       ├── LapTimingEngine.cs            # Lap timing calculations
+│       ├── AppSettings.cs                # JSON settings persistence
+│       ├── LoggingConfiguration.cs       # Serilog setup
+│       └── ServiceConfiguration.cs       # DI container setup
+└── ScalextricBleMonitor.Tests/           # Unit test project
+    ├── LapTimingEngineTests.cs           # Lap timing tests
+    ├── ScalextricProtocolTests.cs        # Protocol builder tests
+    └── AppSettingsTests.cs               # Settings tests
+```
+
+### MVVM Architecture
+
+The application follows strict MVVM (Model-View-ViewModel) pattern:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         App.axaml.cs                                 │
+│  - Builds DI Container via ServiceConfiguration                     │
+│  - Exposes App.Services for resolution                              │
+└─────────────────────────────┬───────────────────────────────────────┘
+                              │
+┌─────────────────────────────▼───────────────────────────────────────┐
+│                      Views Layer                                     │
+│  MainWindow.axaml.cs - ViewModel/service setup, lifecycle only      │
+│  NotificationWindow.axaml.cs - InitializeComponent only             │
+│  GattServicesWindow.axaml.cs - InitializeComponent only             │
+│  (All business logic removed from code-behind)                      │
+└─────────────────────────────┬───────────────────────────────────────┘
+                              │ DataBinding + Commands
+┌─────────────────────────────▼───────────────────────────────────────┐
+│                    ViewModels Layer                                  │
+│  MainViewModel - Commands, services, ObservableCollections          │
+│  ControllerViewModel, ServiceViewModel, CharacteristicViewModel,    │
+│  NotificationDataViewModel - All wrap underlying Models             │
+└─────────────────────────────┬───────────────────────────────────────┘
+                              │ Model property
+┌─────────────────────────────▼───────────────────────────────────────┐
+│                      Models Layer                                    │
+│  Controller, LapRecord, GattService, GattCharacteristic,            │
+│  NotificationEntry - Pure POCOs, no UI dependencies                 │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Key Patterns
 
-- **MVVM with CommunityToolkit.Mvvm** - Uses `[ObservableProperty]` source generators for reactive properties
+- **MVVM with CommunityToolkit.Mvvm** - Uses `[ObservableProperty]` and `[RelayCommand]` source generators
+- **Dependency Injection** - Microsoft.Extensions.DependencyInjection for service management
 - **Compiled Bindings** - `x:DataType` specified in XAML for compile-time binding validation
-- **Service Abstraction** - `IBleMonitorService` abstracts platform-specific BLE code behind `#if WINDOWS` directives
-- **Event-Driven Architecture** - BLE service communicates via events (ConnectionStateChanged, NotificationReceived, etc.)
-- **Singleton Windows** - Pop-out windows (GATT Services, Notifications) are single-instance
+- **Service Abstraction** - `IBleMonitorService`, `IWindowService` for testability
+- **Event-Driven Architecture** - BLE service communicates via events
+- **Model Wrapping** - ViewModels wrap pure domain Models and sync state via partial methods
+- **Structured Logging** - Serilog with file and debug sinks
 
 ### Application Flow
 
 ```
 Program.Main()
-    └── App.axaml (FluentTheme)
-        └── MainWindow()
-            ├── MainViewModel() created
-            │   ├── BleMonitorService() created
-            │   └── AppSettings.Load()
-            └── Window.Opened → StartMonitoring()
-                └── BluetoothLEAdvertisementWatcher.Start()
-                    └── OnAdvertisementReceived()
-                        └── ConnectAndDiscoverServicesAsync()
-                            └── SubscribeToAllNotificationsAsync()
-                                └── OnNotificationReceived() → UI Updates
+    └── LoggingConfiguration.Initialize()
+    └── App.axaml
+        └── OnFrameworkInitializationCompleted()
+            └── ServiceConfiguration.BuildServiceProvider()
+            └── MainWindow()
+                ├── App.Services.GetService<MainViewModel>()
+                ├── WindowService(this, () => viewModel)
+                └── Window.Opened → StartMonitoring()
+                    └── BluetoothLEAdvertisementWatcher.Start()
+                        └── OnAdvertisementReceived()
+                            └── ConnectAndDiscoverServicesAsync()
+                                └── SubscribeToAllNotificationsAsync()
+                                    └── OnNotificationReceived() → UI Updates
 ```
+
+### Commands (RelayCommand)
+
+| ViewModel | Command | Purpose |
+|-----------|---------|---------|
+| MainViewModel | TogglePowerCommand | Enable/disable track power |
+| MainViewModel | ShowGattServicesCommand | Open GATT browser window |
+| MainViewModel | ShowNotificationsCommand | Open notifications window |
+| MainViewModel | ClearNotificationLogCommand | Clear notification log |
+| CharacteristicViewModel | ReadCommand | Read characteristic value |
 
 ### BLE Monitoring Flow
 
-1. `MainWindow` creates `MainViewModel` on construction
-2. `MainViewModel` owns `BleMonitorService` which wraps `BluetoothLEAdvertisementWatcher`
+1. `MainWindow` resolves `MainViewModel` from DI container
+2. `MainViewModel` receives `IBleMonitorService` via constructor injection
 3. Service scans for advertisements containing "Scalextric" in LocalName
 4. On detection, establishes GATT connection via `BluetoothLEDevice.FromBluetoothAddressAsync()`
 5. Discovers services and subscribes to all notification characteristics
@@ -93,15 +165,12 @@ Program.Main()
 ### Lap Counting & Timing
 
 - Lap detection uses Slot characteristic (0x3b0b) notifications
+- `LapTimingEngine` encapsulates timing calculations (extracted for testability)
 - Dual-lane finish line sensors: t1 (bytes 2-5) for lane 1, t2 (bytes 6-9) for lane 2
 - Uses `Math.Max(t1, t2)` to detect whichever lane was crossed most recently
 - Timestamps are 32-bit little-endian values in centiseconds (1/100th second)
-- `CurrentLap` property tracks which lap the car is currently on (not laps completed)
-- First crossing: CurrentLap → 1 (starting lap 1), baseline timestamp established
-- Second crossing: CurrentLap → 2 (finished lap 1), first valid lap time recorded
-- Lap time calculated as: `(newMaxTimestamp - previousMaxTimestamp) / 100.0` seconds
+- Overflow-safe calculations using `unchecked` arithmetic
 - Best lap time tracked per controller (purple indicator, F1 style)
-- Lane indicator shows which lane (L1/L2) the car last crossed
 
 ### Ghost Mode
 
@@ -109,11 +178,8 @@ Program.Main()
 - Per-slot toggle (G button) in the UI when per-slot power mode is enabled
 - In ghost mode, PowerLevel (0-63) becomes a direct throttle index into the throttle profile
 - Protocol: bit 7 of the power byte enables ghost mode (`0x80 | powerLevel`)
-- Ghost mode "latches" in the powerbase - requires explicit clear before power-off:
-  1. Send `PowerOnRacing` with ghost=false, power=0 to clear latched state
-  2. Then send `NoPowerTimerStopped` to cut power
+- Ghost mode "latches" in the powerbase - requires explicit clear before power-off
 - On startup/shutdown, app sends clear-ghost + power-off sequence to reset powerbase state
-- Settings persisted in `SlotGhostModes[]` array in AppSettings
 
 ### Power Management
 
@@ -125,15 +191,22 @@ Program.Main()
 
 ### Key Domain Entities
 
-| Entity | Purpose |
-|--------|---------|
-| `MainViewModel` | Central state manager, BLE event handling, power management |
-| `ControllerViewModel` | Per-slot state (throttle, brake, lane change, lap timing) |
-| `ServiceViewModel` | GATT service with characteristics collection |
-| `CharacteristicViewModel` | GATT characteristic with read/write capabilities |
-| `NotificationDataViewModel` | Timestamped notification log entry |
-| `ScalextricProtocol` | Command building, protocol constants |
-| `AppSettings` | JSON persistence for power levels and ghost mode |
+| Layer | Entity | Purpose |
+|-------|--------|---------|
+| Model | `Controller` | Slot state (throttle, brake, power, ghost mode) |
+| Model | `LapRecord` | Lap timing data with best lap tracking |
+| Model | `GattService` | BLE GATT service data |
+| Model | `GattCharacteristic` | BLE GATT characteristic data |
+| Model | `NotificationEntry` | BLE notification log entry |
+| ViewModel | `MainViewModel` | Central state manager, commands, services |
+| ViewModel | `ControllerViewModel` | Per-slot state, wraps Controller + LapRecord |
+| ViewModel | `ServiceViewModel` | GATT service wrapper |
+| ViewModel | `CharacteristicViewModel` | GATT characteristic wrapper with ReadCommand |
+| ViewModel | `NotificationDataViewModel` | Notification entry wrapper |
+| Service | `IBleMonitorService` | BLE abstraction interface |
+| Service | `IWindowService` | Window management abstraction |
+| Service | `ScalextricProtocolDecoder` | Protocol data decoding |
+| Service | `LapTimingEngine` | Lap timing calculations |
 
 ### Platform Support
 
@@ -146,8 +219,18 @@ Currently Windows-only (`net9.0-windows10.0.19041.0`). BLE code is wrapped in `#
 | UI Framework | Avalonia UI | 11.3.x |
 | Theme | Fluent | - |
 | MVVM | CommunityToolkit.Mvvm | 8.4.0 |
+| DI | Microsoft.Extensions.DependencyInjection | 9.0.0 |
+| Logging | Serilog | 4.3.0 |
 | BLE | Windows.Devices.Bluetooth (WinRT) | - |
+| Testing | xUnit | - |
 | Target Framework | .NET 9.0 | Windows 10.0.19041 |
+
+### Unit Tests
+
+52 tests covering:
+- `LapTimingEngine` - Lap detection, timing calculations, overflow handling
+- `ScalextricProtocol` - Command building, throttle profiles
+- `AppSettings` - Settings persistence and validation
 
 ### Code Quality
 
