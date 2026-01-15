@@ -919,20 +919,4 @@ public partial class MainViewModel : ObservableObject, IDisposable
         NotificationLog.Clear();
         FilteredNotificationLog.Clear();
     }
-
-    /// <summary>
-    /// Called when the notification window is closed.
-    /// </summary>
-    public void OnNotificationWindowClosed()
-    {
-        IsNotificationWindowOpen = false;
-    }
-
-    /// <summary>
-    /// Called when the GATT services window is closed.
-    /// </summary>
-    public void OnGattServicesWindowClosed()
-    {
-        IsGattServicesWindowOpen = false;
-    }
 }

@@ -1,4 +1,3 @@
-using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using ScalextricBleMonitor.ViewModels;
@@ -19,17 +18,6 @@ public partial class GattServicesWindow : Window
             DataContext is MainViewModel viewModel)
         {
             viewModel.ReadCharacteristic(characteristic.ServiceUuid, characteristic.Uuid);
-        }
-    }
-
-    protected override void OnClosed(EventArgs e)
-    {
-        base.OnClosed(e);
-
-        // Notify the main view model that this window was closed
-        if (DataContext is MainViewModel viewModel)
-        {
-            viewModel.OnGattServicesWindowClosed();
         }
     }
 }
