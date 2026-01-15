@@ -92,6 +92,28 @@ public class GhostRecordingService : IGhostRecordingService
     }
 
     /// <inheritdoc />
+    public void ContinueRecording(int slotNumber, DateTime lapStartTime)
+    {
+        ValidateSlotNumber(slotNumber);
+        var state = _recordingStates[slotNumber - 1];
+
+        // Go directly to Recording phase with the lap start time already set
+        state.Phase = RecordingPhase.Recording;
+        state.TrueLapStartTime = lapStartTime;
+        // Keep the buffer - it may have samples from before the lap start that we'll filter later
+
+        var rawTimeSec = lapStartTime.TimeOfDay.TotalSeconds;
+        Log.Information("Continuing recording for slot {SlotNumber} - lap started at trueTime={TrueTime:F2}s",
+            slotNumber, rawTimeSec);
+
+        // Raise the RecordingStarted event since we're now actively recording
+        RecordingStarted?.Invoke(this, new LapRecordingStartedEventArgs
+        {
+            SlotNumber = slotNumber
+        });
+    }
+
+    /// <inheritdoc />
     public void RecordThrottleSample(int slotNumber, byte throttleValue, DateTime timestamp)
     {
         ValidateSlotNumber(slotNumber);
@@ -227,7 +249,8 @@ public class GhostRecordingService : IGhostRecordingService
         RecordingCompleted?.Invoke(this, new LapRecordingCompletedEventArgs
         {
             SlotNumber = slotNumber,
-            RecordedLap = recordedLap
+            RecordedLap = recordedLap,
+            TrueLapEndTime = trueLapEndTime
         });
 
         // Clear state for next recording

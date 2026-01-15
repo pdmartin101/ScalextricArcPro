@@ -133,14 +133,33 @@
                                         </ComboBox>
                                     </Grid>
 
-                                    <!-- Record Button -->
-                                    <Button Content="{Binding RecordButtonText}"
-                                            Command="{Binding ToggleRecordingCommand}"
-                                            HorizontalAlignment="Left"
-                                            Padding="15,8"
-                                            FontSize="12"
-                                            FontWeight="Bold"
-                                            ToolTip.Tip="Record a new lap - drive a complete lap to capture throttle data"/>
+                                    <!-- Laps to Record and Record Button -->
+                                    <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,0,0,5">
+                                        <StackPanel Grid.Column="0"
+                                                    Orientation="Horizontal"
+                                                    Margin="0,0,15,0">
+                                            <TextBlock Text="Record"
+                                                       VerticalAlignment="Center"
+                                                       FontSize="12"
+                                                       Margin="0,0,5,0"/>
+                                            <ComboBox ItemsSource="{x:Static vm:ControllerViewModel.AvailableLapCounts}"
+                                                      SelectedItem="{Binding LapsToRecord}"
+                                                      MinWidth="50"
+                                                      IsEnabled="{Binding !IsRecording}"
+                                                      ToolTip.Tip="Number of laps to record (best will be auto-selected)"/>
+                                            <TextBlock Text="lap(s)"
+                                                       VerticalAlignment="Center"
+                                                       FontSize="12"
+                                                       Margin="5,0,0,0"/>
+                                        </StackPanel>
+                                        <Button Grid.Column="1"
+                                                Content="{Binding RecordButtonText}"
+                                                Command="{Binding ToggleRecordingCommand}"
+                                                Padding="15,8"
+                                                FontSize="12"
+                                                FontWeight="Bold"
+                                                ToolTip.Tip="Record laps - the best (fastest) lap will be auto-selected"/>
+                                    </Grid>
 
                                     <!-- Recording status -->
                                     <TextBlock Text="{Binding RecordingStatusText}"

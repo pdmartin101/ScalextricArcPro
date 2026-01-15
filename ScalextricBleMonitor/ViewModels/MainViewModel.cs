@@ -270,15 +270,41 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (controller != null)
             {
                 controller.AvailableRecordedLaps.Add(e.RecordedLap);
-                controller.IsRecording = false;
-                controller.IsActivelyRecording = false;
-
-                // Auto-select the newly recorded lap
-                controller.SelectedRecordedLap = e.RecordedLap;
+                controller.RecordedLapCount++;
 
                 Log.Information(
-                    "Recording completed for slot {SlotNumber}: {SampleCount} samples, {LapTime:F2}s",
-                    e.SlotNumber, e.RecordedLap.SampleCount, e.RecordedLap.LapTimeSeconds);
+                    "Recording completed for slot {SlotNumber}: lap {LapNum}/{TotalLaps}, {SampleCount} samples, {LapTime:F2}s",
+                    e.SlotNumber, controller.RecordedLapCount, controller.LapsToRecord,
+                    e.RecordedLap.SampleCount, e.RecordedLap.LapTimeSeconds);
+
+                // Check if we need to record more laps
+                if (controller.RecordedLapCount < controller.LapsToRecord)
+                {
+                    // Continue recording the next lap - the lap end is also the next lap start
+                    // Use ContinueRecording to skip the "waiting for lap start" phase
+                    _ghostRecordingService.ContinueRecording(e.SlotNumber, e.TrueLapEndTime);
+                    Log.Information("Continuing recording for lap {NextLap}/{TotalLaps} on slot {SlotNumber}",
+                        controller.RecordedLapCount + 1, controller.LapsToRecord, e.SlotNumber);
+                }
+                else
+                {
+                    // All laps recorded - stop and select the best lap
+                    controller.IsRecording = false;
+                    controller.IsActivelyRecording = false;
+
+                    // Auto-select the best (fastest) recorded lap from this session
+                    var bestLap = controller.AvailableRecordedLaps
+                        .OrderBy(l => l.LapTimeSeconds)
+                        .FirstOrDefault();
+                    controller.SelectedRecordedLap = bestLap;
+
+                    if (controller.LapsToRecord > 1)
+                    {
+                        Log.Information(
+                            "Multi-lap recording completed for slot {SlotNumber}: {LapCount} laps, best time {BestTime:F2}s",
+                            e.SlotNumber, controller.LapsToRecord, bestLap?.LapTimeSeconds ?? 0);
+                    }
+                }
             }
         });
     }

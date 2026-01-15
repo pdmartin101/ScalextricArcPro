@@ -18,6 +18,12 @@ public class LapRecordingCompletedEventArgs : EventArgs
     /// The recorded lap data.
     /// </summary>
     public RecordedLap RecordedLap { get; init; } = null!;
+
+    /// <summary>
+    /// The true event time when the lap ended (delay-adjusted).
+    /// This is also the start time of the next lap for multi-lap recording.
+    /// </summary>
+    public DateTime TrueLapEndTime { get; init; }
 }
 
 /// <summary>
@@ -76,6 +82,15 @@ public interface IGhostRecordingService
     /// </summary>
     /// <param name="slotNumber">The slot number (1-6).</param>
     void StopRecording(int slotNumber);
+
+    /// <summary>
+    /// Continues recording for the next lap, starting from the specified time.
+    /// Use this when the finish line crossing that ended one lap is also the start of the next.
+    /// Unlike StartRecording, this skips the "waiting for lap start" phase.
+    /// </summary>
+    /// <param name="slotNumber">The slot number (1-6) to record.</param>
+    /// <param name="lapStartTime">The true event time of the lap start (the previous lap's end time).</param>
+    void ContinueRecording(int slotNumber, DateTime lapStartTime);
 
     /// <summary>
     /// Records a throttle sample for the specified slot.

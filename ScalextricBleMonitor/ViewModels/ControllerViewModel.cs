@@ -116,6 +116,30 @@ public partial class ControllerViewModel : ObservableObject
         Enum.GetValues<GhostSourceType>();
 
     /// <summary>
+    /// Number of laps to record in a multi-lap recording session (1-5).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RecordingStatusText))]
+    private int _lapsToRecord = 1;
+
+    /// <summary>
+    /// Maximum number of laps that can be recorded in a session.
+    /// </summary>
+    public const int MaxLapsToRecord = 5;
+
+    /// <summary>
+    /// Available lap count options for the UI (1-5).
+    /// </summary>
+    public static IReadOnlyList<int> AvailableLapCounts { get; } = [1, 2, 3, 4, 5];
+
+    /// <summary>
+    /// Number of laps recorded so far in the current recording session.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RecordingStatusText))]
+    private int _recordedLapCount;
+
+    /// <summary>
     /// Whether lap recording is currently active for this slot (waiting or recording).
     /// </summary>
     [ObservableProperty]
@@ -139,9 +163,12 @@ public partial class ControllerViewModel : ObservableObject
     partial void OnIsRecordingChanged(bool value)
     {
         RecordingStateChanged?.Invoke(this, value);
-        // Reset active recording state when overall recording stops
+        // Reset state when recording stops
         if (!value)
+        {
             IsActivelyRecording = false;
+            RecordedLapCount = 0;
+        }
     }
 
     /// <summary>
@@ -152,9 +179,20 @@ public partial class ControllerViewModel : ObservableObject
     /// <summary>
     /// Status text shown during recording phases.
     /// </summary>
-    public string RecordingStatusText => IsActivelyRecording
-        ? "Recording... Complete the lap to save"
-        : "Waiting for lap start... Cross the finish line";
+    public string RecordingStatusText
+    {
+        get
+        {
+            if (!IsRecording)
+                return string.Empty;
+
+            string lapProgress = LapsToRecord > 1 ? $" ({RecordedLapCount + 1}/{LapsToRecord})" : "";
+
+            return IsActivelyRecording
+                ? $"Recording lap{lapProgress}... Complete the lap to save"
+                : $"Waiting for lap start{lapProgress}... Cross the finish line";
+        }
+    }
 
     /// <summary>
     /// Collection of recorded laps available for this slot.
