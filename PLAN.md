@@ -12,9 +12,9 @@ This document tracks identified code quality issues and their resolution status.
 |-------|-------------|-------|-------|-----------|
 | 1 | Critical Issues | 4 | 4 | 0 |
 | 2 | High Priority | 5 | 5 | 0 |
-| 3 | Medium Priority | 7 | 2 | 5 |
+| 3 | Medium Priority | 7 | 3 | 4 |
 | 4 | Low Priority | 7 | 2 | 5 |
-| **Total** | | **23** | **13** | **10** |
+| **Total** | | **23** | **14** | **9** |
 
 ---
 
@@ -187,12 +187,14 @@ uint timeDiff = currentMaxTimestamp >= _lastMaxTimestamp
 
 ---
 
-### 3.3 ❌ Protocol Decoding Mixed into ViewModel
+### 3.3 ✅ Protocol Decoding Mixed into ViewModel
 **Location:** `MainViewModel.cs` - static decode methods
 **Impact:** Violates Single Responsibility Principle
 **Details:** `DecodeSlotData`, `DecodeThrottleData`, `DecodeTrackData`, `DecodeGenericData`
 
 **Fix:** Extract to `ScalextricProtocolDecoder` class in Services folder.
+
+**Resolution:** Created `Services/ScalextricProtocolDecoder.cs` static class with `Decode()` method that handles Slot, Throttle, Track, and generic characteristics. MainViewModel now delegates to this class.
 
 ---
 
@@ -323,6 +325,7 @@ These are larger refactoring efforts to consider after critical issues are resol
 | 2026-01-15 | 2.5 | Fixed: Added WithTimeoutAsync helper with 10s timeout for all BLE async operations |
 | 2026-01-15 | 3.1 | Fixed: Created `BuildCommandWithAllSlotsZeroed` helper to reduce duplication in command building |
 | 2026-01-15 | 3.2 | Fixed: Created `SendPowerOffSequenceAsync` shared method for power-off sequences |
+| 2026-01-15 | 3.3 | Fixed: Created `Services/ScalextricProtocolDecoder.cs` static class; MainViewModel now delegates protocol decoding |
 
 ---
 
