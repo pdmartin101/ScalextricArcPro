@@ -865,9 +865,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
             var controller = Controllers[i];
             var slot = builder.GetSlot(i + 1);
 
-            if (controller.IsGhostMode)
+            // When recording is active, disable ghost mode so controller input works
+            bool isRecording = controller.IsRecording;
+
+            if (controller.IsGhostMode && !isRecording)
             {
-                // Ghost mode: determine throttle based on GhostSource
+                // Ghost mode (not recording): determine throttle based on GhostSource
                 slot.GhostMode = true;
 
                 if (controller.GhostSource == GhostSourceType.FixedSpeed)
@@ -884,7 +887,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
             else
             {
-                // Normal mode: use PowerLevel as multiplier (either per-slot or global)
+                // Normal mode OR recording mode: use PowerLevel as multiplier so controller works
                 slot.PowerMultiplier = (byte)(UsePerSlotPower ? controller.PowerLevel : PowerLevel);
                 slot.GhostMode = false;
             }
