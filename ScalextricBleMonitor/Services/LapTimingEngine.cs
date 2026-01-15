@@ -106,14 +106,24 @@ public class LapTimingEngine
         if (currentMaxTimestamp == 0)
             return LapTimingResult.NoChange(CurrentLap, CurrentLane, BestLapTimeSeconds);
 
-        // First time seeing any timestamp: just store it as baseline, don't count a lap.
-        // The powerbase retains timestamps from previous sessions, so the first value
-        // we see is stale data - we need to wait for an actual crossing to detect a change.
+        // First time seeing a non-zero timestamp after reset: this IS the first crossing.
+        // The car has crossed the start line and is now on lap 1.
         if (!_hasBaselineTimestamp)
         {
             _lastMaxTimestamp = currentMaxTimestamp;
             _hasBaselineTimestamp = true;
-            return LapTimingResult.NoChange(CurrentLap, CurrentLane, BestLapTimeSeconds);
+            CurrentLap = 1;
+            CurrentLane = lane1Timestamp >= lane2Timestamp ? 1 : 2;
+
+            return new LapTimingResult
+            {
+                LapCompleted = true,  // First crossing counts as starting lap 1
+                CurrentLap = CurrentLap,
+                CrossedLane = CurrentLane,
+                LapTimeSeconds = 0,   // No lap time yet - just started
+                IsNewBestLap = false,
+                BestLapTimeSeconds = 0
+            };
         }
 
         // If the max timestamp changed, the car actually crossed a finish line
