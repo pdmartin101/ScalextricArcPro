@@ -3,6 +3,21 @@ using System;
 namespace ScalextricBleMonitor.Services;
 
 /// <summary>
+/// Throttle profile curve types for different throttle response characteristics.
+/// </summary>
+public enum ThrottleProfileType
+{
+    /// <summary>Proportional response - input maps linearly to output.</summary>
+    Linear,
+
+    /// <summary>Gentle at low input, aggressive at high - better control at low speeds.</summary>
+    Exponential,
+
+    /// <summary>Distinct power bands - beginner-friendly with clear speed zones.</summary>
+    Stepped
+}
+
+/// <summary>
 /// Scalextric ARC Pro BLE Protocol constants and command builders.
 /// Based on ScalextricArcBleProtocolExplorer: https://github.com/RazManager/ScalextricArcBleProtocolExplorer
 /// </summary>
@@ -308,6 +323,19 @@ public static class ScalextricProtocol
         public const int TotalValues = BlockCount * ValuesPerBlock;
 
         /// <summary>
+        /// Creates a throttle curve for the specified profile type.
+        /// </summary>
+        /// <param name="profileType">The type of throttle response curve.</param>
+        /// <returns>96-byte array with throttle values.</returns>
+        public static byte[] CreateCurve(ThrottleProfileType profileType) => profileType switch
+        {
+            ThrottleProfileType.Linear => CreateLinearCurve(),
+            ThrottleProfileType.Exponential => CreateExponentialCurve(),
+            ThrottleProfileType.Stepped => CreateSteppedCurve(),
+            _ => CreateLinearCurve()
+        };
+
+        /// <summary>
         /// Creates a linear throttle profile (default).
         /// Maps input 0-95 to output values for throttle response.
         /// </summary>
@@ -320,6 +348,38 @@ public static class ScalextricProtocol
                 // Value = (256 * (i + 1) / 64) - 1, but extended to 96 values
                 // This creates values: 3, 7, 11, 15... up to 255
                 curve[i] = (byte)(256 * (i + 1) / TotalValues - 1);
+            }
+            return curve;
+        }
+
+        /// <summary>
+        /// Creates an exponential throttle profile.
+        /// Gentle response at low input, aggressive at high - better control at low speeds.
+        /// </summary>
+        public static byte[] CreateExponentialCurve()
+        {
+            var curve = new byte[TotalValues];
+            for (int i = 0; i < TotalValues; i++)
+            {
+                // y = x^2 scaled to 0-255
+                double normalized = (double)(i + 1) / TotalValues;
+                curve[i] = (byte)(255 * normalized * normalized);
+            }
+            return curve;
+        }
+
+        /// <summary>
+        /// Creates a stepped throttle profile.
+        /// Four distinct power bands - beginner-friendly with clear speed zones.
+        /// </summary>
+        public static byte[] CreateSteppedCurve()
+        {
+            var curve = new byte[TotalValues];
+            for (int i = 0; i < TotalValues; i++)
+            {
+                // 4 distinct power bands: 25%, 50%, 75%, 100%
+                int band = i / (TotalValues / 4);
+                curve[i] = (byte)((band + 1) * 63); // 63, 126, 189, 252
             }
             return curve;
         }
@@ -368,6 +428,16 @@ public static class ScalextricProtocol
         public static byte[][] CreateLinearBlocks()
         {
             return GetAllBlocks(CreateLinearCurve());
+        }
+
+        /// <summary>
+        /// Creates blocks for the specified throttle profile type ready to write.
+        /// </summary>
+        /// <param name="profileType">The type of throttle response curve.</param>
+        /// <returns>Array of 6 blocks, each 17 bytes.</returns>
+        public static byte[][] CreateBlocks(ThrottleProfileType profileType)
+        {
+            return GetAllBlocks(CreateCurve(profileType));
         }
     }
 }

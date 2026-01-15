@@ -172,6 +172,14 @@
                                                    Foreground="#0096FF"
                                                    VerticalAlignment="Center"
                                                    Width="16"/>
+                                        <!-- Throttle Profile selector -->
+                                        <ComboBox ItemsSource="{x:Static vm:ControllerViewModel.AvailableProfiles}"
+                                                  SelectedItem="{Binding ThrottleProfile}"
+                                                  FontSize="9"
+                                                  Padding="4,2"
+                                                  MinWidth="80"
+                                                  Margin="4,0,0,0"
+                                                  ToolTip.Tip="Throttle response curve (applied on next power enable)"/>
                                     </StackPanel>
 
                                     <!-- Throttle bar -->

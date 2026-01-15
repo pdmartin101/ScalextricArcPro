@@ -142,7 +142,40 @@ public partial class MainViewModel : ObservableObject, IDisposable
         {
             var powerLevel = _settings.SlotPowerLevels.Length > i ? _settings.SlotPowerLevels[i] : 63;
             var isGhostMode = _settings.SlotGhostModes.Length > i && _settings.SlotGhostModes[i];
-            Controllers.Add(new ControllerViewModel { SlotNumber = i + 1, PowerLevel = powerLevel, IsGhostMode = isGhostMode });
+
+            // Load throttle profile from settings
+            var profileType = ThrottleProfileType.Linear;
+            if (_settings.SlotThrottleProfiles.Length > i &&
+                Enum.TryParse<ThrottleProfileType>(_settings.SlotThrottleProfiles[i], out var parsedProfile))
+            {
+                profileType = parsedProfile;
+            }
+
+            var controller = new ControllerViewModel
+            {
+                SlotNumber = i + 1,
+                PowerLevel = powerLevel,
+                IsGhostMode = isGhostMode,
+                ThrottleProfile = profileType
+            };
+
+            // Subscribe to profile changes to persist settings
+            controller.ThrottleProfileChanged += OnControllerThrottleProfileChanged;
+
+            Controllers.Add(controller);
+        }
+    }
+
+    private void OnControllerThrottleProfileChanged(object? sender, ThrottleProfileType profile)
+    {
+        if (sender is ControllerViewModel controller)
+        {
+            int index = controller.SlotNumber - 1;
+            if (index >= 0 && index < _settings.SlotThrottleProfiles.Length)
+            {
+                _settings.SlotThrottleProfiles[index] = profile.ToString();
+                _settings.Save();
+            }
         }
     }
 
@@ -800,24 +833,27 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Writes linear throttle profiles to all 6 slots sequentially with delays.
+    /// Writes throttle profiles to all 6 slots sequentially with delays.
+    /// Each slot uses its configured profile type (Linear, Exponential, or Stepped).
     /// Each slot requires 6 blocks of 17 bytes (block index + 16 throttle values).
     /// </summary>
     private async Task<bool> WriteThrottleProfilesAsync()
     {
         if (!IsGattConnected) return false;
 
-        // Get the throttle curve blocks (6 blocks of 17 bytes each)
-        var blocks = ScalextricProtocol.ThrottleProfile.CreateLinearBlocks();
-
         for (int slot = 1; slot <= 6; slot++)
         {
+            var controller = Controllers[slot - 1];
+            var profileType = controller.ThrottleProfile;
+
+            // Get the throttle curve blocks for this slot's profile type
+            var blocks = ScalextricProtocol.ThrottleProfile.CreateBlocks(profileType);
             var uuid = ScalextricProtocol.Characteristics.GetThrottleProfileForSlot(slot);
 
             // Write all 6 blocks for this slot
             for (int blockIndex = 0; blockIndex < ScalextricProtocol.ThrottleProfile.BlockCount; blockIndex++)
             {
-                StatusText = $"Writing throttle profile slot {slot}, block {blockIndex + 1}/6...";
+                StatusText = $"Writing throttle profile slot {slot} ({profileType}), block {blockIndex + 1}/6...";
 
                 var success = await _bleMonitorService.WriteCharacteristicAwaitAsync(uuid, blocks[blockIndex]);
 

@@ -31,6 +31,12 @@ public class AppSettings
     public bool[] SlotGhostModes { get; set; } = [false, false, false, false, false, false];
 
     /// <summary>
+    /// Per-slot throttle profile type names. Array index 0 = slot 1, etc.
+    /// Valid values: "Linear", "Exponential", "Stepped"
+    /// </summary>
+    public string[] SlotThrottleProfiles { get; set; } = ["Linear", "Linear", "Linear", "Linear", "Linear", "Linear"];
+
+    /// <summary>
     /// Gets the path to the settings file.
     /// </summary>
     private static string SettingsFilePath
@@ -77,6 +83,25 @@ public class AppSettings
                     if (settings.SlotGhostModes == null || settings.SlotGhostModes.Length != 6)
                     {
                         settings.SlotGhostModes = [false, false, false, false, false, false];
+                    }
+
+                    // Validate per-slot throttle profiles
+                    if (settings.SlotThrottleProfiles == null || settings.SlotThrottleProfiles.Length != 6)
+                    {
+                        settings.SlotThrottleProfiles = ["Linear", "Linear", "Linear", "Linear", "Linear", "Linear"];
+                    }
+                    else
+                    {
+                        // Ensure each value is a valid profile name
+                        var validProfiles = new[] { "Linear", "Exponential", "Stepped" };
+                        for (int i = 0; i < 6; i++)
+                        {
+                            if (string.IsNullOrEmpty(settings.SlotThrottleProfiles[i]) ||
+                                Array.IndexOf(validProfiles, settings.SlotThrottleProfiles[i]) < 0)
+                            {
+                                settings.SlotThrottleProfiles[i] = "Linear";
+                            }
+                        }
                     }
 
                     return settings;

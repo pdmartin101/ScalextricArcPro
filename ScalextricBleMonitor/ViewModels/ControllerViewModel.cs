@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ScalextricBleMonitor.Models;
 using ScalextricBleMonitor.Services;
@@ -61,6 +63,29 @@ public partial class ControllerViewModel : ObservableObject
     {
         _controller.IsGhostMode = value;
     }
+
+    /// <summary>
+    /// Throttle profile type for this slot. Determines the throttle response curve.
+    /// Changes take effect on next power enable.
+    /// </summary>
+    [ObservableProperty]
+    private ThrottleProfileType _throttleProfile = ThrottleProfileType.Linear;
+
+    partial void OnThrottleProfileChanged(ThrottleProfileType value)
+    {
+        ThrottleProfileChanged?.Invoke(this, value);
+    }
+
+    /// <summary>
+    /// Event raised when the throttle profile is changed.
+    /// </summary>
+    public event EventHandler<ThrottleProfileType>? ThrottleProfileChanged;
+
+    /// <summary>
+    /// Available throttle profile types for selection in UI.
+    /// </summary>
+    public static IReadOnlyList<ThrottleProfileType> AvailableProfiles { get; } =
+        Enum.GetValues<ThrottleProfileType>();
 
     [ObservableProperty]
     private int _throttle;
