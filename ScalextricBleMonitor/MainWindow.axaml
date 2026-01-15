@@ -3,6 +3,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:ScalextricBleMonitor.ViewModels"
+        xmlns:conv="using:ScalextricBleMonitor.Converters"
         mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="480"
         x:Class="ScalextricBleMonitor.MainWindow"
         x:DataType="vm:MainViewModel"
@@ -78,7 +79,7 @@
                     <Grid ColumnDefinitions="Auto,Auto,*,Auto">
                         <!-- Power button -->
                         <Button Grid.Column="0"
-                                Content="{Binding IsPowerEnabled, Converter={x:Static vm:PowerButtonTextConverter.Instance}}"
+                                Content="{Binding IsPowerEnabled, Converter={x:Static conv:PowerButtonTextConverter.Instance}}"
                                 Click="OnPowerToggleClick"
                                 Padding="12,6"
                                 FontWeight="Bold"
@@ -88,7 +89,7 @@
                         <!-- Per-slot toggle -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" Margin="12,0,0,0" VerticalAlignment="Center">
                             <ToggleButton IsChecked="{Binding UsePerSlotPower}"
-                                          Content="{Binding UsePerSlotPower, Converter={x:Static vm:PerSlotToggleTextConverter.Instance}}"
+                                          Content="{Binding UsePerSlotPower, Converter={x:Static conv:PerSlotToggleTextConverter.Instance}}"
                                           Padding="8,4"
                                           FontSize="10"
                                           ToolTip.Tip="Toggle between global power level and per-slot power levels"/>
@@ -118,7 +119,7 @@
                                  Width="12" Height="12"
                                  VerticalAlignment="Center">
                             <Ellipse.Fill>
-                                <SolidColorBrush Color="{Binding IsPowerEnabled, Converter={x:Static vm:PowerIndicatorColorConverter.Instance}}"/>
+                                <SolidColorBrush Color="{Binding IsPowerEnabled, Converter={x:Static conv:PowerIndicatorColorConverter.Instance}}"/>
                             </Ellipse.Fill>
                         </Ellipse>
                     </Grid>
@@ -164,7 +165,7 @@
                                                 Value="{Binding PowerLevel}"
                                                 Width="50"
                                                 VerticalAlignment="Center"
-                                                ToolTip.Tip="{Binding IsGhostMode, Converter={x:Static vm:GhostModeTooltipConverter.Instance}}"/>
+                                                ToolTip.Tip="{Binding IsGhostMode, Converter={x:Static conv:GhostModeTooltipConverter.Instance}}"/>
                                         <TextBlock Text="{Binding PowerLevel}"
                                                    FontSize="9"
                                                    FontWeight="Bold"
@@ -184,7 +185,7 @@
                                                 HorizontalAlignment="Stretch"
                                                 RenderTransformOrigin="0,0.5">
                                             <Border.RenderTransform>
-                                                <ScaleTransform ScaleX="{Binding Throttle, Converter={x:Static vm:ThrottleToScaleConverter.Instance}}"/>
+                                                <ScaleTransform ScaleX="{Binding Throttle, Converter={x:Static conv:ThrottleToScaleConverter.Instance}}"/>
                                             </Border.RenderTransform>
                                         </Border>
                                         <TextBlock Text="{Binding Throttle}"
@@ -197,7 +198,7 @@
 
                                     <!-- Brake/Lane change/Lap indicators -->
                                     <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="3">
-                                        <Border Background="{Binding IsBrakePressed, Converter={x:Static vm:BoolToBrushConverter.BrakeInstance}}"
+                                        <Border Background="{Binding IsBrakePressed, Converter={x:Static conv:BoolToBrushConverter.BrakeInstance}}"
                                                 CornerRadius="2"
                                                 Padding="3,1"
                                                 MinWidth="30">
@@ -206,7 +207,7 @@
                                                        Foreground="White"
                                                        HorizontalAlignment="Center"/>
                                         </Border>
-                                        <Border Background="{Binding IsLaneChangePressed, Converter={x:Static vm:BoolToBrushConverter.LaneChangeInstance}}"
+                                        <Border Background="{Binding IsLaneChangePressed, Converter={x:Static conv:BoolToBrushConverter.LaneChangeInstance}}"
                                                 CornerRadius="2"
                                                 Padding="3,1"
                                                 MinWidth="30">

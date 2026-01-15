@@ -11,10 +11,10 @@ This document tracks identified code quality issues and their resolution status.
 | Phase | Description | Total | Fixed | Remaining |
 |-------|-------------|-------|-------|-----------|
 | 1 | Critical Issues | 4 | 4 | 0 |
-| 2 | High Priority | 5 | 0 | 5 |
+| 2 | High Priority | 5 | 1 | 4 |
 | 3 | Medium Priority | 7 | 0 | 7 |
-| 4 | Low Priority | 7 | 0 | 7 |
-| **Total** | | **23** | **4** | **19** |
+| 4 | Low Priority | 7 | 2 | 5 |
+| **Total** | | **23** | **7** | **16** |
 
 ---
 
@@ -90,7 +90,7 @@ if (_disposed) throw new ObjectDisposedException(nameof(BleMonitorService));
 
 ## Phase 2: High Priority Issues (Should Fix)
 
-### 2.1 ❌ MainViewModel Class Too Large (1,443 lines)
+### 2.1 ✅ MainViewModel Class Too Large (1,443 lines)
 **Location:** `MainViewModel.cs` entire file
 **Impact:** Hard to maintain, test, and understand
 **Details:** Single class contains:
@@ -104,6 +104,8 @@ if (_disposed) throw new ObjectDisposedException(nameof(BleMonitorService));
 - 6 Value converters
 
 **Fix:** Extract protocol decoding to `ScalextricProtocolDecoder`, move nested classes to separate files.
+
+**Resolution:** Extracted nested ViewModels to separate files (`ControllerViewModel.cs`, `ServiceViewModel.cs`, `CharacteristicViewModel.cs`, `NotificationDataViewModel.cs`) and moved 6 value converters to `Converters/` folder. MainViewModel reduced from ~1,443 to ~984 lines.
 
 ---
 
@@ -243,19 +245,23 @@ uint timeDiff = currentMaxTimestamp >= _lastMaxTimestamp
 
 ---
 
-### 4.4 ❌ Value Converters in ViewModel File
+### 4.4 ✅ Value Converters in ViewModel File
 **Location:** `MainViewModel.cs` - bottom of file (6 converters)
 **Impact:** File size, organization
 
 **Fix:** Move to separate `Converters/` folder with individual files.
 
+**Resolution:** Moved to `Converters/` folder: `ThrottleToScaleConverter.cs`, `PowerButtonTextConverter.cs`, `PerSlotToggleTextConverter.cs`, `BoolToBrushConverter.cs`, `PowerIndicatorColorConverter.cs`, `GhostModeTooltipConverter.cs`.
+
 ---
 
-### 4.5 ❌ Nested ViewModels in Single File
+### 4.5 ✅ Nested ViewModels in Single File
 **Location:** `MainViewModel.cs` - 5 nested classes
 **Impact:** File size, discoverability
 
 **Fix:** Extract to separate files in ViewModels folder.
+
+**Resolution:** Extracted to `ViewModels/` folder: `ControllerViewModel.cs`, `ServiceViewModel.cs`, `CharacteristicViewModel.cs`, `NotificationDataViewModel.cs`. Note: `ControllerViewModel` was already a separate file.
 
 ---
 
@@ -298,6 +304,7 @@ These are larger refactoring efforts to consider after critical issues are resol
 | 2026-01-15 | 1.2 | Fixed: Added `RunFireAndForget` helper method to handle async errors; replaced all `_ = AsyncMethod()` patterns |
 | 2026-01-15 | 1.3 | Fixed: Added `ThrowIfDisposed()` helper and disposal guards to all 8 public methods in BleMonitorService.cs |
 | 2026-01-15 | 1.4 | Fixed: Used `Interlocked` operations for `_connectionAttempts` to prevent race conditions in retry loop |
+| 2026-01-15 | 2.1, 4.4, 4.5 | Fixed: Extracted nested ViewModels to separate files, moved 6 value converters to Converters/ folder. MainViewModel reduced from ~1,443 to ~984 lines |
 
 ---
 
