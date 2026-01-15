@@ -5,7 +5,7 @@ using ScalextricBleMonitor.Views;
 namespace ScalextricBleMonitor.Services;
 
 /// <summary>
-/// Manages application child windows (GATT Services, Notifications).
+/// Manages application child windows (GATT Services, Notifications, Ghost Control).
 /// Ensures single-instance windows and handles lifecycle events.
 /// </summary>
 public class WindowService : IWindowService
@@ -14,9 +14,11 @@ public class WindowService : IWindowService
     private readonly Func<object> _getDataContext;
     private NotificationWindow? _notificationWindow;
     private GattServicesWindow? _gattServicesWindow;
+    private GhostControlWindow? _ghostControlWindow;
 
     public event EventHandler? GattServicesWindowClosed;
     public event EventHandler? NotificationWindowClosed;
+    public event EventHandler? GhostControlWindowClosed;
 
     /// <summary>
     /// Creates a new WindowService.
@@ -63,12 +65,31 @@ public class WindowService : IWindowService
         _notificationWindow.Show(_owner);
     }
 
+    public void ShowGhostControlWindow()
+    {
+        if (_ghostControlWindow != null)
+        {
+            _ghostControlWindow.Activate();
+            return;
+        }
+
+        _ghostControlWindow = new GhostControlWindow
+        {
+            DataContext = _getDataContext()
+        };
+
+        _ghostControlWindow.Closed += OnGhostControlWindowClosed;
+        _ghostControlWindow.Show(_owner);
+    }
+
     public void CloseAllWindows()
     {
         _notificationWindow?.Close();
         _notificationWindow = null;
         _gattServicesWindow?.Close();
         _gattServicesWindow = null;
+        _ghostControlWindow?.Close();
+        _ghostControlWindow = null;
     }
 
     private void OnGattServicesWindowClosed(object? sender, EventArgs e)
@@ -81,5 +102,11 @@ public class WindowService : IWindowService
     {
         _notificationWindow = null;
         NotificationWindowClosed?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnGhostControlWindowClosed(object? sender, EventArgs e)
+    {
+        _ghostControlWindow = null;
+        GhostControlWindowClosed?.Invoke(this, EventArgs.Empty);
     }
 }

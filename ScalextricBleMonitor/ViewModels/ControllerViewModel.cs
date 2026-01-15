@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using ScalextricBleMonitor.Models;
 using ScalextricBleMonitor.Services;
 
@@ -53,8 +54,8 @@ public partial class ControllerViewModel : ObservableObject
     }
 
     /// <summary>
-    /// When true, this slot operates in ghost mode - PowerLevel becomes a direct throttle
-    /// index rather than a multiplier, allowing autonomous car control without a physical controller.
+    /// When true, this slot operates in ghost mode - GhostThrottleLevel becomes the direct throttle
+    /// index rather than using PowerLevel as a multiplier, allowing autonomous car control without a physical controller.
     /// </summary>
     [ObservableProperty]
     private bool _isGhostMode;
@@ -62,6 +63,19 @@ public partial class ControllerViewModel : ObservableObject
     partial void OnIsGhostModeChanged(bool value)
     {
         _controller.IsGhostMode = value;
+    }
+
+    /// <summary>
+    /// Ghost mode throttle level (0-63). When ghost mode is enabled, this value is sent
+    /// directly to the car as a fixed throttle index. Defaults to 0 (stopped).
+    /// Separate from PowerLevel which is used for controller max power.
+    /// </summary>
+    [ObservableProperty]
+    private int _ghostThrottleLevel;
+
+    partial void OnGhostThrottleLevelChanged(int value)
+    {
+        _controller.GhostThrottleLevel = value;
     }
 
     /// <summary>
@@ -184,6 +198,26 @@ public partial class ControllerViewModel : ObservableObject
         : "--";
 
     public string SlotLabel => $"Controller {SlotNumber}";
+
+    /// <summary>
+    /// Increments the ghost throttle level by 1 (max 63).
+    /// Used in ghost mode to increase car speed.
+    /// </summary>
+    [RelayCommand]
+    private void IncrementGhostThrottle()
+    {
+        if (GhostThrottleLevel < 63) GhostThrottleLevel++;
+    }
+
+    /// <summary>
+    /// Decrements the ghost throttle level by 1 (min 0).
+    /// Used in ghost mode to decrease car speed.
+    /// </summary>
+    [RelayCommand]
+    private void DecrementGhostThrottle()
+    {
+        if (GhostThrottleLevel > 0) GhostThrottleLevel--;
+    }
 
     public void UpdateFromByte(byte data)
     {

@@ -151,16 +151,27 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 profileType = parsedProfile;
             }
 
+            // Load ghost throttle level from settings
+            var ghostThrottleLevel = _settings.SlotGhostThrottleLevels.Length > i ? _settings.SlotGhostThrottleLevels[i] : 0;
+
             var controller = new ControllerViewModel
             {
                 SlotNumber = i + 1,
                 PowerLevel = powerLevel,
                 IsGhostMode = isGhostMode,
+                GhostThrottleLevel = ghostThrottleLevel,
                 ThrottleProfile = profileType
             };
 
             // Subscribe to profile changes to persist settings
             controller.ThrottleProfileChanged += OnControllerThrottleProfileChanged;
+
+            // Subscribe to ghost mode changes to update HasAnyGhostMode
+            controller.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(ControllerViewModel.IsGhostMode))
+                    OnPropertyChanged(nameof(HasAnyGhostMode));
+            };
 
             Controllers.Add(controller);
         }
@@ -527,6 +538,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
             {
                 _settings.SlotGhostModes[i] = Controllers[i].IsGhostMode;
             }
+            if (i < _settings.SlotGhostThrottleLevels.Length)
+            {
+                _settings.SlotGhostThrottleLevels[i] = Controllers[i].GhostThrottleLevel;
+            }
         }
         _settings.Save();
 
@@ -734,6 +749,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Builds a power command using per-controller power levels and ghost mode settings.
+    /// In ghost mode, uses GhostThrottleLevel as direct throttle; otherwise uses PowerLevel as multiplier.
     /// </summary>
     private byte[] BuildPowerCommand()
     {
@@ -748,11 +764,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
             var controller = Controllers[i];
             var slot = builder.GetSlot(i + 1);
 
-            // Set power level (either per-slot or global)
-            slot.PowerMultiplier = (byte)(UsePerSlotPower ? controller.PowerLevel : PowerLevel);
-
-            // Set ghost mode flag - in ghost mode, PowerMultiplier becomes direct throttle index
-            slot.GhostMode = controller.IsGhostMode;
+            if (controller.IsGhostMode)
+            {
+                // Ghost mode: use GhostThrottleLevel as direct throttle index
+                slot.PowerMultiplier = (byte)controller.GhostThrottleLevel;
+                slot.GhostMode = true;
+            }
+            else
+            {
+                // Normal mode: use PowerLevel as multiplier (either per-slot or global)
+                slot.PowerMultiplier = (byte)(UsePerSlotPower ? controller.PowerLevel : PowerLevel);
+                slot.GhostMode = false;
+            }
         }
 
         return builder.Build();
@@ -915,6 +938,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private bool _isGattServicesWindowOpen;
 
     /// <summary>
+    /// Indicates whether the ghost control window is currently open.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isGhostControlWindowOpen;
+
+    /// <summary>
+    /// Returns true if any controller is currently in ghost mode.
+    /// Used by Ghost Control window to show placeholder when no ghost slots.
+    /// </summary>
+    public bool HasAnyGhostMode => Controllers.Any(c => c.IsGhostMode);
+
+    /// <summary>
     /// Sets the window service for managing child windows.
     /// </summary>
     /// <param name="windowService">The window service instance.</param>
@@ -923,6 +958,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _windowService = windowService;
         _windowService.GattServicesWindowClosed += (_, _) => IsGattServicesWindowOpen = false;
         _windowService.NotificationWindowClosed += (_, _) => IsNotificationWindowOpen = false;
+        _windowService.GhostControlWindowClosed += (_, _) => IsGhostControlWindowOpen = false;
     }
 
     /// <summary>
@@ -945,6 +981,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (_windowService == null) return;
         IsNotificationWindowOpen = true;
         _windowService.ShowNotificationWindow();
+    }
+
+    /// <summary>
+    /// Shows the Ghost Control window.
+    /// </summary>
+    [RelayCommand]
+    private void ShowGhostControl()
+    {
+        if (_windowService == null) return;
+        IsGhostControlWindowOpen = true;
+        _windowService.ShowGhostControlWindow();
     }
 
     /// <summary>

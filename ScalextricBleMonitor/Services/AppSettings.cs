@@ -31,6 +31,13 @@ public class AppSettings
     public bool[] SlotGhostModes { get; set; } = [false, false, false, false, false, false];
 
     /// <summary>
+    /// Per-slot ghost throttle levels (0-63). Array index 0 = slot 1, etc.
+    /// When ghost mode is enabled, this value is sent as the direct throttle index.
+    /// Defaults to 0 (stopped) for safety.
+    /// </summary>
+    public int[] SlotGhostThrottleLevels { get; set; } = [0, 0, 0, 0, 0, 0];
+
+    /// <summary>
     /// Per-slot throttle profile type names. Array index 0 = slot 1, etc.
     /// Valid values: "Linear", "Exponential", "Stepped"
     /// </summary>
@@ -83,6 +90,19 @@ public class AppSettings
                     if (settings.SlotGhostModes == null || settings.SlotGhostModes.Length != 6)
                     {
                         settings.SlotGhostModes = [false, false, false, false, false, false];
+                    }
+
+                    // Validate per-slot ghost throttle levels
+                    if (settings.SlotGhostThrottleLevels == null || settings.SlotGhostThrottleLevels.Length != 6)
+                    {
+                        settings.SlotGhostThrottleLevels = [0, 0, 0, 0, 0, 0];
+                    }
+                    else
+                    {
+                        for (int i = 0; i < 6; i++)
+                        {
+                            settings.SlotGhostThrottleLevels[i] = Math.Clamp(settings.SlotGhostThrottleLevels[i], 0, 63);
+                        }
                     }
 
                     // Validate per-slot throttle profiles

@@ -55,7 +55,8 @@ ScalextricTest/
 │   ├── Views/                            # Avalonia UI windows
 │   │   ├── MainWindow.axaml(.cs)         # Primary UI window
 │   │   ├── GattServicesWindow.axaml(.cs) # GATT browser pop-out
-│   │   └── NotificationWindow.axaml(.cs) # Live notification viewer
+│   │   ├── NotificationWindow.axaml(.cs) # Live notification viewer
+│   │   └── GhostControlWindow.axaml(.cs) # Ghost car throttle control
 │   ├── Converters/                       # XAML value converters
 │   │   ├── PowerButtonTextConverter.cs
 │   │   ├── PowerIndicatorColorConverter.cs
@@ -96,6 +97,7 @@ The application follows strict MVVM (Model-View-ViewModel) pattern:
 │  MainWindow.axaml.cs - ViewModel/service setup, lifecycle only      │
 │  NotificationWindow.axaml.cs - InitializeComponent only             │
 │  GattServicesWindow.axaml.cs - InitializeComponent only             │
+│  GhostControlWindow.axaml.cs - InitializeComponent only             │
 │  (All business logic removed from code-behind)                      │
 └─────────────────────────────┬───────────────────────────────────────┘
                               │ DataBinding + Commands
@@ -149,8 +151,11 @@ Program.Main()
 | MainViewModel | TogglePowerCommand | Enable/disable track power |
 | MainViewModel | ShowGattServicesCommand | Open GATT browser window |
 | MainViewModel | ShowNotificationsCommand | Open notifications window |
+| MainViewModel | ShowGhostControlCommand | Open ghost control window |
 | MainViewModel | ClearNotificationLogCommand | Clear notification log |
 | CharacteristicViewModel | ReadCommand | Read characteristic value |
+| ControllerViewModel | IncrementGhostThrottleCommand | Increase ghost throttle level |
+| ControllerViewModel | DecrementGhostThrottleCommand | Decrease ghost throttle level |
 
 ### BLE Monitoring Flow
 
@@ -176,8 +181,12 @@ Program.Main()
 
 - Enables autonomous car control without a physical controller
 - Per-slot toggle (G button) in the UI when per-slot power mode is enabled
-- In ghost mode, PowerLevel (0-63) becomes a direct throttle index into the throttle profile
-- Protocol: bit 7 of the power byte enables ghost mode (`0x80 | powerLevel`)
+- **Separate values**: `PowerLevel` (controller max power) and `GhostThrottleLevel` (ghost car speed)
+  - `PowerLevel` (0-63, default 63): Max power multiplier when using controller
+  - `GhostThrottleLevel` (0-63, default 0): Direct throttle index when ghost mode active
+- Protocol: bit 7 of the power byte enables ghost mode (`0x80 | ghostThrottleLevel`)
+- Ghost Control Window provides larger UI controls for fine-tuning ghost car speed
+- When ghost mode is ON, power controls are hidden in main window (shows "Ghost" indicator)
 - Ghost mode "latches" in the powerbase - requires explicit clear before power-off
 - On startup/shutdown, app sends clear-ghost + power-off sequence to reset powerbase state
 
@@ -227,7 +236,7 @@ Currently Windows-only (`net9.0-windows10.0.19041.0`). BLE code is wrapped in `#
 
 ### Unit Tests
 
-52 tests covering:
+67 tests covering:
 - `LapTimingEngine` - Lap detection, timing calculations, overflow handling
 - `ScalextricProtocol` - Command building, throttle profiles
 - `AppSettings` - Settings persistence and validation

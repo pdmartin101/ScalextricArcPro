@@ -387,6 +387,8 @@ These are larger refactoring efforts to consider after critical issues are resol
 | Enhancement | Description | Effort | Status |
 |-------------|-------------|--------|--------|
 | Throttle profile selector | Per-slot throttle profile selection (Linear, Exponential, Stepped) | Low | ✅ Done |
+| Ghost Control Window | Dedicated window with large sliders for ghost car throttle control | Low | ✅ Done |
+| Separate power/ghost values | PowerLevel for controller max power, GhostThrottleLevel for ghost speed | Low | ✅ Done |
 | Advanced Ghost cars | Record laps and replay chosen lap's throttle values as ghost car | Medium | Planned |
 | Multiple powerbase support | Connect to more than one device | High | - |
 | Data logging and export | Record race sessions to file | Medium | - |
@@ -663,6 +665,8 @@ public interface IGhostPlaybackService
 | 2026-01-15 | 5.5 | Implemented: Changed ComboBox/CheckBox to two-way bindings |
 | 2026-01-15 | Docs | Updated: CLAUDE.md and docs/README.md with new MVVM architecture documentation |
 | 2026-01-15 | Enhancement | Implemented: Throttle Profile Selector - per-slot selection of Linear/Exponential/Stepped profiles with persistence |
+| 2026-01-15 | Enhancement | Implemented: Ghost Control Window - dedicated window with large sliders and +/- buttons for ghost car throttle control |
+| 2026-01-15 | Enhancement | Implemented: Separated PowerLevel (controller max power) from GhostThrottleLevel (ghost car speed) for clearer UX |
 
 ---
 

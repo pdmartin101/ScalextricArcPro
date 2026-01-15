@@ -43,10 +43,17 @@ public class Controller
     public int PowerLevel { get; set; } = 63;
 
     /// <summary>
-    /// When true, this slot operates in ghost mode - PowerLevel becomes a direct throttle
-    /// index rather than a multiplier, allowing autonomous car control without a physical controller.
+    /// When true, this slot operates in ghost mode - GhostThrottleLevel becomes the direct throttle
+    /// index rather than using PowerLevel as a multiplier, allowing autonomous car control without a physical controller.
     /// </summary>
     public bool IsGhostMode { get; set; }
+
+    /// <summary>
+    /// Ghost mode throttle level (0-63). When ghost mode is enabled, this value is sent
+    /// directly to the car as a fixed throttle index. Defaults to 0 (stopped).
+    /// Separate from PowerLevel which is used for controller max power.
+    /// </summary>
+    public int GhostThrottleLevel { get; set; }
 
     /// <summary>
     /// Resets controller input state (throttle, buttons, counts).

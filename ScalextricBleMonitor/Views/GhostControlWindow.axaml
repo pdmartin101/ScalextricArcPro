@@ -1,0 +1,129 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:ScalextricBleMonitor.ViewModels"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="500"
+        x:Class="ScalextricBleMonitor.Views.GhostControlWindow"
+        x:DataType="vm:MainViewModel"
+        Title="Ghost Control"
+        Width="400" Height="500"
+        MinWidth="350" MinHeight="300"
+        WindowStartupLocation="CenterOwner">
+
+    <Design.DataContext>
+        <vm:MainViewModel />
+    </Design.DataContext>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="15">
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,15">
+            <TextBlock Text="Ghost Car Control"
+                       FontSize="18"
+                       FontWeight="SemiBold"/>
+            <TextBlock Text="Fine-tune ghost car power levels"
+                       FontSize="12"
+                       Foreground="Gray"/>
+        </StackPanel>
+
+        <!-- Ghost Slots List -->
+        <ScrollViewer Grid.Row="1">
+            <ItemsControl ItemsSource="{Binding Controllers}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ControllerViewModel">
+                        <!-- Only show if in ghost mode -->
+                        <Border Background="#F5F5F5"
+                                CornerRadius="8"
+                                Padding="15"
+                                Margin="0,0,0,10"
+                                IsVisible="{Binding IsGhostMode}">
+                            <Grid RowDefinitions="Auto,Auto,Auto">
+                                <!-- Slot Header -->
+                                <StackPanel Grid.Row="0"
+                                            Orientation="Horizontal"
+                                            Margin="0,0,0,10">
+                                    <TextBlock Text="{Binding SlotNumber, StringFormat='Slot {0}'}"
+                                               FontSize="16"
+                                               FontWeight="Bold"/>
+                                    <TextBlock Text=" - Ghost Mode Active"
+                                               FontSize="14"
+                                               Foreground="#4CAF50"/>
+                                </StackPanel>
+
+                                <!-- Ghost Throttle Slider with +/- buttons -->
+                                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,Auto">
+                                    <Button Grid.Column="0"
+                                            Content="-"
+                                            Command="{Binding DecrementGhostThrottleCommand}"
+                                            Width="40"
+                                            Height="40"
+                                            FontSize="18"
+                                            FontWeight="Bold"/>
+                                    <Slider Grid.Column="1"
+                                            Minimum="0"
+                                            Maximum="63"
+                                            Value="{Binding GhostThrottleLevel}"
+                                            Margin="10,0"
+                                            VerticalAlignment="Center"/>
+                                    <Button Grid.Column="2"
+                                            Content="+"
+                                            Command="{Binding IncrementGhostThrottleCommand}"
+                                            Width="40"
+                                            Height="40"
+                                            FontSize="18"
+                                            FontWeight="Bold"/>
+                                    <TextBlock Grid.Column="3"
+                                               Text="{Binding GhostThrottleLevel}"
+                                               FontSize="24"
+                                               FontWeight="Bold"
+                                               Width="50"
+                                               TextAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Foreground="#0096FF"/>
+                                </Grid>
+
+                                <!-- Throttle Profile -->
+                                <StackPanel Grid.Row="2"
+                                            Orientation="Horizontal"
+                                            Margin="0,15,0,0">
+                                    <TextBlock Text="Profile:"
+                                               VerticalAlignment="Center"
+                                               FontSize="12"/>
+                                    <ComboBox ItemsSource="{x:Static vm:ControllerViewModel.AvailableProfiles}"
+                                              SelectedItem="{Binding ThrottleProfile}"
+                                              Margin="10,0,0,0"
+                                              MinWidth="120"
+                                              ToolTip.Tip="Throttle response curve (applied on next power enable)"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Placeholder when no ghost slots -->
+        <StackPanel Grid.Row="1"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Center"
+                    IsVisible="{Binding !HasAnyGhostMode}">
+            <TextBlock Text="No Ghost Cars Active"
+                       FontSize="16"
+                       Foreground="Gray"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="Enable ghost mode (G button) for a slot in the main window"
+                       FontSize="12"
+                       Foreground="#AAAAAA"
+                       HorizontalAlignment="Center"
+                       TextWrapping="Wrap"
+                       Margin="0,8,0,0"/>
+        </StackPanel>
+
+        <!-- Footer hint -->
+        <TextBlock Grid.Row="2"
+                   Text="Tip: Changes take effect immediately on running ghost cars"
+                   FontSize="11"
+                   Foreground="Gray"
+                   Margin="0,10,0,0"/>
+    </Grid>
+</Window>

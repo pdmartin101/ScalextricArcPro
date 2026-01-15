@@ -19,6 +19,11 @@ public interface IWindowService
     void ShowNotificationWindow();
 
     /// <summary>
+    /// Shows the Ghost Control window. If already open, activates it.
+    /// </summary>
+    void ShowGhostControlWindow();
+
+    /// <summary>
     /// Closes all child windows.
     /// </summary>
     void CloseAllWindows();
@@ -32,4 +37,9 @@ public interface IWindowService
     /// Raised when the Notification window is closed.
     /// </summary>
     event EventHandler? NotificationWindowClosed;
+
+    /// <summary>
+    /// Raised when the Ghost Control window is closed.
+    /// </summary>
+    event EventHandler? GhostControlWindowClosed;
 }
