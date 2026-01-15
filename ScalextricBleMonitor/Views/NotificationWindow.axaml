@@ -4,7 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:ScalextricBleMonitor.ViewModels"
         mc:Ignorable="d" d:DesignWidth="950" d:DesignHeight="500"
-        x:Class="ScalextricBleMonitor.NotificationWindow"
+        x:Class="ScalextricBleMonitor.Views.NotificationWindow"
         x:DataType="vm:MainViewModel"
         Title="Live Notification Data"
         Width="950" Height="500"

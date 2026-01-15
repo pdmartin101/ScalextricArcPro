@@ -3,7 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using ScalextricBleMonitor.ViewModels;
 
-namespace ScalextricBleMonitor;
+namespace ScalextricBleMonitor.Views;
 
 public partial class MainWindow : Window
 {

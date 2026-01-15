@@ -4,7 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:ScalextricBleMonitor.ViewModels"
         mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="500"
-        x:Class="ScalextricBleMonitor.GattServicesWindow"
+        x:Class="ScalextricBleMonitor.Views.GattServicesWindow"
         x:DataType="vm:MainViewModel"
         Title="GATT Services"
         Width="550" Height="500"

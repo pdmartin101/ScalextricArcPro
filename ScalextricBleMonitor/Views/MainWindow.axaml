@@ -5,7 +5,7 @@
         xmlns:vm="using:ScalextricBleMonitor.ViewModels"
         xmlns:conv="using:ScalextricBleMonitor.Converters"
         mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="480"
-        x:Class="ScalextricBleMonitor.MainWindow"
+        x:Class="ScalextricBleMonitor.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Title="Scalextric ARC Pro BLE Monitor"
         Width="500" Height="480"
