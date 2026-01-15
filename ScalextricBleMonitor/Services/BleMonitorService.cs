@@ -57,6 +57,8 @@ public class BleMonitorService : IBleMonitorService
     private BluetoothLEDevice? _connectedDevice;
     private readonly List<GattDeviceService> _gattServices = [];
     private readonly List<(Guid ServiceUuid, GattCharacteristic Characteristic)> _subscribedCharacteristics = [];
+    // Cache characteristics by UUID for O(1) lookup instead of O(n) search through services
+    private readonly Dictionary<Guid, GattCharacteristic> _characteristicCache = [];
 #endif
 
     // Well-known GATT service names
@@ -253,19 +255,8 @@ public class BleMonitorService : IBleMonitorService
     {
         try
         {
-            // Find the characteristic across all services
-            GattCharacteristic? targetCharacteristic = null;
-            foreach (var service in _gattServices)
-            {
-                var charsResult = await service.GetCharacteristicsAsync(BluetoothCacheMode.Cached).AsTask().ConfigureAwait(false);
-                if (charsResult.Status == GattCommunicationStatus.Success)
-                {
-                    targetCharacteristic = charsResult.Characteristics.FirstOrDefault(c => c.Uuid == characteristicUuid);
-                    if (targetCharacteristic != null) break;
-                }
-            }
-
-            if (targetCharacteristic == null)
+            // Use cached characteristic for O(1) lookup
+            if (!_characteristicCache.TryGetValue(characteristicUuid, out var targetCharacteristic))
             {
                 CharacteristicWriteCompleted?.Invoke(this, new BleCharacteristicWriteEventArgs
                 {
@@ -648,6 +639,9 @@ public class BleMonitorService : IBleMonitorService
                                 Properties = FormatCharacteristicProperties(characteristic.CharacteristicProperties)
                             };
                             serviceInfo.Characteristics.Add(charInfo);
+
+                            // Cache characteristic for O(1) lookup
+                            _characteristicCache[characteristic.Uuid] = characteristic;
                         }
                     }
 
@@ -719,6 +713,9 @@ public class BleMonitorService : IBleMonitorService
             }
         }
         _subscribedCharacteristics.Clear();
+
+        // Clear characteristic cache
+        _characteristicCache.Clear();
 
         // Dispose all GATT services
         foreach (var service in _gattServices)

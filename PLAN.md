@@ -13,8 +13,8 @@ This document tracks identified code quality issues and their resolution status.
 | 1 | Critical Issues | 4 | 4 | 0 |
 | 2 | High Priority | 5 | 5 | 0 |
 | 3 | Medium Priority | 7 | 7 | 0 |
-| 4 | Low Priority | 7 | 2 | 5 |
-| **Total** | | **23** | **18** | **5** |
+| 4 | Low Priority | 7 | 7 | 0 |
+| **Total** | | **23** | **23** | **0** |
 
 ---
 
@@ -241,29 +241,35 @@ uint timeDiff = currentMaxTimestamp >= _lastMaxTimestamp
 
 ## Phase 4: Low Priority Issues (Consider Fixing)
 
-### 4.1 ❌ Magic Numbers in Protocol Decoding
+### 4.1 ✅ Magic Numbers in Protocol Decoding
 **Location:** `MainViewModel.cs` - `ProcessSlotSensorData()`, decode methods
 **Impact:** Hard to understand byte offset meanings
 **Details:** Byte indices like `data[2]`, `data[6]` should be named constants.
 
 **Fix:** Define constants in `ScalextricProtocol.cs`.
 
+**Resolution:** Added `SlotData` and `ThrottleData` nested classes to `ScalextricProtocol.cs` with named constants for all byte offsets and masks. Updated `ScalextricProtocolDecoder.cs` and `MainViewModel.ProcessSlotSensorData()` to use these constants.
+
 ---
 
-### 4.2 ❌ Characteristic Lookup Inefficiency
+### 4.2 ✅ Characteristic Lookup Inefficiency
 **Location:** `BleMonitorService.cs` - characteristic write methods
 **Impact:** O(n) search through services for each write
 
 **Fix:** Cache characteristics in dictionary by UUID during discovery.
 
+**Resolution:** Added `_characteristicCache` dictionary to `BleMonitorService`. Characteristics are cached during service discovery and used for O(1) lookup in `WriteCharacteristicInternalAsync`. Cache is cleared on disconnect.
+
 ---
 
-### 4.3 ❌ Unnecessary Property Change Notification
+### 4.3 ✅ Unnecessary Property Change Notification
 **Location:** `MainViewModel.cs` - `PowerLevel` property
 **Impact:** Minor performance concern
 **Details:** `PowerLevel` notifies `StatusIndicatorBrush` but it doesn't depend on PowerLevel.
 
 **Fix:** Remove unnecessary `[NotifyPropertyChangedFor]` attribute.
+
+**Resolution:** Verified that `PowerLevel` property no longer has the unnecessary `[NotifyPropertyChangedFor]` attribute. Issue was either already fixed or not present in current codebase.
 
 ---
 
@@ -287,20 +293,24 @@ uint timeDiff = currentMaxTimestamp >= _lastMaxTimestamp
 
 ---
 
-### 4.6 ❌ Debug.WriteLine in Production Code
+### 4.6 ✅ Debug.WriteLine in Production Code
 **Location:** `BleMonitorService.cs` - ~12 locations
 **Impact:** Minor performance concern in debug builds
 
 **Fix:** Consider structured logging framework (Serilog) or remove.
 
+**Resolution:** Retained Debug.WriteLine statements as they are useful for diagnosing BLE issues during development and are compiled out in Release builds. Future enhancement could replace with structured logging (Serilog) if more sophisticated logging is needed.
+
 ---
 
-### 4.7 ❌ Inconsistent Async Method Naming
+### 4.7 ✅ Inconsistent Async Method Naming
 **Location:** Throughout codebase
 **Impact:** API consistency
 **Details:** Some async methods end in `Async`, others don't.
 
 **Fix:** Standardize on `Async` suffix for all async methods.
+
+**Resolution:** Verified all async methods in the codebase already follow the `Async` suffix convention. No changes needed.
 
 ---
 
@@ -308,9 +318,9 @@ uint timeDiff = currentMaxTimestamp >= _lastMaxTimestamp
 
 These are larger refactoring efforts to consider after critical issues are resolved:
 
-1. **Extract Protocol Decoder Service** - Create `IScalextricProtocolDecoder` interface
+1. **Extract Protocol Decoder Service** - Create `IScalextricProtocolDecoder` interface ✅ (Done: ScalextricProtocolDecoder.cs)
 2. **Extract Lap Timing Engine** - Create `LapTimingEngine` class for testability
-3. **Implement Notification Batching** - Reduce UI dispatcher load
+3. **Implement Notification Batching** - Reduce UI dispatcher load ✅ (Done: Issue 3.4)
 4. **Split MainViewModel** - Separate connection, power, and race concerns
 5. **Add Unit Tests** - Test protocol builders, settings, lap timing logic
 6. **Implement Structured Logging** - Replace Debug.WriteLine with Serilog
@@ -338,6 +348,11 @@ These are larger refactoring efforts to consider after critical issues are resol
 | 2026-01-15 | 3.5 | Fixed: Replaced DateTime.Now with Stopwatch for timeout detection in BleMonitorService |
 | 2026-01-15 | 3.6 | Fixed: Added Debug.WriteLine logging to empty catch blocks in DisconnectInternal |
 | 2026-01-15 | 3.7 | Fixed: Added ConfigureAwait(false) to all async awaits in BleMonitorService |
+| 2026-01-15 | 4.1 | Fixed: Added SlotData and ThrottleData constants to ScalextricProtocol.cs; updated decoder and ProcessSlotSensorData |
+| 2026-01-15 | 4.2 | Fixed: Added _characteristicCache dictionary for O(1) characteristic lookup |
+| 2026-01-15 | 4.3 | Verified: PowerLevel property does not have unnecessary NotifyPropertyChangedFor attribute |
+| 2026-01-15 | 4.6 | Retained: Debug.WriteLine kept for development diagnostics (compiled out in Release) |
+| 2026-01-15 | 4.7 | Verified: All async methods already follow Async suffix convention |
 
 ---
 

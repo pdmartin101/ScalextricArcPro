@@ -438,26 +438,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void ProcessSlotSensorData(byte[] data)
     {
-        // Slot characteristic (0x3b0b) notification format (20 bytes):
-        // data[0] = status/counter byte (changes on events)
-        // data[1] = slot index (1-6)
-        // data[2-5] = t1: Lane 1 entry timestamp (32-bit little-endian, centiseconds)
-        // data[6-9] = t2: Lane 2 entry timestamp (32-bit little-endian, centiseconds)
-        // data[10-13] = t3: Lane 1 exit timestamp (t3 > t1 by a few tenths)
-        // data[14-17] = t4: Lane 2 exit timestamp (t4 > t2 by a few tenths)
-        // data[18-19] = additional data
-        //
-        // t1/t3 are a pair (lane 1 entry/exit), t2/t4 are a pair (lane 2 entry/exit).
-        // For lap timing, we use the entry timestamps t1 and t2.
-        if (data.Length >= 10)
+        // Slot characteristic notification format - see ScalextricProtocol.SlotData for byte layout
+        if (data.Length >= ScalextricProtocol.SlotData.MinLength)
         {
-            int slotId = data[1];
+            int slotId = data[ScalextricProtocol.SlotData.SlotIdOffset];
 
-            // Extract Lane 1 entry timestamp from bytes 2-5 (t1)
-            uint lane1Timestamp = (uint)(data[2] | (data[3] << 8) | (data[4] << 16) | (data[5] << 24));
+            // Extract Lane 1 entry timestamp (t1)
+            uint lane1Timestamp = ReadUInt32LittleEndian(data, ScalextricProtocol.SlotData.Lane1EntryOffset);
 
-            // Extract Lane 2 entry timestamp from bytes 6-9 (t2)
-            uint lane2Timestamp = (uint)(data[6] | (data[7] << 8) | (data[8] << 16) | (data[9] << 24));
+            // Extract Lane 2 entry timestamp (t2)
+            uint lane2Timestamp = ReadUInt32LittleEndian(data, ScalextricProtocol.SlotData.Lane2EntryOffset);
 
             // Valid slot IDs are 1-6
             if (slotId >= 1 && slotId <= MaxControllers)
@@ -466,6 +456,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 Controllers[slotId - 1].UpdateFinishLineTimestamps(lane1Timestamp, lane2Timestamp);
             }
         }
+    }
+
+    /// <summary>
+    /// Reads a 32-bit unsigned integer from a byte array in little-endian format.
+    /// </summary>
+    private static uint ReadUInt32LittleEndian(byte[] data, int offset)
+    {
+        return (uint)(data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24));
     }
 
     public void Dispose()

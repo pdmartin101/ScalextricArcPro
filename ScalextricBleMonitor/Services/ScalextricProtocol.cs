@@ -9,6 +9,65 @@ namespace ScalextricBleMonitor.Services;
 public static class ScalextricProtocol
 {
     /// <summary>
+    /// Byte offsets and masks for Slot characteristic notification data (finish line timestamps).
+    /// Format: 20 bytes total
+    /// </summary>
+    public static class SlotData
+    {
+        /// <summary>Minimum valid packet length for slot data.</summary>
+        public const int MinLength = 10;
+
+        /// <summary>Full packet length for slot data.</summary>
+        public const int FullLength = 18;
+
+        /// <summary>Status/counter byte offset.</summary>
+        public const int StatusOffset = 0;
+
+        /// <summary>Slot ID offset (1-6).</summary>
+        public const int SlotIdOffset = 1;
+
+        /// <summary>Lane 1 entry timestamp offset (t1, 4 bytes little-endian, centiseconds).</summary>
+        public const int Lane1EntryOffset = 2;
+
+        /// <summary>Lane 2 entry timestamp offset (t2, 4 bytes little-endian, centiseconds).</summary>
+        public const int Lane2EntryOffset = 6;
+
+        /// <summary>Lane 1 exit timestamp offset (t3, 4 bytes little-endian, centiseconds).</summary>
+        public const int Lane1ExitOffset = 10;
+
+        /// <summary>Lane 2 exit timestamp offset (t4, 4 bytes little-endian, centiseconds).</summary>
+        public const int Lane2ExitOffset = 14;
+
+        /// <summary>Timestamp conversion: timestamps are in centiseconds (1/100th second).</summary>
+        public const double TimestampUnitsPerSecond = 100.0;
+    }
+
+    /// <summary>
+    /// Byte offsets and masks for Throttle characteristic notification data (controller input).
+    /// Format: 7 bytes (1 header + 6 controller bytes)
+    /// </summary>
+    public static class ThrottleData
+    {
+        /// <summary>Header byte offset.</summary>
+        public const int HeaderOffset = 0;
+
+        /// <summary>First controller data offset.</summary>
+        public const int FirstControllerOffset = 1;
+
+        /// <summary>Maximum number of controllers.</summary>
+        public const int MaxControllers = 6;
+
+        /// <summary>Mask for throttle value (bits 0-5).</summary>
+        public const byte ThrottleMask = 0x3F;
+
+        /// <summary>Mask for brake flag (bit 6).</summary>
+        public const byte BrakeMask = 0x40;
+
+        /// <summary>Mask for lane change flag (bit 7).</summary>
+        public const byte LaneChangeMask = 0x80;
+    }
+
+    /// <summary>
     /// GATT Characteristic UUIDs for Scalextric ARC devices.
     /// </summary>
     public static class Characteristics

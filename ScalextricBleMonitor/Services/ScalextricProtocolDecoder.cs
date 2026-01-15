@@ -42,36 +42,45 @@ public static class ScalextricProtocolDecoder
     /// </summary>
     private static string DecodeSlotData(byte[] data)
     {
-        if (data.Length < 18) return $"(incomplete: {data.Length} bytes)";
+        if (data.Length < ScalextricProtocol.SlotData.FullLength)
+            return $"(incomplete: {data.Length} bytes)";
 
         var parts = new List<string>();
 
         // Status byte and Slot ID
-        parts.Add($"St:{data[0]}");
-        int slotId = data[1];
+        parts.Add($"St:{data[ScalextricProtocol.SlotData.StatusOffset]}");
+        int slotId = data[ScalextricProtocol.SlotData.SlotIdOffset];
         parts.Add($"Slot:{slotId}");
 
-        // t1: Lane 1 entry timestamp (bytes 2-5, centiseconds)
-        uint t1 = (uint)(data[2] | (data[3] << 8) | (data[4] << 16) | (data[5] << 24));
-        double t1Seconds = t1 / 100.0;
+        // t1: Lane 1 entry timestamp (centiseconds)
+        uint t1 = ReadUInt32LittleEndian(data, ScalextricProtocol.SlotData.Lane1EntryOffset);
+        double t1Seconds = t1 / ScalextricProtocol.SlotData.TimestampUnitsPerSecond;
         parts.Add($"t1:{t1}({t1Seconds:F2}s)");
 
-        // t2: Lane 2 entry timestamp (bytes 6-9, centiseconds)
-        uint t2 = (uint)(data[6] | (data[7] << 8) | (data[8] << 16) | (data[9] << 24));
-        double t2Seconds = t2 / 100.0;
+        // t2: Lane 2 entry timestamp (centiseconds)
+        uint t2 = ReadUInt32LittleEndian(data, ScalextricProtocol.SlotData.Lane2EntryOffset);
+        double t2Seconds = t2 / ScalextricProtocol.SlotData.TimestampUnitsPerSecond;
         parts.Add($"t2:{t2}({t2Seconds:F2}s)");
 
-        // t3: Lane 1 exit timestamp (bytes 10-13, centiseconds) - t3 > t1 by a few tenths
-        uint t3 = (uint)(data[10] | (data[11] << 8) | (data[12] << 16) | (data[13] << 24));
-        double t3Seconds = t3 / 100.0;
+        // t3: Lane 1 exit timestamp (centiseconds) - t3 > t1 by a few tenths
+        uint t3 = ReadUInt32LittleEndian(data, ScalextricProtocol.SlotData.Lane1ExitOffset);
+        double t3Seconds = t3 / ScalextricProtocol.SlotData.TimestampUnitsPerSecond;
         parts.Add($"t3:{t3}({t3Seconds:F2}s)");
 
-        // t4: Lane 2 exit timestamp (bytes 14-17, centiseconds) - t4 > t2 by a few tenths
-        uint t4 = (uint)(data[14] | (data[15] << 8) | (data[16] << 16) | (data[17] << 24));
-        double t4Seconds = t4 / 100.0;
+        // t4: Lane 2 exit timestamp (centiseconds) - t4 > t2 by a few tenths
+        uint t4 = ReadUInt32LittleEndian(data, ScalextricProtocol.SlotData.Lane2ExitOffset);
+        double t4Seconds = t4 / ScalextricProtocol.SlotData.TimestampUnitsPerSecond;
         parts.Add($"t4:{t4}({t4Seconds:F2}s)");
 
         return string.Join(" | ", parts);
+    }
+
+    /// <summary>
+    /// Reads a 32-bit unsigned integer from a byte array in little-endian format.
+    /// </summary>
+    private static uint ReadUInt32LittleEndian(byte[] data, int offset)
+    {
+        return (uint)(data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24));
     }
 
     /// <summary>
@@ -83,15 +92,16 @@ public static class ScalextricProtocolDecoder
 
         // First byte is header
         if (data.Length >= 1)
-            parts.Add($"H:{data[0]:X2}");
+            parts.Add($"H:{data[ScalextricProtocol.ThrottleData.HeaderOffset]:X2}");
 
         // Remaining bytes are controller data
-        for (int i = 1; i < data.Length && i <= 6; i++)
+        int maxController = ScalextricProtocol.ThrottleData.FirstControllerOffset + ScalextricProtocol.ThrottleData.MaxControllers;
+        for (int i = ScalextricProtocol.ThrottleData.FirstControllerOffset; i < data.Length && i < maxController; i++)
         {
             var b = data[i];
-            int throttle = b & 0x3F;
-            bool brake = (b & 0x40) != 0;
-            bool laneChange = (b & 0x80) != 0;
+            int throttle = b & ScalextricProtocol.ThrottleData.ThrottleMask;
+            bool brake = (b & ScalextricProtocol.ThrottleData.BrakeMask) != 0;
+            bool laneChange = (b & ScalextricProtocol.ThrottleData.LaneChangeMask) != 0;
 
             var decoded = $"C{i}:T{throttle}";
             if (brake) decoded += "+B";
