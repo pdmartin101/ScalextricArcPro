@@ -384,13 +384,30 @@ These are larger refactoring efforts to consider after critical issues are resol
 
 ## Potential Future Enhancements
 
-| Enhancement | Description | Effort |
-|-------------|-------------|--------|
-| Throttle profile selector | UI to select from powerbase's predefined throttle profiles | Low |
-| Advanced Ghost cars | Record laps and replay chosen lap's throttle values as ghost car | Medium |
-| Multiple powerbase support | Connect to more than one device | High |
-| Data logging and export | Record race sessions to file | Medium |
-| Cross-platform BLE | macOS/Linux via InTheHand.BluetoothLE | High |
+| Enhancement | Description | Effort | Status |
+|-------------|-------------|--------|--------|
+| Throttle profile selector | Per-slot throttle profile selection (Linear, Exponential, Stepped) | Low | ✅ Done |
+| Advanced Ghost cars | Record laps and replay chosen lap's throttle values as ghost car | Medium | Planned |
+| Multiple powerbase support | Connect to more than one device | High | - |
+| Data logging and export | Record race sessions to file | Medium | - |
+| Cross-platform BLE | macOS/Linux via InTheHand.BluetoothLE | High | - |
+
+### Throttle Profile Selector - Implementation Summary (Completed)
+
+**Files Modified:**
+- `ScalextricProtocol.cs` - Added `ThrottleProfileType` enum (Linear, Exponential, Stepped), curve generation methods
+- `AppSettings.cs` - Added `SlotThrottleProfiles` array for persistence
+- `ControllerViewModel.cs` - Added `ThrottleProfile` property, `ThrottleProfileChanged` event
+- `MainViewModel.cs` - Per-slot profile loading/saving, modified `WriteThrottleProfilesAsync()`
+- `MainWindow.axaml` - Added ComboBox per slot for profile selection
+- `ScalextricProtocolTests.cs` - Added 15 tests for curve generation
+
+**Profile Characteristics:**
+| Profile | Curve | Use Case |
+|---------|-------|----------|
+| Linear | y = x | Default, predictable response |
+| Exponential | y = x² | Better low-speed control |
+| Stepped | 4 bands (63, 126, 189, 252) | Beginners, kids |
 
 ### Advanced Ghost Cars - Detailed Design
 
@@ -560,6 +577,53 @@ public interface IGhostPlaybackService
 | 8 | Create Lap Library window for lap management | Phase 7 |
 | 9 | Add unit tests for recording/playback services | Phases 2, 4 |
 
+### Advanced Ghost Cars - Concise Implementation Plan
+
+**Phase 1: Data Models** (Foundation)
+- Create `ThrottleSample` record (timestamp + throttle value)
+- Create `RecordedLap` class (slot, timestamp, lap time, samples list)
+- Create `GhostCarSession` class (name, list of laps)
+
+**Phase 2: Recording Service**
+- Create `IGhostRecordingService` interface
+- Implement recording: capture throttle from notifications (~50Hz)
+- Hook into `LapTimingEngine` for lap boundary detection
+- Store samples with timestamps relative to lap start
+
+**Phase 3: Recording UI**
+- Add "R" toggle button per slot in `MainWindow.axaml`
+- Add `IsRecording` property to `ControllerViewModel`
+- Add pulsing red indicator when recording
+
+**Phase 4: Playback Service**
+- Create `IGhostPlaybackService` interface
+- Implement `GetCurrentThrottleValue(slot, timestamp)` with linear interpolation
+- Handle lap looping (wrap timestamp back to start)
+
+**Phase 5: Playback Integration**
+- Modify `PowerHeartbeatLoopAsync()` to query playback service
+- For ghost slots with playback: use interpolated throttle instead of fixed power
+- Protocol: `0x80 | interpolatedThrottle`
+
+**Phase 6: Lap Selection UI**
+- Add lap dropdown in ghost mode UI (shows recorded laps)
+- Add `AvailableLaps` collection to `ControllerViewModel`
+- Add `SelectedGhostLap` property
+
+**Phase 7: Persistence**
+- Save recorded laps to `ghost-sessions.json` in app data folder
+- Load on startup, integrate with `AppSettings`
+
+**Phase 8: Lap Library Window**
+- New pop-out window for lap management
+- Rename, delete, export laps
+- View lap statistics (time, sample count)
+
+**Phase 9: Unit Tests**
+- Test recording service sample capture
+- Test playback interpolation
+- Test timestamp wraparound for looping
+
 ---
 
 ## Change Log
@@ -598,6 +662,7 @@ public interface IGhostPlaybackService
 | 2026-01-15 | 5.4 | Implemented: Reduced all code-behind to InitializeComponent only, removed all Click/OnClosed handlers |
 | 2026-01-15 | 5.5 | Implemented: Changed ComboBox/CheckBox to two-way bindings |
 | 2026-01-15 | Docs | Updated: CLAUDE.md and docs/README.md with new MVVM architecture documentation |
+| 2026-01-15 | Enhancement | Implemented: Throttle Profile Selector - per-slot selection of Linear/Exponential/Stepped profiles with persistence |
 
 ---
 
