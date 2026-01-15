@@ -10,11 +10,11 @@ This document tracks identified code quality issues and their resolution status.
 
 | Phase | Description | Total | Fixed | Remaining |
 |-------|-------------|-------|-------|-----------|
-| 1 | Critical Issues | 4 | 1 | 3 |
+| 1 | Critical Issues | 4 | 3 | 1 |
 | 2 | High Priority | 5 | 0 | 5 |
 | 3 | Medium Priority | 7 | 0 | 7 |
 | 4 | Low Priority | 7 | 0 | 7 |
-| **Total** | | **23** | **1** | **22** |
+| **Total** | | **23** | **3** | **20** |
 
 ---
 
@@ -41,7 +41,7 @@ var buffer = writer.DetachBuffer();
 
 ---
 
-### 1.2 ❌ Fire-and-Forget Async Without Error Handling
+### 1.2 ✅ Fire-and-Forget Async Without Error Handling
 **Location:**
 - `BleMonitorService.cs` lines ~152, ~173, ~191, ~208
 - `MainViewModel.cs` lines ~199, ~297, ~613, ~690, ~798
@@ -65,7 +65,7 @@ _ = SendInitialPowerOffAsync().ContinueWith(t =>
 
 ---
 
-### 1.3 ❌ No Disposal Guard in BLE Service Methods
+### 1.3 ✅ No Disposal Guard in BLE Service Methods
 **Location:** `BleMonitorService.cs` - all public methods
 **Impact:** Can create resources after disposal, potential crashes
 **Details:** `_disposed` flag is set but never checked in `StartScanning()`, `ConnectAndDiscoverServices()`, etc.
@@ -295,6 +295,8 @@ These are larger refactoring efforts to consider after critical issues are resol
 |------|-------|--------|
 | 2025-01-15 | Initial | Plan created with 23 identified issues |
 | 2026-01-15 | 1.1 | Fixed: Added `using` statements to DataWriter/DataReader in BleMonitorService.cs (lines 271, 376, 479) |
+| 2026-01-15 | 1.2 | Fixed: Added `RunFireAndForget` helper method to handle async errors; replaced all `_ = AsyncMethod()` patterns |
+| 2026-01-15 | 1.3 | Fixed: Added `ThrowIfDisposed()` helper and disposal guards to all 8 public methods in BleMonitorService.cs |
 
 ---
 

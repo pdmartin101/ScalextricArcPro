@@ -210,7 +210,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // This clears any ghost mode that may have been left from a previous session
             if (e.IsGattConnected && !wasGattConnected)
             {
-                _ = SendInitialPowerOffAsync();
+                RunFireAndForget(SendInitialPowerOffAsync, "SendInitialPowerOff");
             }
 
             if (!e.IsGattConnected)
@@ -687,7 +687,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (!IsGattConnected) return;
 
         // Run the async enable operation without blocking
-        _ = EnablePowerAsync();
+        RunFireAndForget(EnablePowerAsync, "EnablePower");
     }
 
     private async Task EnablePowerAsync()
@@ -715,7 +715,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _powerHeartbeatCts = new CancellationTokenSource();
 
         // Start continuous power command sending
-        _ = PowerHeartbeatLoopAsync(_powerHeartbeatCts.Token);
+        var token = _powerHeartbeatCts.Token;
+        RunFireAndForget(() => PowerHeartbeatLoopAsync(token), "PowerHeartbeatLoop");
     }
 
     /// <summary>
@@ -795,7 +796,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _powerHeartbeatCts?.Cancel();
         _powerHeartbeatCts = null;
 
-        _ = DisablePowerAsync();
+        RunFireAndForget(DisablePowerAsync, "DisablePower");
     }
 
     private async Task DisablePowerAsync()
@@ -922,6 +923,26 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _powerHeartbeatCts?.Cancel();
         _powerHeartbeatCts = null;
         IsPowerEnabled = false;
+    }
+
+    /// <summary>
+    /// Safely runs an async task without awaiting, handling any exceptions.
+    /// This replaces the fire-and-forget pattern `_ = AsyncMethod()` to ensure errors are not silently swallowed.
+    /// </summary>
+    private void RunFireAndForget(Func<Task> asyncAction, string operationName)
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                await asyncAction();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in {operationName}: {ex.Message}");
+                Dispatcher.UIThread.Post(() => StatusText = $"Error: {ex.Message}");
+            }
+        });
     }
 
     /// <summary>

@@ -81,6 +81,7 @@ public class BleMonitorService : IBleMonitorService
 
     public void StartScanning()
     {
+        ThrowIfDisposed();
         if (IsScanning) return;
 
 #if WINDOWS
@@ -118,6 +119,7 @@ public class BleMonitorService : IBleMonitorService
 
     public void StopScanning()
     {
+        ThrowIfDisposed();
         if (!IsScanning) return;
 
 #if WINDOWS
@@ -146,16 +148,20 @@ public class BleMonitorService : IBleMonitorService
 
     public void ConnectAndDiscoverServices()
     {
+        ThrowIfDisposed();
 #if WINDOWS
         if (_lastBluetoothAddress.HasValue && !_isConnecting && !IsGattConnected)
         {
-            _ = ConnectAndDiscoverServicesAsync(_lastBluetoothAddress.Value);
+            RunFireAndForget(
+                () => ConnectAndDiscoverServicesAsync(_lastBluetoothAddress.Value),
+                "ConnectAndDiscoverServices");
         }
 #endif
     }
 
     public void Disconnect()
     {
+        ThrowIfDisposed();
 #if WINDOWS
         DisconnectInternal(raiseEvents: true);
         RaiseStatusMessage("Disconnected from device.");
@@ -164,18 +170,20 @@ public class BleMonitorService : IBleMonitorService
 
     public void SubscribeToAllNotifications()
     {
+        ThrowIfDisposed();
 #if WINDOWS
         if (!IsGattConnected)
         {
             RaiseStatusMessage("Cannot subscribe: not connected.");
             return;
         }
-        _ = SubscribeToAllNotificationsAsync();
+        RunFireAndForget(SubscribeToAllNotificationsAsync, "SubscribeToAllNotifications");
 #endif
     }
 
     public void ReadCharacteristic(Guid serviceUuid, Guid characteristicUuid)
     {
+        ThrowIfDisposed();
 #if WINDOWS
         if (!IsGattConnected)
         {
@@ -188,12 +196,15 @@ public class BleMonitorService : IBleMonitorService
             });
             return;
         }
-        _ = ReadCharacteristicAsync(serviceUuid, characteristicUuid);
+        RunFireAndForget(
+            () => ReadCharacteristicAsync(serviceUuid, characteristicUuid),
+            "ReadCharacteristic");
 #endif
     }
 
     public void WriteCharacteristic(Guid characteristicUuid, byte[] data)
     {
+        ThrowIfDisposed();
 #if WINDOWS
         if (!IsGattConnected)
         {
@@ -205,12 +216,15 @@ public class BleMonitorService : IBleMonitorService
             });
             return;
         }
-        _ = WriteCharacteristicInternalAsync(characteristicUuid, data);
+        RunFireAndForget(
+            () => WriteCharacteristicInternalAsync(characteristicUuid, data),
+            "WriteCharacteristic");
 #endif
     }
 
     public async Task<bool> WriteCharacteristicAwaitAsync(Guid characteristicUuid, byte[] data)
     {
+        ThrowIfDisposed();
 #if WINDOWS
         if (!IsGattConnected)
         {
@@ -525,7 +539,9 @@ public class BleMonitorService : IBleMonitorService
                     RaiseStatusMessage($"Found {localName}. Connecting...");
 
                     // Automatically attempt GATT connection when device is found
-                    _ = ConnectAndDiscoverServicesAsync(args.BluetoothAddress);
+                    RunFireAndForget(
+                        () => ConnectAndDiscoverServicesAsync(args.BluetoothAddress),
+                        "AutoConnectOnAdvertisement");
                 }
                 // Don't spam UI updates for every advertisement when already connected
             }
@@ -790,6 +806,34 @@ public class BleMonitorService : IBleMonitorService
     private void RaiseStatusMessage(string message)
     {
         StatusMessageChanged?.Invoke(this, message);
+    }
+
+    /// <summary>
+    /// Throws ObjectDisposedException if the service has been disposed.
+    /// </summary>
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+    }
+
+    /// <summary>
+    /// Safely runs an async task without awaiting, handling any exceptions.
+    /// This replaces the fire-and-forget pattern `_ = AsyncMethod()` to ensure errors are not silently swallowed.
+    /// </summary>
+    private void RunFireAndForget(Func<Task> asyncAction, string operationName)
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                await asyncAction();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in {operationName}: {ex.Message}");
+                RaiseStatusMessage($"Error: {ex.Message}");
+            }
+        });
     }
 
     public void Dispose()
