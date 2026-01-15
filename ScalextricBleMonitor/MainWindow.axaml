@@ -146,16 +146,25 @@
                                     <!-- Per-slot power control (only visible in per-slot mode) -->
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2" Margin="4,0" VerticalAlignment="Center"
                                                 IsVisible="{ReflectionBinding DataContext.UsePerSlotPower, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
+                                        <!-- Ghost mode toggle -->
+                                        <ToggleButton IsChecked="{Binding IsGhostMode}"
+                                                      Content="G"
+                                                      Padding="4,2"
+                                                      FontSize="9"
+                                                      FontWeight="Bold"
+                                                      MinWidth="20"
+                                                      ToolTip.Tip="Ghost Mode: Car runs autonomously at the set power level without controller input"/>
                                         <TextBlock Text="P:"
                                                    FontSize="9"
                                                    Foreground="#666666"
-                                                   VerticalAlignment="Center"/>
+                                                   VerticalAlignment="Center"
+                                                   Margin="4,0,0,0"/>
                                         <Slider Minimum="0"
                                                 Maximum="63"
                                                 Value="{Binding PowerLevel}"
                                                 Width="50"
                                                 VerticalAlignment="Center"
-                                                ToolTip.Tip="Power level for this controller (0-63)"/>
+                                                ToolTip.Tip="{Binding IsGhostMode, Converter={x:Static vm:GhostModeTooltipConverter.Instance}}"/>
                                         <TextBlock Text="{Binding PowerLevel}"
                                                    FontSize="9"
                                                    FontWeight="Bold"

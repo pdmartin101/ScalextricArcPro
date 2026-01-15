@@ -64,6 +64,18 @@ ScalextricBleMonitor/
 - Best lap time tracked per controller (purple indicator, F1 style)
 - Lane indicator shows which lane (L1/L2) the car last crossed
 
+### Ghost Mode
+
+- Enables autonomous car control without a physical controller
+- Per-slot toggle (G button) in the UI when per-slot power mode is enabled
+- In ghost mode, PowerLevel (0-63) becomes a direct throttle index into the throttle profile
+- Protocol: bit 7 of the power byte enables ghost mode (`0x80 | powerLevel`)
+- Ghost mode "latches" in the powerbase - requires explicit clear before power-off:
+  1. Send `PowerOnRacing` with ghost=false, power=0 to clear latched state
+  2. Then send `NoPowerTimerStopped` to cut power
+- On startup/shutdown, app sends clear-ghost + power-off sequence to reset powerbase state
+- Settings persisted in `SlotGhostModes[]` array in AppSettings
+
 ### Platform Support
 
 Currently Windows-only (`net9.0-windows10.0.19041.0`). BLE code is wrapped in `#if WINDOWS` for future macOS/Linux support using InTheHand.BluetoothLE or similar.

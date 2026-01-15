@@ -25,6 +25,12 @@ public class AppSettings
     public bool UsePerSlotPower { get; set; } = true;
 
     /// <summary>
+    /// Per-slot ghost mode settings. Array index 0 = slot 1, etc.
+    /// When true, the slot operates in ghost mode (power level becomes direct throttle index).
+    /// </summary>
+    public bool[] SlotGhostModes { get; set; } = [false, false, false, false, false, false];
+
+    /// <summary>
     /// Gets the path to the settings file.
     /// </summary>
     private static string SettingsFilePath
@@ -65,6 +71,12 @@ public class AppSettings
                         {
                             settings.SlotPowerLevels[i] = Math.Clamp(settings.SlotPowerLevels[i], 0, 63);
                         }
+                    }
+
+                    // Validate per-slot ghost modes
+                    if (settings.SlotGhostModes == null || settings.SlotGhostModes.Length != 6)
+                    {
+                        settings.SlotGhostModes = [false, false, false, false, false, false];
                     }
 
                     return settings;

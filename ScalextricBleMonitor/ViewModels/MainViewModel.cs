@@ -132,7 +132,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         for (int i = 0; i < MaxControllers; i++)
         {
             var powerLevel = _settings.SlotPowerLevels.Length > i ? _settings.SlotPowerLevels[i] : 63;
-            Controllers.Add(new ControllerViewModel { SlotNumber = i + 1, PowerLevel = powerLevel });
+            var isGhostMode = _settings.SlotGhostModes.Length > i && _settings.SlotGhostModes[i];
+            Controllers.Add(new ControllerViewModel { SlotNumber = i + 1, PowerLevel = powerLevel, IsGhostMode = isGhostMode });
         }
     }
 
@@ -200,9 +201,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // Must dispatch to UI thread for ObservableCollection operations
         Dispatcher.UIThread.Post(() =>
         {
+            var wasGattConnected = IsGattConnected;
             IsConnected = e.IsConnected;
             IsGattConnected = e.IsGattConnected;
             DeviceName = e.DeviceName ?? string.Empty;
+
+            // When GATT connection is first established, send power-off to reset powerbase state
+            // This clears any ghost mode that may have been left from a previous session
+            if (e.IsGattConnected && !wasGattConnected)
+            {
+                _ = SendInitialPowerOffAsync();
+            }
 
             if (!e.IsGattConnected)
             {
@@ -216,6 +225,29 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 ResetControllers();
             }
         });
+    }
+
+    private async Task SendInitialPowerOffAsync()
+    {
+        // Small delay to ensure connection is stable
+        await Task.Delay(100);
+
+        // First, send a PowerOnRacing command with all slots at power 0 and ghost mode OFF
+        // This clears any latched ghost mode state from a previous session
+        var clearGhostCommand = BuildClearGhostCommand();
+        for (int i = 0; i < 3; i++)
+        {
+            await _bleMonitorService.WriteCharacteristicAwaitAsync(ScalextricProtocol.Characteristics.Command, clearGhostCommand);
+            await Task.Delay(BleWriteDelayMs);
+        }
+
+        // Now send the actual power-off command
+        var powerOffCommand = BuildPowerOffCommand();
+        for (int i = 0; i < 3; i++)
+        {
+            await _bleMonitorService.WriteCharacteristicAwaitAsync(ScalextricProtocol.Characteristics.Command, powerOffCommand);
+            await Task.Delay(BleWriteDelayMs);
+        }
     }
 
     private void ResetControllers()
@@ -515,6 +547,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
         for (int i = 0; i < Controllers.Count && i < _settings.SlotPowerLevels.Length; i++)
         {
             _settings.SlotPowerLevels[i] = Controllers[i].PowerLevel;
+            if (i < _settings.SlotGhostModes.Length)
+            {
+                _settings.SlotGhostModes[i] = Controllers[i].IsGhostMode;
+            }
         }
         _settings.Save();
 
@@ -522,6 +558,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _powerHeartbeatCts?.Cancel();
         _powerHeartbeatCts?.Dispose();
         _powerHeartbeatCts = null;
+
+        // Send power-off commands to stop any ghost cars before disconnecting
+        // This must happen before we dispose the BLE service
+        if (IsGattConnected)
+        {
+            SendShutdownPowerOff();
+        }
 
         _bleMonitorService.ConnectionStateChanged -= OnConnectionStateChanged;
         _bleMonitorService.StatusMessageChanged -= OnStatusMessageChanged;
@@ -531,6 +574,46 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _bleMonitorService.Dispose();
 
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Sends power-off commands during shutdown to stop ghost cars.
+    /// Uses Task.Run to avoid blocking the UI thread and has a timeout to prevent hangs.
+    /// </summary>
+    private void SendShutdownPowerOff()
+    {
+        try
+        {
+            // Run on a background thread with a timeout to avoid blocking shutdown
+            var shutdownTask = Task.Run(async () =>
+            {
+                var clearGhostCommand = BuildClearGhostCommand();
+                var powerOffCommand = BuildPowerOffCommand();
+
+                // Send clear ghost commands
+                for (int i = 0; i < 3; i++)
+                {
+                    await _bleMonitorService.WriteCharacteristicAwaitAsync(
+                        ScalextricProtocol.Characteristics.Command, clearGhostCommand);
+                    await Task.Delay(BleWriteDelayMs);
+                }
+
+                // Send power-off commands
+                for (int i = 0; i < 3; i++)
+                {
+                    await _bleMonitorService.WriteCharacteristicAwaitAsync(
+                        ScalextricProtocol.Characteristics.Command, powerOffCommand);
+                    await Task.Delay(BleWriteDelayMs);
+                }
+            });
+
+            // Wait up to 2 seconds for shutdown commands, then give up
+            shutdownTask.Wait(TimeSpan.FromSeconds(2));
+        }
+        catch
+        {
+            // Ignore errors during shutdown - we're disposing anyway
+        }
     }
 
     private void OnCharacteristicValueRead(object? sender, BleCharacteristicReadEventArgs e)
@@ -676,7 +759,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Builds a power command using per-controller power levels.
+    /// Builds a power command using per-controller power levels and ghost mode settings.
     /// </summary>
     private byte[] BuildPowerCommand()
     {
@@ -685,18 +768,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Type = ScalextricProtocol.CommandType.PowerOnRacing
         };
 
-        if (UsePerSlotPower)
+        // Always set per-slot settings to handle ghost mode correctly
+        for (int i = 0; i < Controllers.Count; i++)
         {
-            // Use individual per-slot power levels from controller view models
-            for (int i = 0; i < Controllers.Count; i++)
-            {
-                builder.SetSlotPower(i + 1, (byte)Controllers[i].PowerLevel);
-            }
-        }
-        else
-        {
-            // Use global power level for all slots
-            builder.SetAllPower((byte)PowerLevel);
+            var controller = Controllers[i];
+            var slot = builder.GetSlot(i + 1);
+
+            // Set power level (either per-slot or global)
+            slot.PowerMultiplier = (byte)(UsePerSlotPower ? controller.PowerLevel : PowerLevel);
+
+            // Set ghost mode flag - in ghost mode, PowerMultiplier becomes direct throttle index
+            slot.GhostMode = controller.IsGhostMode;
         }
 
         return builder.Build();
@@ -719,19 +801,69 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private async Task DisablePowerAsync()
     {
         StatusText = "Sending power off command...";
-        var command = ScalextricProtocol.CommandBuilder.CreatePowerOffCommand();
-        var success = await _bleMonitorService.WriteCharacteristicAwaitAsync(ScalextricProtocol.Characteristics.Command, command);
 
-        if (success)
+        // First, send a PowerOnRacing command with all slots at power 0 and ghost mode OFF
+        // This clears the ghost mode state in the powerbase before we cut power
+        var clearGhostCommand = BuildClearGhostCommand();
+        for (int i = 0; i < 3; i++)
         {
-            IsPowerEnabled = false;
-            StatusText = "Power disabled";
+            await _bleMonitorService.WriteCharacteristicAwaitAsync(ScalextricProtocol.Characteristics.Command, clearGhostCommand);
+            await Task.Delay(BleWriteDelayMs);
         }
-        else
+
+        // Now send the actual power-off command
+        var powerOffCommand = BuildPowerOffCommand();
+        for (int i = 0; i < 3; i++)
         {
-            IsPowerEnabled = false; // Still mark as disabled
-            StatusText = "Failed to send power off command";
+            await _bleMonitorService.WriteCharacteristicAwaitAsync(ScalextricProtocol.Characteristics.Command, powerOffCommand);
+            await Task.Delay(BleWriteDelayMs);
         }
+
+        IsPowerEnabled = false;
+        StatusText = "Power disabled";
+    }
+
+    /// <summary>
+    /// Builds a command that keeps power on but clears ghost mode on all slots with power 0.
+    /// This is used to transition out of ghost mode before cutting power.
+    /// </summary>
+    private static byte[] BuildClearGhostCommand()
+    {
+        var builder = new ScalextricProtocol.CommandBuilder
+        {
+            Type = ScalextricProtocol.CommandType.PowerOnRacing
+        };
+
+        // Set all slots to power 0 with ghost mode disabled
+        for (int i = 1; i <= 6; i++)
+        {
+            var slot = builder.GetSlot(i);
+            slot.PowerMultiplier = 0;
+            slot.GhostMode = false;
+        }
+
+        return builder.Build();
+    }
+
+    /// <summary>
+    /// Builds a power-off command that clears ghost mode on all slots.
+    /// </summary>
+    private static byte[] BuildPowerOffCommand()
+    {
+        var builder = new ScalextricProtocol.CommandBuilder
+        {
+            Type = ScalextricProtocol.CommandType.NoPowerTimerStopped
+        };
+
+        // Ensure all slots have power 0 and ghost mode disabled
+        for (int i = 1; i <= 6; i++)
+        {
+            var slot = builder.GetSlot(i);
+            slot.PowerMultiplier = 0;
+            slot.GhostMode = false;
+        }
+
+        return builder.Build();
     }
 
     /// <summary>
@@ -972,9 +1104,17 @@ public partial class ControllerViewModel : ObservableObject
 
     /// <summary>
     /// Power level for this controller (0-63). Used as a multiplier for track power.
+    /// In ghost mode, this becomes the direct throttle index (0-63).
     /// </summary>
     [ObservableProperty]
     private int _powerLevel = 63;
+
+    /// <summary>
+    /// When true, this slot operates in ghost mode - PowerLevel becomes a direct throttle
+    /// index rather than a multiplier, allowing autonomous car control without a physical controller.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isGhostMode;
 
     [ObservableProperty]
     private int _throttle;
@@ -1271,6 +1411,28 @@ public class PowerIndicatorColorConverter : IValueConverter
             return isPowerOn ? PowerOnColor : PowerOffColor;
         }
         return PowerOffColor;
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts ghost mode state to slider tooltip text.
+/// </summary>
+public class GhostModeTooltipConverter : IValueConverter
+{
+    public static readonly GhostModeTooltipConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is bool isGhostMode && isGhostMode)
+        {
+            return "Ghost throttle index (0-63): Direct motor control without controller";
+        }
+        return "Power level for this controller (0-63)";
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

@@ -8,7 +8,8 @@ ScalextricBleMonitor is a .NET 9.0 Avalonia UI application that connects to a Sc
 
 - **Real-time monitoring** of controller inputs (throttle, brake, lane change)
 - **GATT service discovery** with characteristic inspection
-- **Track power control** with adjustable power levels
+- **Track power control** with adjustable power levels (global or per-slot)
+- **Ghost mode** for autonomous car control without a physical controller
 - **Live notification streaming** from the powerbase
 
 The application automatically scans for Scalextric devices, establishes a GATT connection, and subscribes to notifications for real-time data updates.
@@ -24,7 +25,9 @@ The application automatically scans for Scalextric devices, establishes a GATT c
 | Lap Timing | Last lap time (green) and best lap time (purple, F1 style) per controller |
 | Lane Detection | Shows which lane (L1/L2) the car last crossed the finish line in |
 | Power Control | Enable/disable track power with adjustable level (0-63) |
-| Settings Persistence | Power level saved to JSON and restored on startup |
+| Per-Slot Power | Individual power levels for each controller slot |
+| Ghost Mode | Autonomous car control - car runs at set power level without controller input |
+| Settings Persistence | Power levels and ghost mode saved to JSON and restored on startup |
 | Characteristic Reader | Read values from any readable GATT characteristic |
 | Notification Log | Live stream of notification data with hex/decoded views |
 
