@@ -305,6 +305,30 @@ To enable track power and get cars running:
 1. Stop the heartbeat loop
 2. Send power command with `CommandType = NoPowerTimerStopped`
 
+## Powerbase Reset
+
+The powerbase has a reset command that may be useful for recovery after track shorts or other issues:
+
+| Value | Name | Description |
+|-------|------|-------------|
+| 5 | NoPowerRebootPic18 | Reboot the PIC18 microcontroller |
+
+### Track Short Recovery
+
+When a car shorts out the track (e.g., derailment causing metal-to-metal contact), the powerbase may:
+1. Cut power to protect itself
+2. Possibly disconnect BLE
+3. Enter a fault state requiring reset
+
+A potential reset sequence:
+1. Send command with `CommandType = NoPowerRebootPic18` (byte 0 = 5)
+2. Wait for BLE disconnect (powerbase rebooting)
+3. Wait for BLE reconnect (powerbase advertising again)
+4. Re-establish GATT connection and re-subscribe to notifications
+5. Re-send throttle profiles and power commands
+
+**Note:** This reset behavior has not been fully tested. Physical power cycle (unplug/replug) may still be required in some cases.
+
 ## Digital Mode (ARC PRO)
 
 - Supports 6 car IDs (1-6)
