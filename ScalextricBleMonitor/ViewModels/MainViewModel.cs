@@ -10,6 +10,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using ScalextricBleMonitor.Services;
+using Serilog;
 
 namespace ScalextricBleMonitor.ViewModels;
 
@@ -846,7 +847,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error in {operationName}: {ex.Message}");
+                Log.Error(ex, "Error in {OperationName}", operationName);
                 Dispatcher.UIThread.Post(() => StatusText = $"Error: {ex.Message}");
             }
         });

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using Serilog;
 
 #if WINDOWS
 using System.Threading.Tasks;
@@ -456,24 +457,24 @@ public class BleMonitorService : IBleMonitorService
                             subscribed++;
 
                             var charName = GetCharacteristicName(characteristic.Uuid);
-                            System.Diagnostics.Debug.WriteLine($"Subscribed to {charName} ({characteristic.Uuid})");
+                            Log.Debug("Subscribed to {CharacteristicName} ({CharacteristicUuid})", charName, characteristic.Uuid);
                         }
                         else
                         {
                             failed++;
-                            System.Diagnostics.Debug.WriteLine($"Failed to subscribe to {characteristic.Uuid}: {status}");
+                            Log.Warning("Failed to subscribe to {CharacteristicUuid}: {Status}", characteristic.Uuid, status);
                         }
                     }
                     catch (Exception ex)
                     {
                         failed++;
-                        System.Diagnostics.Debug.WriteLine($"Exception subscribing to {characteristic.Uuid}: {ex.Message}");
+                        Log.Warning(ex, "Exception subscribing to {CharacteristicUuid}", characteristic.Uuid);
                     }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error getting characteristics for service {service.Uuid}: {ex.Message}");
+                Log.Warning(ex, "Error getting characteristics for service {ServiceUuid}", service.Uuid);
             }
         }
 
@@ -516,7 +517,7 @@ public class BleMonitorService : IBleMonitorService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error processing notification: {ex.Message}");
+            Log.Error(ex, "Error processing notification");
         }
     }
 
@@ -555,7 +556,7 @@ public class BleMonitorService : IBleMonitorService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error processing advertisement: {ex.Message}");
+            Log.Error(ex, "Error processing advertisement");
         }
     }
 
@@ -591,7 +592,7 @@ public class BleMonitorService : IBleMonitorService
                 _connectedDevice = await BluetoothLEDevice.FromBluetoothAddressAsync(bluetoothAddress).AsTask().ConfigureAwait(false);
                 if (_connectedDevice == null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Attempt {attempt}: Device not found");
+                    Log.Warning("Connection attempt {Attempt}: Device not found", attempt);
                     continue;
                 }
 
@@ -606,7 +607,7 @@ public class BleMonitorService : IBleMonitorService
 
                 if (gattResult.Status != GattCommunicationStatus.Success)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Attempt {attempt}: GetGattServicesAsync failed: {gattResult.Status}");
+                    Log.Warning("Connection attempt {Attempt}: GetGattServicesAsync failed: {Status}", attempt, gattResult.Status);
                     DisconnectInternal(raiseEvents: false);
                     continue;
                 }
@@ -666,7 +667,7 @@ public class BleMonitorService : IBleMonitorService
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Attempt {attempt}: Exception: {ex.Message}");
+                Log.Warning(ex, "Connection attempt {Attempt}: Exception", attempt);
                 DisconnectInternal(raiseEvents: false);
             }
         }
@@ -709,7 +710,7 @@ public class BleMonitorService : IBleMonitorService
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error unsubscribing from characteristic: {ex.Message}");
+                Log.Warning(ex, "Error unsubscribing from characteristic");
             }
         }
         _subscribedCharacteristics.Clear();
@@ -726,7 +727,7 @@ public class BleMonitorService : IBleMonitorService
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error disposing GATT service: {ex.Message}");
+                Log.Warning(ex, "Error disposing GATT service");
             }
         }
         _gattServices.Clear();
@@ -741,7 +742,7 @@ public class BleMonitorService : IBleMonitorService
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error disposing BLE device: {ex.Message}");
+                Log.Warning(ex, "Error disposing BLE device");
             }
             _connectedDevice = null;
         }
@@ -876,7 +877,7 @@ public class BleMonitorService : IBleMonitorService
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error in {operationName}: {ex.Message}");
+                Log.Error(ex, "Error in {OperationName}", operationName);
                 RaiseStatusMessage($"Error: {ex.Message}");
             }
         });
