@@ -37,7 +37,7 @@
                                 Padding="15"
                                 Margin="0,0,0,10"
                                 IsVisible="{Binding IsGhostMode}">
-                            <Grid RowDefinitions="Auto,Auto,Auto">
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
                                 <!-- Slot Header -->
                                 <StackPanel Grid.Row="0"
                                             Orientation="Horizontal"
@@ -50,48 +50,84 @@
                                                Foreground="#4CAF50"/>
                                 </StackPanel>
 
-                                <!-- Ghost Throttle Slider with +/- buttons -->
-                                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,Auto">
-                                    <Button Grid.Column="0"
-                                            Content="-"
-                                            Command="{Binding DecrementGhostThrottleCommand}"
-                                            Width="40"
-                                            Height="40"
-                                            FontSize="18"
-                                            FontWeight="Bold"/>
-                                    <Slider Grid.Column="1"
-                                            Minimum="0"
-                                            Maximum="63"
-                                            Value="{Binding GhostThrottleLevel}"
-                                            Margin="10,0"
-                                            VerticalAlignment="Center"/>
-                                    <Button Grid.Column="2"
-                                            Content="+"
-                                            Command="{Binding IncrementGhostThrottleCommand}"
-                                            Width="40"
-                                            Height="40"
-                                            FontSize="18"
-                                            FontWeight="Bold"/>
-                                    <TextBlock Grid.Column="3"
-                                               Text="{Binding GhostThrottleLevel}"
-                                               FontSize="24"
-                                               FontWeight="Bold"
-                                               Width="50"
-                                               TextAlignment="Center"
+                                <!-- Ghost Source Selection -->
+                                <StackPanel Grid.Row="1"
+                                            Orientation="Horizontal"
+                                            Margin="0,0,0,10">
+                                    <TextBlock Text="Source:"
                                                VerticalAlignment="Center"
-                                               Foreground="#0096FF"/>
-                                </Grid>
+                                               FontSize="12"
+                                               Width="50"/>
+                                    <ComboBox ItemsSource="{x:Static vm:ControllerViewModel.AvailableGhostSources}"
+                                              SelectedItem="{Binding GhostSource}"
+                                              MinWidth="140"
+                                              ToolTip.Tip="Fixed Speed uses constant throttle; Recorded Lap replays a recorded lap"/>
+                                </StackPanel>
+
+                                <!-- Fixed Speed Controls - visible when GhostSource is FixedSpeed -->
+                                <StackPanel Grid.Row="2"
+                                            IsVisible="{Binding IsFixedSpeedSource}"
+                                            Margin="0,5,0,0">
+                                    <TextBlock Text="Fixed Speed Controls"
+                                               FontSize="11"
+                                               Foreground="#666666"
+                                               Margin="0,0,0,8"/>
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                        <Button Grid.Column="0"
+                                                Content="-"
+                                                Command="{Binding DecrementGhostThrottleCommand}"
+                                                Width="40"
+                                                Height="40"
+                                                FontSize="18"
+                                                FontWeight="Bold"/>
+                                        <Slider Grid.Column="1"
+                                                Minimum="0"
+                                                Maximum="63"
+                                                Value="{Binding GhostThrottleLevel}"
+                                                Margin="10,0"
+                                                VerticalAlignment="Center"/>
+                                        <Button Grid.Column="2"
+                                                Content="+"
+                                                Command="{Binding IncrementGhostThrottleCommand}"
+                                                Width="40"
+                                                Height="40"
+                                                FontSize="18"
+                                                FontWeight="Bold"/>
+                                        <TextBlock Grid.Column="3"
+                                                   Text="{Binding GhostThrottleLevel}"
+                                                   FontSize="24"
+                                                   FontWeight="Bold"
+                                                   Width="50"
+                                                   TextAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="#0096FF"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <!-- Recorded Lap Controls - visible when GhostSource is RecordedLap -->
+                                <StackPanel Grid.Row="3"
+                                            IsVisible="{Binding IsRecordedLapSource}"
+                                            Margin="0,5,0,0">
+                                    <TextBlock Text="Recorded Lap Controls"
+                                               FontSize="11"
+                                               Foreground="#666666"
+                                               Margin="0,0,0,8"/>
+                                    <TextBlock Text="(Recording functionality coming soon)"
+                                               FontSize="12"
+                                               Foreground="#999999"
+                                               FontStyle="Italic"/>
+                                </StackPanel>
 
                                 <!-- Throttle Profile -->
-                                <StackPanel Grid.Row="2"
+                                <StackPanel Grid.Row="4"
                                             Orientation="Horizontal"
                                             Margin="0,15,0,0">
                                     <TextBlock Text="Profile:"
                                                VerticalAlignment="Center"
-                                               FontSize="12"/>
+                                               FontSize="12"
+                                               Width="50"/>
                                     <ComboBox ItemsSource="{x:Static vm:ControllerViewModel.AvailableProfiles}"
                                               SelectedItem="{Binding ThrottleProfile}"
-                                              Margin="10,0,0,0"
                                               MinWidth="120"
                                               ToolTip.Tip="Throttle response curve (applied on next power enable)"/>
                                 </StackPanel>

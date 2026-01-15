@@ -154,17 +154,29 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // Load ghost throttle level from settings
             var ghostThrottleLevel = _settings.SlotGhostThrottleLevels.Length > i ? _settings.SlotGhostThrottleLevels[i] : 0;
 
+            // Load ghost source from settings
+            var ghostSource = GhostSourceType.FixedSpeed;
+            if (_settings.SlotGhostSources.Length > i &&
+                Enum.TryParse<GhostSourceType>(_settings.SlotGhostSources[i], out var parsedSource))
+            {
+                ghostSource = parsedSource;
+            }
+
             var controller = new ControllerViewModel
             {
                 SlotNumber = i + 1,
                 PowerLevel = powerLevel,
                 IsGhostMode = isGhostMode,
                 GhostThrottleLevel = ghostThrottleLevel,
+                GhostSource = ghostSource,
                 ThrottleProfile = profileType
             };
 
             // Subscribe to profile changes to persist settings
             controller.ThrottleProfileChanged += OnControllerThrottleProfileChanged;
+
+            // Subscribe to ghost source changes to persist settings
+            controller.GhostSourceChanged += OnControllerGhostSourceChanged;
 
             // Subscribe to ghost mode changes to update HasAnyGhostMode
             controller.PropertyChanged += (s, e) =>
@@ -185,6 +197,19 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (index >= 0 && index < _settings.SlotThrottleProfiles.Length)
             {
                 _settings.SlotThrottleProfiles[index] = profile.ToString();
+                _settings.Save();
+            }
+        }
+    }
+
+    private void OnControllerGhostSourceChanged(object? sender, GhostSourceType source)
+    {
+        if (sender is ControllerViewModel controller)
+        {
+            int index = controller.SlotNumber - 1;
+            if (index >= 0 && index < _settings.SlotGhostSources.Length)
+            {
+                _settings.SlotGhostSources[index] = source.ToString();
                 _settings.Save();
             }
         }
@@ -541,6 +566,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (i < _settings.SlotGhostThrottleLevels.Length)
             {
                 _settings.SlotGhostThrottleLevels[i] = Controllers[i].GhostThrottleLevel;
+            }
+            if (i < _settings.SlotGhostSources.Length)
+            {
+                _settings.SlotGhostSources[i] = Controllers[i].GhostSource.ToString();
             }
         }
         _settings.Save();

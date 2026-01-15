@@ -44,6 +44,12 @@ public class AppSettings
     public string[] SlotThrottleProfiles { get; set; } = ["Linear", "Linear", "Linear", "Linear", "Linear", "Linear"];
 
     /// <summary>
+    /// Per-slot ghost source type names. Array index 0 = slot 1, etc.
+    /// Valid values: "FixedSpeed", "RecordedLap"
+    /// </summary>
+    public string[] SlotGhostSources { get; set; } = ["FixedSpeed", "FixedSpeed", "FixedSpeed", "FixedSpeed", "FixedSpeed", "FixedSpeed"];
+
+    /// <summary>
     /// Gets the path to the settings file.
     /// </summary>
     private static string SettingsFilePath
@@ -120,6 +126,25 @@ public class AppSettings
                                 Array.IndexOf(validProfiles, settings.SlotThrottleProfiles[i]) < 0)
                             {
                                 settings.SlotThrottleProfiles[i] = "Linear";
+                            }
+                        }
+                    }
+
+                    // Validate per-slot ghost sources
+                    if (settings.SlotGhostSources == null || settings.SlotGhostSources.Length != 6)
+                    {
+                        settings.SlotGhostSources = ["FixedSpeed", "FixedSpeed", "FixedSpeed", "FixedSpeed", "FixedSpeed", "FixedSpeed"];
+                    }
+                    else
+                    {
+                        // Ensure each value is a valid ghost source name
+                        var validSources = new[] { "FixedSpeed", "RecordedLap" };
+                        for (int i = 0; i < 6; i++)
+                        {
+                            if (string.IsNullOrEmpty(settings.SlotGhostSources[i]) ||
+                                Array.IndexOf(validSources, settings.SlotGhostSources[i]) < 0)
+                            {
+                                settings.SlotGhostSources[i] = "FixedSpeed";
                             }
                         }
                     }

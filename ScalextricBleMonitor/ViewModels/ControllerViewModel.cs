@@ -79,6 +79,42 @@ public partial class ControllerViewModel : ObservableObject
     }
 
     /// <summary>
+    /// The source of throttle values when in ghost mode.
+    /// FixedSpeed uses GhostThrottleLevel; RecordedLap uses a previously recorded lap.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsFixedSpeedSource))]
+    [NotifyPropertyChangedFor(nameof(IsRecordedLapSource))]
+    private GhostSourceType _ghostSource = GhostSourceType.FixedSpeed;
+
+    partial void OnGhostSourceChanged(GhostSourceType value)
+    {
+        _controller.GhostSource = value;
+        GhostSourceChanged?.Invoke(this, value);
+    }
+
+    /// <summary>
+    /// Event raised when the ghost source is changed.
+    /// </summary>
+    public event EventHandler<GhostSourceType>? GhostSourceChanged;
+
+    /// <summary>
+    /// Returns true when ghost source is FixedSpeed. Used for UI visibility bindings.
+    /// </summary>
+    public bool IsFixedSpeedSource => GhostSource == GhostSourceType.FixedSpeed;
+
+    /// <summary>
+    /// Returns true when ghost source is RecordedLap. Used for UI visibility bindings.
+    /// </summary>
+    public bool IsRecordedLapSource => GhostSource == GhostSourceType.RecordedLap;
+
+    /// <summary>
+    /// Available ghost source types for selection in UI.
+    /// </summary>
+    public static IReadOnlyList<GhostSourceType> AvailableGhostSources { get; } =
+        Enum.GetValues<GhostSourceType>();
+
+    /// <summary>
     /// Throttle profile type for this slot. Determines the throttle response curve.
     /// Changes take effect on next power enable.
     /// </summary>

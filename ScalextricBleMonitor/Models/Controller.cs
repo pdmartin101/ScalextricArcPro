@@ -1,3 +1,5 @@
+using ScalextricBleMonitor.Services;
+
 namespace ScalextricBleMonitor.Models;
 
 /// <summary>
@@ -54,6 +56,12 @@ public class Controller
     /// Separate from PowerLevel which is used for controller max power.
     /// </summary>
     public int GhostThrottleLevel { get; set; }
+
+    /// <summary>
+    /// The source of throttle values when in ghost mode.
+    /// FixedSpeed uses GhostThrottleLevel; RecordedLap uses a previously recorded lap.
+    /// </summary>
+    public GhostSourceType GhostSource { get; set; } = GhostSourceType.FixedSpeed;
 
     /// <summary>
     /// Resets controller input state (throttle, buttons, counts).
