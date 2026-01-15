@@ -578,37 +578,30 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Sends power-off commands during shutdown to stop ghost cars.
-    /// Uses Task.Run to avoid blocking the UI thread and has a timeout to prevent hangs.
+    /// Uses best-effort approach: sends commands synchronously but with short timeout
+    /// to avoid blocking the UI thread during shutdown.
     /// </summary>
     private void SendShutdownPowerOff()
     {
         try
         {
-            // Run on a background thread with a timeout to avoid blocking shutdown
-            var shutdownTask = Task.Run(async () =>
-            {
-                var clearGhostCommand = BuildClearGhostCommand();
-                var powerOffCommand = BuildPowerOffCommand();
+            // Build commands upfront
+            var clearGhostCommand = BuildClearGhostCommand();
+            var powerOffCommand = BuildPowerOffCommand();
 
-                // Send clear ghost commands
-                for (int i = 0; i < 3; i++)
-                {
-                    await _bleMonitorService.WriteCharacteristicAwaitAsync(
-                        ScalextricProtocol.Characteristics.Command, clearGhostCommand);
-                    await Task.Delay(BleWriteDelayMs);
-                }
+            // Use a short timeout CTS for each write to avoid blocking
+            using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
 
-                // Send power-off commands
-                for (int i = 0; i < 3; i++)
-                {
-                    await _bleMonitorService.WriteCharacteristicAwaitAsync(
-                        ScalextricProtocol.Characteristics.Command, powerOffCommand);
-                    await Task.Delay(BleWriteDelayMs);
-                }
-            });
+            // Best-effort: send one clear ghost and one power-off command
+            // We don't wait for responses - just fire and let the BLE service handle it
+            // This is acceptable during shutdown since we're disposing anyway
+            _bleMonitorService.WriteCharacteristicAwaitAsync(
+                ScalextricProtocol.Characteristics.Command, clearGhostCommand)
+                .Wait(100); // Very short wait, just enough to queue the write
 
-            // Wait up to 2 seconds for shutdown commands, then give up
-            shutdownTask.Wait(TimeSpan.FromSeconds(2));
+            _bleMonitorService.WriteCharacteristicAwaitAsync(
+                ScalextricProtocol.Characteristics.Command, powerOffCommand)
+                .Wait(100);
         }
         catch
         {

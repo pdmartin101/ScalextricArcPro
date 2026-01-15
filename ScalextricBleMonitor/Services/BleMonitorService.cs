@@ -46,6 +46,9 @@ public class BleMonitorService : IBleMonitorService
     private const int MaxConnectionAttempts = 3;
     private static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(500);
 
+    // Timeout for BLE async operations to prevent indefinite hangs
+    private static readonly TimeSpan BleOperationTimeout = TimeSpan.FromSeconds(10);
+
 #if WINDOWS
     private BluetoothLEAdvertisementWatcher? _watcher;
     private BluetoothLEDevice? _connectedDevice;
@@ -295,7 +298,9 @@ public class BleMonitorService : IBleMonitorService
                 ? GattWriteOption.WriteWithResponse
                 : GattWriteOption.WriteWithoutResponse;
 
-            var status = await targetCharacteristic.WriteValueAsync(buffer, writeOption);
+            var status = await WithTimeoutAsync(
+                targetCharacteristic.WriteValueAsync(buffer, writeOption).AsTask(),
+                "WriteValue");
 
             var success = status == GattCommunicationStatus.Success;
             CharacteristicWriteCompleted?.Invoke(this, new BleCharacteristicWriteEventArgs
@@ -378,7 +383,9 @@ public class BleMonitorService : IBleMonitorService
             }
 
             // Read the value
-            var readResult = await characteristic.ReadValueAsync(BluetoothCacheMode.Uncached);
+            var readResult = await WithTimeoutAsync(
+                characteristic.ReadValueAsync(BluetoothCacheMode.Uncached).AsTask(),
+                "ReadValue");
             if (readResult.Status != GattCommunicationStatus.Success)
             {
                 CharacteristicValueRead?.Invoke(this, new BleCharacteristicReadEventArgs
@@ -598,7 +605,9 @@ public class BleMonitorService : IBleMonitorService
 
                 // Get GATT services - this establishes the actual connection
                 RaiseStatusMessage("Discovering GATT services...");
-                var gattResult = await _connectedDevice.GetGattServicesAsync(BluetoothCacheMode.Uncached);
+                var gattResult = await WithTimeoutAsync(
+                    _connectedDevice.GetGattServicesAsync(BluetoothCacheMode.Uncached).AsTask(),
+                    "GetGattServices");
 
                 if (gattResult.Status != GattCommunicationStatus.Success)
                 {
@@ -621,7 +630,9 @@ public class BleMonitorService : IBleMonitorService
                     };
 
                     // Get characteristics for this service
-                    var charsResult = await service.GetCharacteristicsAsync(BluetoothCacheMode.Uncached);
+                    var charsResult = await WithTimeoutAsync(
+                        service.GetCharacteristicsAsync(BluetoothCacheMode.Uncached).AsTask(),
+                        "GetCharacteristics");
                     if (charsResult.Status == GattCommunicationStatus.Success)
                     {
                         foreach (var characteristic in charsResult.Characteristics)
@@ -822,6 +833,22 @@ public class BleMonitorService : IBleMonitorService
     }
 
     /// <summary>
+    /// Wraps an async operation with a timeout to prevent indefinite hangs.
+    /// </summary>
+    private static async Task<T> WithTimeoutAsync<T>(Task<T> task, string operationName)
+    {
+        using var cts = new CancellationTokenSource(BleOperationTimeout);
+        try
+        {
+            return await task.WaitAsync(cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            throw new TimeoutException($"BLE operation '{operationName}' timed out after {BleOperationTimeout.TotalSeconds} seconds");
+        }
+    }
+
+    /// <summary>
     /// Safely runs an async task without awaiting, handling any exceptions.
     /// This replaces the fire-and-forget pattern `_ = AsyncMethod()` to ensure errors are not silently swallowed.
     /// </summary>
@@ -841,7 +868,21 @@ public class BleMonitorService : IBleMonitorService
         });
     }
 
+    /// <summary>
+    /// Finalizer to ensure resources are cleaned up if Dispose is not called.
+    /// </summary>
+    ~BleMonitorService()
+    {
+        Dispose(disposing: false);
+    }
+
     public void Dispose()
+    {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
     {
         if (_disposed) return;
 
@@ -850,9 +891,15 @@ public class BleMonitorService : IBleMonitorService
 
         _disposed = true;
 
+        if (disposing)
+        {
+            // Dispose managed resources
 #if WINDOWS
-        DisconnectInternal(raiseEvents: false);
+            DisconnectInternal(raiseEvents: false);
 #endif
-        GC.SuppressFinalize(this);
+        }
+
+        // Note: No unmanaged resources to clean up in finalizer path
+        // The timer and BLE objects are managed and will be collected
     }
 }

@@ -12,7 +12,8 @@
       "Bash(cd:*)",
       "Bash(dir:*)",
       "Bash(cmd /c \"cd /d d:\\\\Development\\\\ProjectsWork\\\\ScalextricTest && dir /s /b\")",
-      "Bash(cmd /c \"cd /d d:\\\\Development\\\\ProjectsWork\\\\ScalextricTest && dir /s /b /ad | findstr /v bin /v obj\")"
+      "Bash(cmd /c \"cd /d d:\\\\Development\\\\ProjectsWork\\\\ScalextricTest && dir /s /b /ad | findstr /v bin /v obj\")",
+      "Bash(git reset:*)"
     ]
   }
 }

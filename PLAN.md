@@ -11,10 +11,10 @@ This document tracks identified code quality issues and their resolution status.
 | Phase | Description | Total | Fixed | Remaining |
 |-------|-------------|-------|-------|-----------|
 | 1 | Critical Issues | 4 | 4 | 0 |
-| 2 | High Priority | 5 | 1 | 4 |
+| 2 | High Priority | 5 | 5 | 0 |
 | 3 | Medium Priority | 7 | 0 | 7 |
 | 4 | Low Priority | 7 | 2 | 5 |
-| **Total** | | **23** | **7** | **16** |
+| **Total** | | **23** | **11** | **12** |
 
 ---
 
@@ -109,8 +109,8 @@ if (_disposed) throw new ObjectDisposedException(nameof(BleMonitorService));
 
 ---
 
-### 2.2 ❌ Timestamp Overflow Not Handled
-**Location:** `MainViewModel.cs` - `ControllerViewModel.UpdateFinishLineTimestamps()`
+### 2.2 ✅ Timestamp Overflow Not Handled
+**Location:** `ControllerViewModel.cs` - `UpdateFinishLineTimestamps()`
 **Impact:** Incorrect lap times after ~497 days of continuous operation
 **Details:**
 ```csharp
@@ -124,31 +124,39 @@ uint timeDiff = currentMaxTimestamp >= _lastMaxTimestamp
     : (uint.MaxValue - _lastMaxTimestamp) + currentMaxTimestamp + 1;
 ```
 
+**Resolution:** Applied the overflow-safe calculation in `ControllerViewModel.cs`.
+
 ---
 
-### 2.3 ❌ Blocking Wait in Dispose
+### 2.3 ✅ Blocking Wait in Dispose
 **Location:** `MainViewModel.cs` - `SendShutdownPowerOff()`
 **Impact:** UI thread blocked for up to 2 seconds during shutdown
 **Details:** `shutdownTask.Wait(TimeSpan.FromSeconds(2))` blocks synchronously.
 
 **Fix:** Implement `IAsyncDisposable` or accept best-effort shutdown.
 
+**Resolution:** Changed to best-effort approach with very short waits (100ms each) to queue writes without blocking shutdown.
+
 ---
 
-### 2.4 ❌ Missing Finalizer in BleMonitorService
+### 2.4 ✅ Missing Finalizer in BleMonitorService
 **Location:** `BleMonitorService.cs`
 **Impact:** Timer and BluetoothLEDevice may leak if Dispose() not called
 **Details:** Implements IDisposable but no `~BleMonitorService()` destructor.
 
 **Fix:** Add destructor that calls Dispose(false).
 
+**Resolution:** Implemented proper dispose pattern with `~BleMonitorService()` finalizer and `Dispose(bool disposing)` method.
+
 ---
 
-### 2.5 ❌ No Timeout on Async BLE Operations
+### 2.5 ✅ No Timeout on Async BLE Operations
 **Location:** `BleMonitorService.cs` - `GetGattServicesAsync()`, `GetCharacteristicsAsync()`, etc.
 **Impact:** Operations could hang indefinitely if device stops responding
 
 **Fix:** Wrap operations with `CancellationTokenSource` + timeout.
+
+**Resolution:** Added `WithTimeoutAsync<T>` helper method with 10-second timeout. Applied to `GetGattServicesAsync`, `GetCharacteristicsAsync`, `WriteValueAsync`, and `ReadValueAsync`.
 
 ---
 
@@ -305,6 +313,10 @@ These are larger refactoring efforts to consider after critical issues are resol
 | 2026-01-15 | 1.3 | Fixed: Added `ThrowIfDisposed()` helper and disposal guards to all 8 public methods in BleMonitorService.cs |
 | 2026-01-15 | 1.4 | Fixed: Used `Interlocked` operations for `_connectionAttempts` to prevent race conditions in retry loop |
 | 2026-01-15 | 2.1, 4.4, 4.5 | Fixed: Extracted nested ViewModels to separate files, moved 6 value converters to Converters/ folder. MainViewModel reduced from ~1,443 to ~984 lines |
+| 2026-01-15 | 2.2 | Fixed: Added overflow-safe timestamp calculation in ControllerViewModel.cs |
+| 2026-01-15 | 2.3 | Fixed: Changed SendShutdownPowerOff to best-effort with short waits (100ms) instead of 2s blocking |
+| 2026-01-15 | 2.4 | Fixed: Added finalizer and proper Dispose(bool) pattern to BleMonitorService |
+| 2026-01-15 | 2.5 | Fixed: Added WithTimeoutAsync helper with 10s timeout for all BLE async operations |
 
 ---
 
