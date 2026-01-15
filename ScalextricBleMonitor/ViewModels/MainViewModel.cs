@@ -168,21 +168,30 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IsConnected ? "Detected" :
         "Disconnected";
 
-    public MainViewModel() : this(new BleMonitorService())
+    /// <summary>
+    /// Creates a MainViewModel with default services. Used for design-time and simple instantiation.
+    /// </summary>
+    public MainViewModel() : this(new BleMonitorService(), AppSettings.Load())
     {
     }
 
-    public MainViewModel(IBleMonitorService bleMonitorService)
+    /// <summary>
+    /// Creates a MainViewModel with injected dependencies.
+    /// </summary>
+    /// <param name="bleMonitorService">The BLE monitoring service.</param>
+    /// <param name="settings">The application settings.</param>
+    public MainViewModel(IBleMonitorService bleMonitorService, AppSettings settings)
     {
         _bleMonitorService = bleMonitorService;
+        _settings = settings;
+
         _bleMonitorService.ConnectionStateChanged += OnConnectionStateChanged;
         _bleMonitorService.StatusMessageChanged += OnStatusMessageChanged;
         _bleMonitorService.ServicesDiscovered += OnServicesDiscovered;
         _bleMonitorService.NotificationReceived += OnNotificationReceived;
         _bleMonitorService.CharacteristicValueRead += OnCharacteristicValueRead;
 
-        // Load persisted settings
-        _settings = AppSettings.Load();
+        // Initialize from persisted settings
         _powerLevel = _settings.PowerLevel;
         _usePerSlotPower = _settings.UsePerSlotPower;
 

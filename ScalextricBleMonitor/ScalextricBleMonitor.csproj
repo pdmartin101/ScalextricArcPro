@@ -17,6 +17,8 @@
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.10" />
     <!-- MVVM Toolkit for observable properties and commands -->
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <!-- Dependency Injection -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
     <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
     <PackageReference Include="Avalonia.Diagnostics" Version="11.3.10">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>

@@ -1,5 +1,6 @@
 using System;
 using Avalonia.Controls;
+using Microsoft.Extensions.DependencyInjection;
 using ScalextricBleMonitor.Services;
 using ScalextricBleMonitor.ViewModels;
 
@@ -14,11 +15,11 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        // Create and set the view model
-        _viewModel = new MainViewModel();
+        // Get the view model from DI container (falls back to direct instantiation if not available)
+        _viewModel = App.Services?.GetService<MainViewModel>() ?? new MainViewModel();
         DataContext = _viewModel;
 
-        // Create and set the window service
+        // Create and set the window service (not in DI as it needs Window reference)
         _windowService = new WindowService(this, () => _viewModel);
         _viewModel.SetWindowService(_windowService);
 
