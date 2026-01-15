@@ -321,7 +321,7 @@ These are larger refactoring efforts to consider after critical issues are resol
 1. **Extract Protocol Decoder Service** - Create `IScalextricProtocolDecoder` interface ✅ (Done: ScalextricProtocolDecoder.cs)
 2. **Extract Lap Timing Engine** - Create `LapTimingEngine` class for testability ✅ (Done: Services/LapTimingEngine.cs)
 3. **Implement Notification Batching** - Reduce UI dispatcher load ✅ (Done: Issue 3.4)
-4. **Split MainViewModel** - Separate connection, power, and race concerns ✅ (Done: PowerManagementViewModel.cs created)
+4. **Split MainViewModel** - Separate connection, power, and race concerns (Partial: PowerManagementViewModel was created but duplicated logic; removed as MainViewModel already handles power management)
 5. **Add Unit Tests** - Test protocol builders, settings, lap timing logic ✅ (Done: 52 tests in ScalextricBleMonitor.Tests)
 6. **Implement Structured Logging** - Replace Debug.WriteLine with Serilog ✅ (Done: LoggingConfiguration.cs, all Debug.WriteLine replaced with Serilog)
 
@@ -354,7 +354,7 @@ These are larger refactoring efforts to consider after critical issues are resol
 | 2026-01-15 | 4.6 | Retained: Debug.WriteLine kept for development diagnostics (compiled out in Release) |
 | 2026-01-15 | 4.7 | Verified: All async methods already follow Async suffix convention |
 | 2026-01-15 | Future.2 | Implemented: Extracted LapTimingEngine to Services/LapTimingEngine.cs for testability |
-| 2026-01-15 | Future.4 | Implemented: Created PowerManagementViewModel.cs for power control concerns |
+| 2026-01-15 | Future.4 | Reverted: PowerManagementViewModel.cs removed - duplicated logic already in MainViewModel |
 | 2026-01-15 | Future.5 | Implemented: Added 52 unit tests covering LapTimingEngine, ScalextricProtocol, and AppSettings |
 | 2026-01-15 | Future.6 | Implemented: Added Serilog structured logging, replaced all Debug.WriteLine calls |
 
