@@ -9,6 +9,7 @@ using Avalonia.Data.Converters;
 using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using ScalextricBleMonitor.Services;
 using Serilog;
 
@@ -778,7 +779,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Toggles track power on/off.
     /// </summary>
-    public void TogglePower()
+    [RelayCommand]
+    private void TogglePower()
     {
         if (IsPowerEnabled)
             DisablePower();
@@ -868,7 +870,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Clears the notification log.
     /// </summary>
-    public void ClearNotificationLog()
+    [RelayCommand]
+    private void ClearNotificationLog()
     {
         NotificationLog.Clear();
         FilteredNotificationLog.Clear();

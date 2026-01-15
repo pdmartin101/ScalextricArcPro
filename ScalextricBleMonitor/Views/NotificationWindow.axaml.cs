@@ -12,14 +12,6 @@ public partial class NotificationWindow : Window
         InitializeComponent();
     }
 
-    private void OnClearLogClick(object? sender, RoutedEventArgs e)
-    {
-        if (DataContext is MainViewModel viewModel)
-        {
-            viewModel.ClearNotificationLog();
-        }
-    }
-
     private void OnFilterChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (DataContext is MainViewModel viewModel && CharacteristicFilter.SelectedIndex >= 0)

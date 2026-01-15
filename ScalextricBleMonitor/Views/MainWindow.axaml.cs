@@ -43,11 +43,6 @@ public partial class MainWindow : Window
         _viewModel.Dispose();
     }
 
-    private void OnPowerToggleClick(object? sender, RoutedEventArgs e)
-    {
-        _viewModel.TogglePower();
-    }
-
     private void OnViewGattServicesClick(object? sender, RoutedEventArgs e)
     {
         // Only allow one GATT services window at a time

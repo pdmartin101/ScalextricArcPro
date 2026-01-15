@@ -80,7 +80,7 @@
                         <!-- Power button -->
                         <Button Grid.Column="0"
                                 Content="{Binding IsPowerEnabled, Converter={x:Static conv:PowerButtonTextConverter.Instance}}"
-                                Click="OnPowerToggleClick"
+                                Command="{Binding TogglePowerCommand}"
                                 Padding="12,6"
                                 FontWeight="Bold"
                                 FontSize="12"
