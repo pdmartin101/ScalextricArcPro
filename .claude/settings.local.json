@@ -13,7 +13,11 @@
       "Bash(dir:*)",
       "Bash(cmd /c \"cd /d d:\\\\Development\\\\ProjectsWork\\\\ScalextricTest && dir /s /b\")",
       "Bash(cmd /c \"cd /d d:\\\\Development\\\\ProjectsWork\\\\ScalextricTest && dir /s /b /ad | findstr /v bin /v obj\")",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(dotnet new:*)",
+      "Bash(dotnet sln:*)",
+      "Bash(dotnet add:*)",
+      "Bash(dotnet test:*)"
     ]
   }
 }
