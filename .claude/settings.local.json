@@ -18,7 +18,8 @@
       "Bash(dotnet sln:*)",
       "Bash(dotnet add:*)",
       "Bash(dotnet test:*)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(git tag:*)"
     ]
   }
 }
