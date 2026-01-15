@@ -232,7 +232,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // Small delay to ensure connection is stable
         await Task.Delay(100);
 
-        // First, send a PowerOnRacing command with all slots at power 0 and ghost mode OFF
+        await SendPowerOffSequenceAsync();
+    }
+
+    /// <summary>
+    /// Sends the power-off sequence: clear ghost commands followed by power-off commands.
+    /// This shared method is used by both initial power-off and disable power operations.
+    /// </summary>
+    private async Task SendPowerOffSequenceAsync()
+    {
+        // First, send PowerOnRacing commands with all slots at power 0 and ghost mode OFF
         // This clears any latched ghost mode state from a previous session
         var clearGhostCommand = BuildClearGhostCommand();
         for (int i = 0; i < 3; i++)
@@ -241,7 +250,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             await Task.Delay(BleWriteDelayMs);
         }
 
-        // Now send the actual power-off command
+        // Now send the actual power-off commands
         var powerOffCommand = BuildPowerOffCommand();
         for (int i = 0; i < 3; i++)
         {
@@ -796,22 +805,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         StatusText = "Sending power off command...";
 
-        // First, send a PowerOnRacing command with all slots at power 0 and ghost mode OFF
-        // This clears the ghost mode state in the powerbase before we cut power
-        var clearGhostCommand = BuildClearGhostCommand();
-        for (int i = 0; i < 3; i++)
-        {
-            await _bleMonitorService.WriteCharacteristicAwaitAsync(ScalextricProtocol.Characteristics.Command, clearGhostCommand);
-            await Task.Delay(BleWriteDelayMs);
-        }
-
-        // Now send the actual power-off command
-        var powerOffCommand = BuildPowerOffCommand();
-        for (int i = 0; i < 3; i++)
-        {
-            await _bleMonitorService.WriteCharacteristicAwaitAsync(ScalextricProtocol.Characteristics.Command, powerOffCommand);
-            await Task.Delay(BleWriteDelayMs);
-        }
+        await SendPowerOffSequenceAsync();
 
         IsPowerEnabled = false;
         StatusText = "Power disabled";
@@ -823,20 +817,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     private static byte[] BuildClearGhostCommand()
     {
-        var builder = new ScalextricProtocol.CommandBuilder
-        {
-            Type = ScalextricProtocol.CommandType.PowerOnRacing
-        };
-
-        // Set all slots to power 0 with ghost mode disabled
-        for (int i = 1; i <= 6; i++)
-        {
-            var slot = builder.GetSlot(i);
-            slot.PowerMultiplier = 0;
-            slot.GhostMode = false;
-        }
-
-        return builder.Build();
+        return BuildCommandWithAllSlotsZeroed(ScalextricProtocol.CommandType.PowerOnRacing);
     }
 
     /// <summary>
@@ -844,12 +825,20 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     private static byte[] BuildPowerOffCommand()
     {
+        return BuildCommandWithAllSlotsZeroed(ScalextricProtocol.CommandType.NoPowerTimerStopped);
+    }
+
+    /// <summary>
+    /// Helper method to build a command with all slots set to power 0 and ghost mode disabled.
+    /// Reduces duplication between BuildClearGhostCommand and BuildPowerOffCommand.
+    /// </summary>
+    private static byte[] BuildCommandWithAllSlotsZeroed(ScalextricProtocol.CommandType commandType)
+    {
         var builder = new ScalextricProtocol.CommandBuilder
         {
-            Type = ScalextricProtocol.CommandType.NoPowerTimerStopped
+            Type = commandType
         };
 
-        // Ensure all slots have power 0 and ghost mode disabled
         for (int i = 1; i <= 6; i++)
         {
             var slot = builder.GetSlot(i);

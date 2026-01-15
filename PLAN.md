@@ -12,9 +12,9 @@ This document tracks identified code quality issues and their resolution status.
 |-------|-------------|-------|-------|-----------|
 | 1 | Critical Issues | 4 | 4 | 0 |
 | 2 | High Priority | 5 | 5 | 0 |
-| 3 | Medium Priority | 7 | 0 | 7 |
+| 3 | Medium Priority | 7 | 2 | 5 |
 | 4 | Low Priority | 7 | 2 | 5 |
-| **Total** | | **23** | **11** | **12** |
+| **Total** | | **23** | **13** | **10** |
 
 ---
 
@@ -162,7 +162,7 @@ uint timeDiff = currentMaxTimestamp >= _lastMaxTimestamp
 
 ## Phase 3: Medium Priority Issues (Nice to Fix)
 
-### 3.1 ❌ Duplicate Power Command Building Logic
+### 3.1 ✅ Duplicate Power Command Building Logic
 **Location:** `MainViewModel.cs`
 - `BuildPowerCommand()`
 - `BuildClearGhostCommand()`
@@ -171,15 +171,19 @@ uint timeDiff = currentMaxTimestamp >= _lastMaxTimestamp
 **Impact:** Code duplication, maintenance burden
 **Fix:** Create shared helper method for common slot iteration.
 
+**Resolution:** Created `BuildCommandWithAllSlotsZeroed(commandType)` helper method that `BuildClearGhostCommand` and `BuildPowerOffCommand` now delegate to.
+
 ---
 
-### 3.2 ❌ Duplicate Shutdown/Init Power-Off Sequences
+### 3.2 ✅ Duplicate Shutdown/Init Power-Off Sequences
 **Location:** `MainViewModel.cs`
 - `SendInitialPowerOffAsync()`
 - `SendShutdownPowerOff()`
 
 **Impact:** Code duplication
 **Fix:** Extract to shared `SendPowerOffSequenceAsync()` method.
+
+**Resolution:** Created `SendPowerOffSequenceAsync()` method used by both `SendInitialPowerOffAsync` and `DisablePowerAsync`. `SendShutdownPowerOff` kept separate as it uses best-effort sync approach for shutdown.
 
 ---
 
@@ -317,6 +321,8 @@ These are larger refactoring efforts to consider after critical issues are resol
 | 2026-01-15 | 2.3 | Fixed: Changed SendShutdownPowerOff to best-effort with short waits (100ms) instead of 2s blocking |
 | 2026-01-15 | 2.4 | Fixed: Added finalizer and proper Dispose(bool) pattern to BleMonitorService |
 | 2026-01-15 | 2.5 | Fixed: Added WithTimeoutAsync helper with 10s timeout for all BLE async operations |
+| 2026-01-15 | 3.1 | Fixed: Created `BuildCommandWithAllSlotsZeroed` helper to reduce duplication in command building |
+| 2026-01-15 | 3.2 | Fixed: Created `SendPowerOffSequenceAsync` shared method for power-off sequences |
 
 ---
 
