@@ -579,23 +579,58 @@ public interface IGhostPlaybackService
 | 8 | Create Lap Library window for lap management | Phase 7 |
 | 9 | Add unit tests for recording/playback services | Phases 2, 4 |
 
-### Advanced Ghost Cars - Concise Implementation Plan
+### Advanced Ghost Cars - Revised Implementation Plan
 
-**Phase 1: Data Models** (Foundation)
-- Create `ThrottleSample` record (timestamp + throttle value)
-- Create `RecordedLap` class (slot, timestamp, lap time, samples list)
-- Create `GhostCarSession` class (name, list of laps)
+**Design Decision:** Keep main window "G" toggle as simple Ghost ON/OFF. All ghost configuration (source selection, recording, lap management) happens in the Ghost Control Window. This provides:
+- Quick toggle for enabling/disabling ghost mode during testing
+- Clear separation: toggle = ON/OFF, Ghost Control Window = setup
+- Better discoverability of advanced features
 
-**Phase 2: Recording Service**
+**UI Design:**
+```
+Ghost Control Window (per slot):
+┌─────────────────────────────────────┐
+│ Slot 1 - Ghost Mode Active          │
+│                                     │
+│ Source: [Fixed Speed     ▼]         │  ← GhostSourceType enum
+│                                     │
+│ ── Fixed Speed Controls ──────────  │  ← shown when FixedSpeed
+│ [-] ═══════════════════════ [+] 45  │
+│                                     │
+│ ── Recorded Lap Controls ─────────  │  ← shown when RecordedLap
+│ Lap: [Best - 12.34s          ▼]     │
+│ [● Record] [Stop]                   │
+│                                     │
+│ Profile: [Linear        ▼]          │
+└─────────────────────────────────────┘
+```
+
+**Data Model:**
+```csharp
+public enum GhostSourceType { FixedSpeed, RecordedLap }
+public record ThrottleSample(uint TimestampCentiseconds, byte ThrottleValue);
+public class RecordedLap { SlotNumber, RecordedAt, LapTime, List<ThrottleSample> }
+```
+
+**Phase 1: Data Models & Enums**
+- Add `GhostSourceType` enum to `ScalextricProtocol.cs`
+- Create `ThrottleSample` record in `Models/`
+- Create `RecordedLap` class in `Models/`
+- Add `GhostSource` property to `ControllerViewModel` (default: FixedSpeed)
+
+**Phase 2: Ghost Control Window UI Update**
+- Add Source dropdown (FixedSpeed / RecordedLap)
+- Show Fixed Speed controls when `GhostSource == FixedSpeed`
+- Show Recorded Lap controls when `GhostSource == RecordedLap`
+- Add `AvailableRecordedLaps` collection to `ControllerViewModel`
+- Add `SelectedRecordedLap` property
+
+**Phase 3: Recording Service**
 - Create `IGhostRecordingService` interface
 - Implement recording: capture throttle from notifications (~50Hz)
 - Hook into `LapTimingEngine` for lap boundary detection
 - Store samples with timestamps relative to lap start
-
-**Phase 3: Recording UI**
-- Add "R" toggle button per slot in `MainWindow.axaml`
-- Add `IsRecording` property to `ControllerViewModel`
-- Add pulsing red indicator when recording
+- Add `IsRecording` property and Record/Stop commands to `ControllerViewModel`
 
 **Phase 4: Playback Service**
 - Create `IGhostPlaybackService` interface
@@ -603,28 +638,24 @@ public interface IGhostPlaybackService
 - Handle lap looping (wrap timestamp back to start)
 
 **Phase 5: Playback Integration**
-- Modify `PowerHeartbeatLoopAsync()` to query playback service
-- For ghost slots with playback: use interpolated throttle instead of fixed power
-- Protocol: `0x80 | interpolatedThrottle`
+- Modify `BuildPowerCommand()` to check `GhostSource`
+- If `RecordedLap`: query playback service for interpolated throttle
+- If `FixedSpeed`: use existing `GhostThrottleLevel` (current behavior)
 
-**Phase 6: Lap Selection UI**
-- Add lap dropdown in ghost mode UI (shows recorded laps)
-- Add `AvailableLaps` collection to `ControllerViewModel`
-- Add `SelectedGhostLap` property
+**Phase 6: Persistence**
+- Add `RecordedLaps` collection to `AppSettings` or separate `ghost-laps.json`
+- Load on startup, save on recording complete
+- Validate and migrate old settings
 
-**Phase 7: Persistence**
-- Save recorded laps to `ghost-sessions.json` in app data folder
-- Load on startup, integrate with `AppSettings`
+**Phase 7: Lap Management**
+- Add rename/delete functionality in Ghost Control Window
+- Optional: separate Lap Library window for bulk management
 
-**Phase 8: Lap Library Window**
-- New pop-out window for lap management
-- Rename, delete, export laps
-- View lap statistics (time, sample count)
-
-**Phase 9: Unit Tests**
+**Phase 8: Unit Tests**
 - Test recording service sample capture
 - Test playback interpolation
 - Test timestamp wraparound for looping
+- Test GhostSourceType switching
 
 ---
 
