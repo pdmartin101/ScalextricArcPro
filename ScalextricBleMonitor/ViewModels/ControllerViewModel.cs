@@ -1,21 +1,42 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using ScalextricBleMonitor.Models;
 using ScalextricBleMonitor.Services;
 
 namespace ScalextricBleMonitor.ViewModels;
 
 /// <summary>
 /// View model for individual controller/slot status.
+/// Wraps a Controller model and LapRecord model with UI-specific properties.
 /// </summary>
 public partial class ControllerViewModel : ObservableObject
 {
     private bool _previousBrakeState;
     private bool _previousLaneChangeState;
 
+    // Underlying domain models
+    private readonly Controller _controller = new();
+    private readonly LapRecord _lapRecord = new();
+
     // Lap timing is delegated to a separate engine for testability
     private readonly LapTimingEngine _lapTimingEngine = new();
 
+    /// <summary>
+    /// Gets the underlying Controller model.
+    /// </summary>
+    public Controller Model => _controller;
+
+    /// <summary>
+    /// Gets the underlying LapRecord model.
+    /// </summary>
+    public LapRecord LapRecordModel => _lapRecord;
+
     [ObservableProperty]
     private int _slotNumber;
+
+    partial void OnSlotNumberChanged(int value)
+    {
+        _controller.SlotNumber = value;
+    }
 
     /// <summary>
     /// Power level for this controller (0-63). Used as a multiplier for track power.
@@ -24,6 +45,11 @@ public partial class ControllerViewModel : ObservableObject
     [ObservableProperty]
     private int _powerLevel = 63;
 
+    partial void OnPowerLevelChanged(int value)
+    {
+        _controller.PowerLevel = value;
+    }
+
     /// <summary>
     /// When true, this slot operates in ghost mode - PowerLevel becomes a direct throttle
     /// index rather than a multiplier, allowing autonomous car control without a physical controller.
@@ -31,35 +57,85 @@ public partial class ControllerViewModel : ObservableObject
     [ObservableProperty]
     private bool _isGhostMode;
 
+    partial void OnIsGhostModeChanged(bool value)
+    {
+        _controller.IsGhostMode = value;
+    }
+
     [ObservableProperty]
     private int _throttle;
+
+    partial void OnThrottleChanged(int value)
+    {
+        _controller.Throttle = value;
+    }
 
     [ObservableProperty]
     private bool _isBrakePressed;
 
+    partial void OnIsBrakePressedChanged(bool value)
+    {
+        _controller.IsBrakePressed = value;
+    }
+
     [ObservableProperty]
     private bool _isLaneChangePressed;
+
+    partial void OnIsLaneChangePressedChanged(bool value)
+    {
+        _controller.IsLaneChangePressed = value;
+    }
 
     [ObservableProperty]
     private int _brakeCount;
 
+    partial void OnBrakeCountChanged(int value)
+    {
+        _controller.BrakeCount = value;
+    }
+
     [ObservableProperty]
     private int _laneChangeCount;
 
+    partial void OnLaneChangeCountChanged(int value)
+    {
+        _controller.LaneChangeCount = value;
+    }
+
     [ObservableProperty]
     private int _currentLap;
+
+    partial void OnCurrentLapChanged(int value)
+    {
+        _lapRecord.CurrentLap = value;
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(LapTimeDisplay))]
     private double _lastLapTimeSeconds;
 
+    partial void OnLastLapTimeSecondsChanged(double value)
+    {
+        _lapRecord.LastLapTimeSeconds = value;
+    }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(BestLapTimeDisplay))]
     private double _bestLapTimeSeconds;
 
+    partial void OnBestLapTimeSecondsChanged(double value)
+    {
+        _lapRecord.BestLapTimeSeconds = value;
+    }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(LaneDisplay))]
     private int _currentLane;
+
+    partial void OnCurrentLaneChanged(int value)
+    {
+        _lapRecord.CurrentLane = value;
+    }
 
     /// <summary>
     /// Formatted display of the last lap time.
@@ -146,6 +222,10 @@ public partial class ControllerViewModel : ObservableObject
         _previousBrakeState = false;
         _previousLaneChangeState = false;
         CurrentLane = 0;
+
+        // Reset the models
+        _controller.ResetInputState();
+        _lapRecord.Reset();
 
         // Reset the lap timing engine
         _lapTimingEngine.Reset();
