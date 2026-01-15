@@ -387,9 +387,178 @@ These are larger refactoring efforts to consider after critical issues are resol
 | Enhancement | Description | Effort |
 |-------------|-------------|--------|
 | Throttle profile selector | UI to select from powerbase's predefined throttle profiles | Low |
+| Advanced Ghost cars | Record laps and replay chosen lap's throttle values as ghost car | Medium |
 | Multiple powerbase support | Connect to more than one device | High |
 | Data logging and export | Record race sessions to file | Medium |
 | Cross-platform BLE | macOS/Linux via InTheHand.BluetoothLE | High |
+
+### Advanced Ghost Cars - Detailed Design
+
+**Overview:** Record throttle inputs during live laps and replay them as ghost car opponents. This extends the existing ghost mode (fixed power level) to support dynamic throttle replay, enabling "race against yourself" functionality.
+
+**Core Concepts:**
+
+1. **Recording Mode**
+   - Capture throttle values (0-63) from a physical controller during live driving
+   - Record timestamps relative to lap start (using existing finish line detection)
+   - Store multiple laps per slot for comparison and selection
+   - Auto-detect lap completion via existing `LapTimingEngine`
+
+2. **Replay Mode**
+   - Play back recorded throttle values through ghost mode protocol (`0x80 | throttleValue`)
+   - Interpolate between recorded points if sample rate differs from playback rate
+   - Loop continuously or stop after N laps
+   - Support multiple ghost cars on different slots simultaneously
+
+**Data Model:**
+
+```csharp
+// New Models/
+public record ThrottleSample(uint TimestampCentiseconds, byte ThrottleValue);
+
+public class RecordedLap
+{
+    public int SlotNumber { get; init; }
+    public DateTime RecordedAt { get; init; }
+    public TimeSpan LapTime { get; init; }
+    public List<ThrottleSample> Samples { get; init; } = new();
+}
+
+public class GhostCarSession
+{
+    public string Name { get; set; }
+    public List<RecordedLap> Laps { get; } = new();
+}
+```
+
+**Services:**
+
+```csharp
+// New Services/
+public interface IGhostRecordingService
+{
+    bool IsRecording { get; }
+    void StartRecording(int slotNumber);
+    void StopRecording();
+    RecordedLap? GetCurrentLap();
+    event EventHandler<RecordedLap>? LapCompleted;
+}
+
+public interface IGhostPlaybackService
+{
+    bool IsPlaying { get; }
+    void StartPlayback(int targetSlot, RecordedLap lap, bool loop = true);
+    void StopPlayback(int targetSlot);
+    byte GetCurrentThrottleValue(int slotNumber, uint currentTimestamp);
+}
+```
+
+**Integration Points:**
+
+| Existing Component | Integration |
+|-------------------|-------------|
+| `MainViewModel.OnNotificationReceived()` | Feed throttle values to `IGhostRecordingService` when recording |
+| `MainViewModel.PowerHeartbeatLoopAsync()` | Query `IGhostPlaybackService` for throttle values instead of fixed power level |
+| `ControllerViewModel` | Add `IsRecording`, `IsPlayingGhost`, `AvailableLaps` properties |
+| `LapTimingEngine` | Trigger lap completion events to recording service |
+| `AppSettings` | Persist recorded laps to JSON (or separate file) |
+
+**UI Additions:**
+
+| Element | Location | Function |
+|---------|----------|----------|
+| Record button (R) | Per-slot row | Toggle recording for that slot |
+| Lap selector dropdown | Per-slot row (ghost mode) | Choose which recorded lap to replay |
+| Recording indicator | Per-slot row | Pulsing red dot when recording |
+| Lap library window | New pop-out | Manage saved laps (rename, delete, export) |
+
+**Recording Flow:**
+
+```
+1. User enables recording for Slot 1
+   └── IGhostRecordingService.StartRecording(1)
+       └── Create new RecordedLap with SlotNumber=1
+
+2. Throttle notification received (0x3b09)
+   └── MainViewModel.OnNotificationReceived()
+       └── If recording slot 1:
+           └── Add ThrottleSample(timestamp, throttleValue)
+
+3. Finish line crossed (detected by LapTimingEngine)
+   └── IGhostRecordingService receives lap complete signal
+       └── Finalize current lap, emit LapCompleted event
+       └── Start new lap recording (continuous mode)
+
+4. User stops recording
+   └── IGhostRecordingService.StopRecording()
+       └── Save completed laps to session
+```
+
+**Playback Flow:**
+
+```
+1. User selects recorded lap for Slot 2 ghost
+   └── IGhostPlaybackService.StartPlayback(2, selectedLap, loop: true)
+       └── Store lap reference and reset playback position
+
+2. PowerHeartbeatLoopAsync() (every 200ms)
+   └── For each slot in ghost mode with playback:
+       └── byte throttle = IGhostPlaybackService.GetCurrentThrottleValue(slot, timestamp)
+       └── Build command with 0x80 | throttle
+
+3. GetCurrentThrottleValue() implementation:
+   └── Find samples bracketing current timestamp
+   └── Linear interpolation between samples
+   └── Handle wrap-around for looping playback
+```
+
+**Sample Rate Considerations:**
+
+- Throttle notifications arrive at ~50Hz (every 20ms)
+- Power heartbeat sends at 5Hz (every 200ms)
+- Recording: Store all samples (~50 per second per slot)
+- Playback: Interpolate to match current timestamp
+- Storage: ~3KB per lap minute (50 samples × 5 bytes × 60 seconds)
+
+**Persistence:**
+
+```json
+// ghost-sessions.json
+{
+  "sessions": [
+    {
+      "name": "Practice Session 1",
+      "laps": [
+        {
+          "slotNumber": 1,
+          "recordedAt": "2026-01-15T14:30:00Z",
+          "lapTimeMs": 12340,
+          "samples": [
+            { "t": 0, "v": 0 },
+            { "t": 20, "v": 15 },
+            { "t": 40, "v": 32 },
+            ...
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Implementation Phases:**
+
+| Phase | Tasks | Depends On |
+|-------|-------|------------|
+| 1 | Create data models (`ThrottleSample`, `RecordedLap`, `GhostCarSession`) | - |
+| 2 | Implement `IGhostRecordingService` with in-memory storage | Phase 1 |
+| 3 | Add recording UI (R button, indicator) to `ControllerViewModel` | Phase 2 |
+| 4 | Implement `IGhostPlaybackService` with interpolation | Phase 1 |
+| 5 | Integrate playback into `PowerHeartbeatLoopAsync()` | Phase 4 |
+| 6 | Add lap selector dropdown to ghost mode UI | Phases 3, 4 |
+| 7 | Add JSON persistence for recorded laps | Phase 3 |
+| 8 | Create Lap Library window for lap management | Phase 7 |
+| 9 | Add unit tests for recording/playback services | Phases 2, 4 |
 
 ---
 

@@ -408,6 +408,30 @@ private static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(500);
 - [ ] Custom throttle profile editor
 - [ ] Multiple powerbase support
 - [ ] Data logging and export
+- [ ] **Advanced Ghost cars** - Record laps and replay throttle inputs as ghost opponents
+
+### Advanced Ghost Cars
+
+A planned enhancement to extend the existing ghost mode with lap recording and replay capabilities:
+
+| Feature | Description |
+|---------|-------------|
+| **Recording** | Capture throttle inputs (0-63) during live driving with timestamps |
+| **Lap Detection** | Auto-complete recording when finish line is crossed |
+| **Replay** | Play back recorded throttle values through ghost mode protocol |
+| **Multi-Ghost** | Run multiple ghost cars on different slots simultaneously |
+| **Lap Library** | Save, manage, and select from recorded laps |
+
+**How it works:**
+1. Enable recording on a slot while driving with a physical controller
+2. Throttle values are captured at ~50Hz with timestamps relative to lap start
+3. When the finish line is crossed, the lap is saved and a new recording begins
+4. Select any recorded lap to replay on a ghost slot
+5. The ghost car follows the exact throttle profile from the recording
+
+This enables "race against yourself" functionality - compare your current driving to your best recorded lap.
+
+See [PLAN.md](../PLAN.md) for detailed technical design including data models, services, and implementation phases.
 
 ## Related Documentation
 
