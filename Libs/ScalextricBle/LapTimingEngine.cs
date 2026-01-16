@@ -1,6 +1,6 @@
 using System;
 
-namespace ScalextricBleMonitor.Services;
+namespace ScalextricBle;
 
 /// <summary>
 /// Result of a lap timing update.
@@ -54,7 +54,6 @@ public readonly struct LapTimingResult
 
 /// <summary>
 /// Encapsulates lap timing logic for a single car/slot.
-/// Extracted from ControllerViewModel for testability and separation of concerns.
 ///
 /// The Scalextric ARC Pro powerbase has two finish line sensors (one per lane).
 /// Each sensor records a timestamp (in centiseconds) when crossed. The higher

@@ -1,6 +1,7 @@
+using ScalextricBle;
 using ScalextricBleMonitor.Models;
 using ScalextricBleMonitor.Services;
-using static ScalextricBleMonitor.Services.ScalextricProtocol;
+using static ScalextricBle.ScalextricProtocol;
 
 namespace ScalextricBleMonitor.Tests;
 
@@ -375,7 +376,7 @@ public class ScalextricProtocolTests
         [Fact]
         public void CreateCurve_ReturnsLinearForLinearType()
         {
-            var curve = ScalextricProtocol.ThrottleProfile.CreateCurve(ThrottleProfileType.Linear);
+            var curve = ThrottleProfileHelper.CreateCurve(ThrottleProfileType.Linear);
             var linear = ScalextricProtocol.ThrottleProfile.CreateLinearCurve();
 
             Assert.Equal(linear, curve);
@@ -384,7 +385,7 @@ public class ScalextricProtocolTests
         [Fact]
         public void CreateCurve_ReturnsExponentialForExponentialType()
         {
-            var curve = ScalextricProtocol.ThrottleProfile.CreateCurve(ThrottleProfileType.Exponential);
+            var curve = ThrottleProfileHelper.CreateCurve(ThrottleProfileType.Exponential);
             var exponential = ScalextricProtocol.ThrottleProfile.CreateExponentialCurve();
 
             Assert.Equal(exponential, curve);
@@ -393,7 +394,7 @@ public class ScalextricProtocolTests
         [Fact]
         public void CreateCurve_ReturnsSteppedForSteppedType()
         {
-            var curve = ScalextricProtocol.ThrottleProfile.CreateCurve(ThrottleProfileType.Stepped);
+            var curve = ThrottleProfileHelper.CreateCurve(ThrottleProfileType.Stepped);
             var stepped = ScalextricProtocol.ThrottleProfile.CreateSteppedCurve();
 
             Assert.Equal(stepped, curve);
@@ -402,7 +403,7 @@ public class ScalextricProtocolTests
         [Fact]
         public void CreateBlocks_ReturnsCorrectBlocksForProfileType()
         {
-            var blocks = ScalextricProtocol.ThrottleProfile.CreateBlocks(ThrottleProfileType.Exponential);
+            var blocks = ThrottleProfileHelper.CreateBlocks(ThrottleProfileType.Exponential);
             var expectedCurve = ScalextricProtocol.ThrottleProfile.CreateExponentialCurve();
 
             Assert.Equal(6, blocks.Length);
@@ -424,7 +425,7 @@ public class ScalextricProtocolTests
         [InlineData(ThrottleProfileType.Stepped)]
         public void AllProfileTypes_Return96Values(ThrottleProfileType profileType)
         {
-            var curve = ScalextricProtocol.ThrottleProfile.CreateCurve(profileType);
+            var curve = ThrottleProfileHelper.CreateCurve(profileType);
 
             Assert.Equal(96, curve.Length);
         }

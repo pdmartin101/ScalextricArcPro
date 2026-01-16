@@ -10,6 +10,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ScalextricBle;
 using ScalextricBleMonitor.Models;
 using ScalextricBleMonitor.Services;
 using Serilog;
@@ -1203,7 +1204,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             var profileType = controller.ThrottleProfile;
 
             // Get the throttle curve blocks for this slot's profile type
-            var blocks = ScalextricProtocol.ThrottleProfile.CreateBlocks(profileType);
+            var blocks = ThrottleProfileHelper.CreateBlocks(profileType);
             var uuid = ScalextricProtocol.Characteristics.GetThrottleProfileForSlot(slot);
 
             // Write all 6 blocks for this slot

@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ScalextricBleMonitor\ScalextricBleMonitor.csproj" />
+    <ProjectReference Include="..\..\..\Libs\ScalextricBle\ScalextricBle.csproj" />
   </ItemGroup>
 
 </Project>

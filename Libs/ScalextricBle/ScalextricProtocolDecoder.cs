@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
 
-namespace ScalextricBleMonitor.Services;
+namespace ScalextricBle;
 
 /// <summary>
 /// Decodes Scalextric ARC Pro BLE notification data into human-readable strings.
-/// Extracted from MainViewModel to follow Single Responsibility Principle.
 /// </summary>
 public static class ScalextricProtocolDecoder
 {
@@ -78,7 +77,7 @@ public static class ScalextricProtocolDecoder
     /// <summary>
     /// Reads a 32-bit unsigned integer from a byte array in little-endian format.
     /// </summary>
-    private static uint ReadUInt32LittleEndian(byte[] data, int offset)
+    public static uint ReadUInt32LittleEndian(byte[] data, int offset)
     {
         return (uint)(data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24));
     }

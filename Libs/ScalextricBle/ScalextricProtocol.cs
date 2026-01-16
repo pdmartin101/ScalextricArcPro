@@ -1,7 +1,6 @@
 using System;
-using ScalextricBleMonitor.Models;
 
-namespace ScalextricBleMonitor.Services;
+namespace ScalextricBle;
 
 /// <summary>
 /// Scalextric ARC Pro BLE Protocol constants and command builders.
@@ -309,19 +308,6 @@ public static class ScalextricProtocol
         public const int TotalValues = BlockCount * ValuesPerBlock;
 
         /// <summary>
-        /// Creates a throttle curve for the specified profile type.
-        /// </summary>
-        /// <param name="profileType">The type of throttle response curve.</param>
-        /// <returns>96-byte array with throttle values.</returns>
-        public static byte[] CreateCurve(ThrottleProfileType profileType) => profileType switch
-        {
-            ThrottleProfileType.Linear => CreateLinearCurve(),
-            ThrottleProfileType.Exponential => CreateExponentialCurve(),
-            ThrottleProfileType.Stepped => CreateSteppedCurve(),
-            _ => CreateLinearCurve()
-        };
-
-        /// <summary>
         /// Creates a linear throttle profile (default).
         /// Maps input 0-95 to output values for throttle response.
         /// </summary>
@@ -414,16 +400,6 @@ public static class ScalextricProtocol
         public static byte[][] CreateLinearBlocks()
         {
             return GetAllBlocks(CreateLinearCurve());
-        }
-
-        /// <summary>
-        /// Creates blocks for the specified throttle profile type ready to write.
-        /// </summary>
-        /// <param name="profileType">The type of throttle response curve.</param>
-        /// <returns>Array of 6 blocks, each 17 bytes.</returns>
-        public static byte[][] CreateBlocks(ThrottleProfileType profileType)
-        {
-            return GetAllBlocks(CreateCurve(profileType));
         }
     }
 }
