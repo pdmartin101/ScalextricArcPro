@@ -19,7 +19,10 @@
       "Bash(dotnet add:*)",
       "Bash(dotnet test:*)",
       "Bash(git mv:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(explorer \"%LOCALAPPDATA%\\\\ScalextricBleMonitor\\\\logs\")",
+      "Bash(powershell -Command \"Get-ChildItem -Path \"\"$env:LOCALAPPDATA\\\\ScalextricBleMonitor\\\\logs\"\" -ErrorAction SilentlyContinue | Format-Table Name, LastWriteTime, Length\")",
+      "Bash(powershell -Command:*)"
     ]
   }
 }
