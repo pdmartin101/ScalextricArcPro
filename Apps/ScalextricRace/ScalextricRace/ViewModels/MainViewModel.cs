@@ -252,11 +252,8 @@ public partial class MainViewModel : ObservableObject
             Controllers.Add(controller);
         }
 
-        // Initialize with default car (always present, non-deletable)
-        var defaultCar = Car.CreateDefault();
-        var defaultCarVm = new CarViewModel(defaultCar, isDefault: true);
-        defaultCarVm.DeleteRequested += OnCarDeleteRequested;
-        Cars.Add(defaultCarVm);
+        // Load cars from storage
+        LoadCars();
 
         // Initialization complete - enable auto-save
         _isInitializing = false;
@@ -384,9 +381,11 @@ public partial class MainViewModel : ObservableObject
         var newCar = new Car($"Car {Cars.Count + 1}");
         var viewModel = new CarViewModel(newCar, isDefault: false);
         viewModel.DeleteRequested += OnCarDeleteRequested;
+        viewModel.Changed += OnCarChanged;
         Cars.Add(viewModel);
         SelectedCar = viewModel;
         Log.Information("Added new car: {CarName}", newCar.Name);
+        SaveCars();
     }
 
     /// <summary>
@@ -398,6 +397,14 @@ public partial class MainViewModel : ObservableObject
         {
             DeleteCar(car);
         }
+    }
+
+    /// <summary>
+    /// Handles property change on a car view model.
+    /// </summary>
+    private void OnCarChanged(object? sender, EventArgs e)
+    {
+        SaveCars();
     }
 
     /// <summary>
@@ -413,12 +420,56 @@ public partial class MainViewModel : ObservableObject
         }
 
         car.DeleteRequested -= OnCarDeleteRequested;
+        car.Changed -= OnCarChanged;
         Cars.Remove(car);
         if (SelectedCar == car)
         {
             SelectedCar = null;
         }
         Log.Information("Deleted car: {CarName}", car.Name);
+        SaveCars();
+    }
+
+    /// <summary>
+    /// Loads cars from storage.
+    /// Ensures the default car is always present.
+    /// </summary>
+    private void LoadCars()
+    {
+        var storedCars = CarStorage.Load();
+
+        // Check if default car exists in storage
+        var hasDefaultCar = storedCars.Any(c => c.Id == Car.DefaultCarId);
+
+        if (!hasDefaultCar)
+        {
+            // Create default car if not in storage
+            var defaultCar = Car.CreateDefault();
+            storedCars.Insert(0, defaultCar);
+        }
+
+        // Create view models for all cars
+        foreach (var car in storedCars)
+        {
+            var isDefault = car.Id == Car.DefaultCarId;
+            var viewModel = new CarViewModel(car, isDefault);
+            viewModel.DeleteRequested += OnCarDeleteRequested;
+            viewModel.Changed += OnCarChanged;
+            Cars.Add(viewModel);
+        }
+
+        Log.Information("Loaded {Count} cars", Cars.Count);
+    }
+
+    /// <summary>
+    /// Saves all cars to storage.
+    /// </summary>
+    private void SaveCars()
+    {
+        if (_isInitializing) return;
+
+        var cars = Cars.Select(vm => vm.GetModel());
+        CarStorage.Save(cars);
     }
 
     #endregion

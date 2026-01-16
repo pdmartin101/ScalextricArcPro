@@ -18,6 +18,11 @@ public partial class CarViewModel : ObservableObject
     public event EventHandler? DeleteRequested;
 
     /// <summary>
+    /// Event raised when any car property changes (for auto-save).
+    /// </summary>
+    public event EventHandler? Changed;
+
+    /// <summary>
     /// Gets whether this is the default car (cannot be deleted).
     /// </summary>
     public bool IsDefault { get; }
@@ -85,12 +90,36 @@ public partial class CarViewModel : ObservableObject
     /// </summary>
     public Car GetModel() => _car;
 
-    // Sync changes back to model
-    partial void OnNameChanged(string value) => _car.Name = value;
-    partial void OnImagePathChanged(string? value) => _car.ImagePath = value;
-    partial void OnDefaultPowerChanged(int value) => _car.DefaultPower = Math.Clamp(value, 0, 63);
-    partial void OnGhostMaxPowerChanged(int value) => _car.GhostMaxPower = Math.Clamp(value, 0, 63);
-    partial void OnMinPowerChanged(int value) => _car.MinPower = Math.Clamp(value, 0, 63);
+    // Sync changes back to model and raise Changed event
+    partial void OnNameChanged(string value)
+    {
+        _car.Name = value;
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    partial void OnImagePathChanged(string? value)
+    {
+        _car.ImagePath = value;
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    partial void OnDefaultPowerChanged(int value)
+    {
+        _car.DefaultPower = Math.Clamp(value, 0, 63);
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    partial void OnGhostMaxPowerChanged(int value)
+    {
+        _car.GhostMaxPower = Math.Clamp(value, 0, 63);
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    partial void OnMinPowerChanged(int value)
+    {
+        _car.MinPower = Math.Clamp(value, 0, 63);
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
 
     /// <summary>
     /// Requests deletion of this car.
