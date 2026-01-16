@@ -86,17 +86,26 @@ public class AppSettings
     public StartupSettings Startup { get; set; } = new();
 
     /// <summary>
-    /// Gets the path to the settings file.
+    /// Gets the base application data folder path.
     /// </summary>
-    private static string SettingsFilePath
+    public static string AppDataFolder
     {
         get
         {
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var appFolder = Path.Combine(appDataPath, "ScalextricPdm", "ScalextricRace");
-            return Path.Combine(appFolder, "settings.json");
+            return Path.Combine(appDataPath, "ScalextricPdm", "ScalextricRace");
         }
     }
+
+    /// <summary>
+    /// Gets the path to the Images folder for storing car images.
+    /// </summary>
+    public static string ImagesFolder => Path.Combine(AppDataFolder, "Images");
+
+    /// <summary>
+    /// Gets the path to the settings file.
+    /// </summary>
+    private static string SettingsFilePath => Path.Combine(AppDataFolder, "settings.json");
 
     /// <summary>
     /// Loads settings from disk, or returns defaults if file doesn't exist.

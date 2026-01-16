@@ -71,6 +71,7 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Opens a file picker to select an image for the specified car.
+    /// Copies the image to the app's Images folder for persistence.
     /// </summary>
     private async void OnImageChangeRequested(object? sender, CarViewModel car)
     {
@@ -93,8 +94,35 @@ public partial class MainWindow : Window
 
         if (result.Count > 0)
         {
-            var file = result[0];
-            car.ImagePath = file.Path.LocalPath;
+            var sourceFile = result[0];
+            var sourcePath = sourceFile.Path.LocalPath;
+
+            try
+            {
+                // Ensure Images folder exists
+                var imagesFolder = AppSettings.ImagesFolder;
+                if (!System.IO.Directory.Exists(imagesFolder))
+                {
+                    System.IO.Directory.CreateDirectory(imagesFolder);
+                }
+
+                // Generate unique filename using car ID and original extension
+                var extension = System.IO.Path.GetExtension(sourcePath);
+                var destFileName = $"{car.Id}{extension}";
+                var destPath = System.IO.Path.Combine(imagesFolder, destFileName);
+
+                // Copy the file (overwrite if exists)
+                System.IO.File.Copy(sourcePath, destPath, overwrite: true);
+
+                // Update car with local path
+                car.ImagePath = destPath;
+            }
+            catch (System.Exception ex)
+            {
+                Serilog.Log.Warning(ex, "Failed to copy image for car {CarId}", car.Id);
+                // Fall back to using original path
+                car.ImagePath = sourcePath;
+            }
         }
     }
 }
