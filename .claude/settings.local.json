@@ -23,7 +23,8 @@
       "Bash(explorer \"%LOCALAPPDATA%\\\\ScalextricBleMonitor\\\\logs\")",
       "Bash(powershell -Command \"Get-ChildItem -Path \"\"$env:LOCALAPPDATA\\\\ScalextricBleMonitor\\\\logs\"\" -ErrorAction SilentlyContinue | Format-Table Name, LastWriteTime, Length\")",
       "Bash(powershell -Command:*)",
-      "Bash(move ScalextricBleMonitor \"Apps\\\\ScalextricBleMonitor\\\\ScalextricBleMonitor\")"
+      "Bash(move ScalextricBleMonitor \"Apps\\\\ScalextricBleMonitor\\\\ScalextricBleMonitor\")",
+      "Bash(ls:*)"
     ]
   }
 }
