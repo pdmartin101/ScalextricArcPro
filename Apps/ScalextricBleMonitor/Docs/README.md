@@ -460,7 +460,7 @@ Since the app doesn't know where the car is on the track when playback starts, i
 - **Phase 2 (Replay)**: Car follows the recorded throttle values, looping each time it completes a lap
 
 **Persistence:**
-Recorded laps are saved to `%LocalAppData%\ScalextricBleMonitor\recorded_laps.json` and automatically loaded when the app starts.
+Recorded laps are saved to `%LocalAppData%\ScalextricPdm\ScalextricBleMonitor\recorded_laps.json` and automatically loaded when the app starts.
 
 ## Related Documentation
 

@@ -7,7 +7,7 @@ namespace ScalextricRace.Services;
 
 /// <summary>
 /// Application settings that persist between sessions.
-/// Stored in %LocalAppData%/ScalextricRace/settings.json
+/// Stored in %LocalAppData%/ScalextricPdm/ScalextricRace/settings.json
 /// </summary>
 public class AppSettings
 {
@@ -35,7 +35,7 @@ public class AppSettings
         get
         {
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var appFolder = Path.Combine(appDataPath, "ScalextricRace");
+            var appFolder = Path.Combine(appDataPath, "ScalextricPdm", "ScalextricRace");
             return Path.Combine(appFolder, "settings.json");
         }
     }

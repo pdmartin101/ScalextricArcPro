@@ -57,7 +57,7 @@ public class AppSettings
         get
         {
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var appFolder = Path.Combine(appDataPath, "ScalextricBleMonitor");
+            var appFolder = Path.Combine(appDataPath, "ScalextricPdm", "ScalextricBleMonitor");
             return Path.Combine(appFolder, "settings.json");
         }
     }

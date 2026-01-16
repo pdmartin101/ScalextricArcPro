@@ -20,7 +20,7 @@ public static class LoggingConfiguration
         get
         {
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            return Path.Combine(appDataPath, "ScalextricRace", "logs");
+            return Path.Combine(appDataPath, "ScalextricPdm", "ScalextricRace", "logs");
         }
     }
 

@@ -95,7 +95,7 @@ The application references two shared libraries in `Libs/`:
 - **Compiled Bindings** - `x:DataType` specified in XAML for compile-time binding validation
 - **Service Abstraction** - `IBleService` interface for testability
 - **Event-Driven Architecture** - BLE service communicates via events (ConnectionStateChanged, NotificationReceived, StatusMessageChanged)
-- **Settings Persistence** - JSON file at `%LocalAppData%/ScalextricRace/settings.json`
+- **Settings Persistence** - JSON file at `%LocalAppData%/ScalextricPdm/ScalextricRace/settings.json`
 - **Structured Logging** - Serilog with file and debug sinks
 
 ### Application Flow
@@ -149,7 +149,7 @@ Power controls are accessed via a gear icon (⚙) flyout in the top-right corner
 
 ### Settings Persistence
 
-Settings are stored in `%LocalAppData%/ScalextricRace/settings.json`:
+Settings are stored in `%LocalAppData%/ScalextricPdm/ScalextricRace/settings.json`:
 ```json
 {
   "PowerEnabled": true,
@@ -201,7 +201,7 @@ Currently Windows-only (`net9.0-windows10.0.19041.0`). BLE code is wrapped in `#
 
 Logs are written to:
 - Debug output (Visual Studio Debug window)
-- File: `%LocalAppData%/ScalextricRace/logs/scalextric-race-YYYYMMDD.log`
+- File: `%LocalAppData%/ScalextricPdm/ScalextricRace/logs/scalextric-race-YYYYMMDD.log`
 
 Log levels: Debug minimum, Warning for Microsoft namespaces.
 
