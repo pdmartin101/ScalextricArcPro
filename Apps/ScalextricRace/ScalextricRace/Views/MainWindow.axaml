@@ -348,8 +348,7 @@
                                             <!-- Delete Button (not for default car) -->
                                             <Button Grid.Row="4"
                                                     Content="Delete"
-                                                    Command="{Binding #CarsItemsControl.((vm:MainViewModel)DataContext).DeleteCarCommand}"
-                                                    CommandParameter="{Binding}"
+                                                    Command="{Binding RequestDeleteCommand}"
                                                     IsVisible="{Binding CanDelete}"
                                                     HorizontalAlignment="Right"
                                                     Padding="10,5"

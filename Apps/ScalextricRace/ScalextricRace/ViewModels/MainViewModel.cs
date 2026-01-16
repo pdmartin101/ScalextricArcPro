@@ -254,7 +254,9 @@ public partial class MainViewModel : ObservableObject
 
         // Initialize with default car (always present, non-deletable)
         var defaultCar = Car.CreateDefault();
-        Cars.Add(new CarViewModel(defaultCar, isDefault: true));
+        var defaultCarVm = new CarViewModel(defaultCar, isDefault: true);
+        defaultCarVm.DeleteRequested += OnCarDeleteRequested;
+        Cars.Add(defaultCarVm);
 
         // Initialization complete - enable auto-save
         _isInitializing = false;
@@ -381,16 +383,27 @@ public partial class MainViewModel : ObservableObject
     {
         var newCar = new Car($"Car {Cars.Count + 1}");
         var viewModel = new CarViewModel(newCar, isDefault: false);
+        viewModel.DeleteRequested += OnCarDeleteRequested;
         Cars.Add(viewModel);
         SelectedCar = viewModel;
         Log.Information("Added new car: {CarName}", newCar.Name);
     }
 
     /// <summary>
+    /// Handles delete request from a car view model.
+    /// </summary>
+    private void OnCarDeleteRequested(object? sender, EventArgs e)
+    {
+        if (sender is CarViewModel car)
+        {
+            DeleteCar(car);
+        }
+    }
+
+    /// <summary>
     /// Deletes the specified car (cannot delete the default car).
     /// </summary>
     /// <param name="car">The car view model to delete.</param>
-    [RelayCommand]
     private void DeleteCar(CarViewModel? car)
     {
         if (car == null || car.IsDefault)
@@ -399,6 +412,7 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        car.DeleteRequested -= OnCarDeleteRequested;
         Cars.Remove(car);
         if (SelectedCar == car)
         {

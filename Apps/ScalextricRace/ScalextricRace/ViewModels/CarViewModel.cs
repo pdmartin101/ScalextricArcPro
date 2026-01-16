@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using ScalextricRace.Models;
 
 namespace ScalextricRace.ViewModels;
@@ -10,6 +11,11 @@ namespace ScalextricRace.ViewModels;
 public partial class CarViewModel : ObservableObject
 {
     private readonly Car _car;
+
+    /// <summary>
+    /// Event raised when deletion is requested for this car.
+    /// </summary>
+    public event EventHandler? DeleteRequested;
 
     /// <summary>
     /// Gets whether this is the default car (cannot be deleted).
@@ -85,4 +91,16 @@ public partial class CarViewModel : ObservableObject
     partial void OnDefaultPowerChanged(int value) => _car.DefaultPower = Math.Clamp(value, 0, 63);
     partial void OnGhostMaxPowerChanged(int value) => _car.GhostMaxPower = Math.Clamp(value, 0, 63);
     partial void OnMinPowerChanged(int value) => _car.MinPower = Math.Clamp(value, 0, 63);
+
+    /// <summary>
+    /// Requests deletion of this car.
+    /// </summary>
+    [RelayCommand]
+    private void RequestDelete()
+    {
+        if (!IsDefault)
+        {
+            DeleteRequested?.Invoke(this, EventArgs.Empty);
+        }
+    }
 }
