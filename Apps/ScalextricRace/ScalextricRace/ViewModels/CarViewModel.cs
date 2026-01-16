@@ -23,6 +23,11 @@ public partial class CarViewModel : ObservableObject
     public event EventHandler? Changed;
 
     /// <summary>
+    /// Event raised when tuning is requested for this car.
+    /// </summary>
+    public event EventHandler? TuneRequested;
+
+    /// <summary>
     /// Gets whether this is the default car (cannot be deleted).
     /// </summary>
     public bool IsDefault { get; }
@@ -131,5 +136,14 @@ public partial class CarViewModel : ObservableObject
         {
             DeleteRequested?.Invoke(this, EventArgs.Empty);
         }
+    }
+
+    /// <summary>
+    /// Requests tuning for this car.
+    /// </summary>
+    [RelayCommand]
+    private void RequestTune()
+    {
+        TuneRequested?.Invoke(this, EventArgs.Empty);
     }
 }

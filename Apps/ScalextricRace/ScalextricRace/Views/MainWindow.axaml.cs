@@ -1,5 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Microsoft.Extensions.DependencyInjection;
+using ScalextricRace.Services;
 using ScalextricRace.ViewModels;
 
 namespace ScalextricRace.Views;
@@ -17,6 +19,15 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        // Subscribe to tune window request after DataContext is set
+        DataContextChanged += (_, _) =>
+        {
+            if (DataContext is MainViewModel viewModel)
+            {
+                viewModel.TuneWindowRequested += OnTuneWindowRequested;
+            }
+        };
     }
 
     /// <summary>
@@ -27,6 +38,32 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel viewModel)
         {
             viewModel.IsMenuOpen = false;
+        }
+    }
+
+    /// <summary>
+    /// Opens the car tuning window for the specified car.
+    /// </summary>
+    private async void OnTuneWindowRequested(object? sender, CarViewModel car)
+    {
+        // Get BLE service from DI container
+        var bleService = App.Services?.GetService<IBleService>();
+
+        // Create the tuning view model
+        var tuningViewModel = new CarTuningViewModel(car, bleService);
+
+        // Create and show the tuning window
+        var window = new CarTuningWindow(tuningViewModel)
+        {
+            // Set owner for proper modal behavior
+        };
+
+        // Show as dialog and wait for result
+        var result = await window.ShowDialog<bool?>(this);
+
+        if (result == true)
+        {
+            // Tuning completed successfully - values were saved to car
         }
     }
 }

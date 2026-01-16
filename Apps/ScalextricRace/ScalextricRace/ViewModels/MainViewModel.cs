@@ -382,6 +382,7 @@ public partial class MainViewModel : ObservableObject
         var viewModel = new CarViewModel(newCar, isDefault: false);
         viewModel.DeleteRequested += OnCarDeleteRequested;
         viewModel.Changed += OnCarChanged;
+        viewModel.TuneRequested += OnCarTuneRequested;
         Cars.Add(viewModel);
         SelectedCar = viewModel;
         Log.Information("Added new car: {CarName}", newCar.Name);
@@ -408,6 +409,23 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Handles tune request from a car view model.
+    /// </summary>
+    private void OnCarTuneRequested(object? sender, EventArgs e)
+    {
+        if (sender is CarViewModel car)
+        {
+            OpenTuningWindow(car);
+        }
+    }
+
+    /// <summary>
+    /// Event raised when a tuning window should be opened.
+    /// The view subscribes to this event and opens the window.
+    /// </summary>
+    public event EventHandler<CarViewModel>? TuneWindowRequested;
+
+    /// <summary>
     /// Deletes the specified car (cannot delete the default car).
     /// </summary>
     /// <param name="car">The car view model to delete.</param>
@@ -421,6 +439,7 @@ public partial class MainViewModel : ObservableObject
 
         car.DeleteRequested -= OnCarDeleteRequested;
         car.Changed -= OnCarChanged;
+        car.TuneRequested -= OnCarTuneRequested;
         Cars.Remove(car);
         if (SelectedCar == car)
         {
@@ -428,6 +447,16 @@ public partial class MainViewModel : ObservableObject
         }
         Log.Information("Deleted car: {CarName}", car.Name);
         SaveCars();
+    }
+
+    /// <summary>
+    /// Opens the tuning window for the specified car.
+    /// </summary>
+    /// <param name="car">The car to tune.</param>
+    private void OpenTuningWindow(CarViewModel car)
+    {
+        Log.Information("Opening tuning window for car: {CarName}", car.Name);
+        TuneWindowRequested?.Invoke(this, car);
     }
 
     /// <summary>
@@ -455,6 +484,7 @@ public partial class MainViewModel : ObservableObject
             var viewModel = new CarViewModel(car, isDefault);
             viewModel.DeleteRequested += OnCarDeleteRequested;
             viewModel.Changed += OnCarChanged;
+            viewModel.TuneRequested += OnCarTuneRequested;
             Cars.Add(viewModel);
         }
 

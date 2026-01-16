@@ -324,22 +324,16 @@
                                                      Background="Transparent"
                                                      Padding="0" />
 
-                                            <!-- Default Power (editable) -->
-                                            <StackPanel Grid.Row="2" Margin="0,0,0,8">
-                                                <Grid ColumnDefinitions="*,Auto">
-                                                    <TextBlock Text="Default Power"
-                                                               FontSize="11"
-                                                               Foreground="Gray" />
-                                                    <TextBlock Grid.Column="1"
-                                                               Text="{Binding DefaultPower}"
-                                                               FontSize="11"
-                                                               FontWeight="SemiBold" />
-                                                </Grid>
-                                                <Slider Minimum="0"
-                                                        Maximum="63"
-                                                        Value="{Binding DefaultPower}"
-                                                        Margin="0,3,0,0" />
-                                            </StackPanel>
+                                            <!-- Default Power (read-only, set via tuning) -->
+                                            <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                                                <TextBlock Text="Default Power"
+                                                           FontSize="11"
+                                                           Foreground="Gray" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding DefaultPower}"
+                                                           FontSize="11"
+                                                           FontWeight="SemiBold" />
+                                            </Grid>
 
                                             <!-- Ghost Max / Min Power (read-only, needs tuning) -->
                                             <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,0,5">
@@ -360,15 +354,22 @@
                                                            FontWeight="SemiBold" />
                                             </Grid>
 
-                                            <!-- Delete Button (not for default car) -->
-                                            <Button Grid.Row="4"
-                                                    Content="Delete"
-                                                    Command="{Binding RequestDeleteCommand}"
-                                                    IsVisible="{Binding CanDelete}"
-                                                    HorizontalAlignment="Right"
-                                                    Padding="10,5"
-                                                    FontSize="11"
-                                                    Margin="0,10,0,0" />
+                                            <!-- Action Buttons -->
+                                            <StackPanel Grid.Row="4"
+                                                        Orientation="Horizontal"
+                                                        HorizontalAlignment="Right"
+                                                        Spacing="8"
+                                                        Margin="0,10,0,0">
+                                                <Button Content="Tune"
+                                                        Command="{Binding RequestTuneCommand}"
+                                                        Padding="10,5"
+                                                        FontSize="11" />
+                                                <Button Content="Delete"
+                                                        Command="{Binding RequestDeleteCommand}"
+                                                        IsVisible="{Binding CanDelete}"
+                                                        Padding="10,5"
+                                                        FontSize="11" />
+                                            </StackPanel>
 
                                             <!-- Default Car Badge -->
                                             <Border Grid.Row="4"
