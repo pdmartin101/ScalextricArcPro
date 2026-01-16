@@ -78,7 +78,8 @@ ScalextricBleMonitor/
 ├── App.axaml(.cs)               # Avalonia application configuration + DI bootstrap
 ├── Models/
 │   ├── GattService.cs           # Pure domain model for GATT service
-│   └── GattCharacteristic.cs    # Pure domain model for GATT characteristic
+│   ├── GattCharacteristic.cs    # Pure domain model for GATT characteristic
+│   └── GhostSourceType.cs       # Ghost mode throttle source type
 ├── ViewModels/
 │   ├── MainViewModel.cs         # Main MVVM view model
 │   ├── ControllerViewModel.cs   # Per-slot controller state & lap timing
@@ -90,8 +91,6 @@ ScalextricBleMonitor/
 │   ├── GattServicesWindow.axaml(.cs) # GATT services browser
 │   └── NotificationWindow.axaml(.cs) # Live notification log
 ├── Converters/                   # UI value converters (6 converters)
-│   ├── BooleanToVisibilityConverter.cs
-│   └── ...
 └── Services/
     ├── IBleMonitorService.cs    # BLE service abstraction
     ├── BleMonitorService.cs     # Windows BLE implementation
@@ -102,10 +101,19 @@ ScalextricBleMonitor/
     ├── IGhostPlaybackService.cs # Ghost lap playback abstraction
     ├── GhostPlaybackService.cs  # Replays recorded throttle values
     ├── RecordedLapStorage.cs    # JSON persistence for recorded laps
+    ├── ThrottleProfileHelper.cs # Maps ThrottleProfileType to curves
     ├── ServiceConfiguration.cs  # DI container configuration
-    ├── ScalextricProtocol.cs    # Protocol constants and builders
     └── AppSettings.cs           # JSON settings persistence
 ```
+
+### Shared Libraries
+
+The application uses shared libraries from the `Libs/` folder:
+
+| Library | Namespace | Purpose |
+|---------|-----------|---------|
+| [Scalextric](../../../Libs/Scalextric/Docs/README.md) | `Scalextric` | Core domain logic (lap timing, throttle profile types) |
+| [ScalextricBle](../../../Libs/ScalextricBle/Docs/README.md) | `ScalextricBle` | BLE protocol (characteristics, commands, decoding) |
 
 ### Design Patterns
 
@@ -143,7 +151,12 @@ The application follows strict MVVM with clear layer separation:
 │                       SERVICES                                   │
 │  IBleMonitorService → BleMonitorService                         │
 │  IWindowService → WindowService                                  │
-│  AppSettings, ScalextricProtocol                                │
+│  AppSettings, ThrottleProfileHelper                             │
+└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    SHARED LIBRARIES                              │
+│  Scalextric: LapTimingEngine, ThrottleProfileType               │
+│  ScalextricBle: ScalextricProtocol, ScalextricProtocolDecoder   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -308,9 +321,9 @@ Manages child window lifecycle (implements `IWindowService`):
 | `ShowNotificationWindow()` | Show/focus notifications window |
 | `CloseAllWindows()` | Close all child windows |
 
-### ScalextricProtocol
+### ScalextricProtocol (from ScalextricBle library)
 
-Protocol constants and builders:
+Protocol constants and builders. See [ScalextricBle documentation](../../../Libs/ScalextricBle/Docs/README.md) for details.
 
 | Class | Purpose |
 |-------|---------|
@@ -318,6 +331,10 @@ Protocol constants and builders:
 | `CommandType` | Enum of command types (PowerOnRacing, etc.) |
 | `CommandBuilder` | Builds 20-byte command packets |
 | `ThrottleProfile` | Generates 96-value throttle curves |
+
+### LapTimingEngine (from Scalextric library)
+
+Lap timing calculations. See [Scalextric documentation](../../../Libs/Scalextric/Docs/README.md) for details.
 
 ## UI Layout
 
@@ -448,6 +465,8 @@ Recorded laps are saved to `%LocalAppData%\ScalextricBleMonitor\recorded_laps.js
 ## Related Documentation
 
 - [ArcPro-BLE-Protocol.md](ArcPro-BLE-Protocol.md) - Protocol specification
+- [Scalextric Library](../../../Libs/Scalextric/Docs/README.md) - Core domain logic
+- [ScalextricBle Library](../../../Libs/ScalextricBle/Docs/README.md) - BLE protocol library
 - [CLAUDE.md](../CLAUDE.md) - Build instructions for AI assistants
 
 ---
