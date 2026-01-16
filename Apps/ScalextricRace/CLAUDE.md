@@ -33,11 +33,17 @@ Apps/ScalextricRace/
     ├── Program.cs                        # Application entry point
     ├── App.axaml(.cs)                    # Avalonia app bootstrap + DI container
     ├── app.manifest                      # Windows application manifest
-    ├── Models/                           # Domain models (currently empty)
+    ├── Models/                           # Domain models
+    │   ├── Car.cs                        # Car entity with power settings
+    │   ├── Driver.cs                     # Driver entity (for future use)
+    │   └── CarStorage.cs                 # JSON persistence for cars
     ├── ViewModels/                       # MVVM ViewModels
-    │   └── MainViewModel.cs              # Main application ViewModel
+    │   ├── MainViewModel.cs              # Main application ViewModel
+    │   ├── CarViewModel.cs               # Car wrapper with commands
+    │   └── CarTuningViewModel.cs         # 3-stage car tuning wizard
     ├── Views/                            # Avalonia UI windows
-    │   └── MainWindow.axaml(.cs)         # Main UI window with settings flyout
+    │   ├── MainWindow.axaml(.cs)         # Main UI with navigation
+    │   └── CarTuningWindow.axaml(.cs)    # Car tuning wizard dialog
     └── Services/                         # Application services
         ├── IBleService.cs                # BLE service interface + event args
         ├── BleService.cs                 # Windows BLE implementation (~700 lines)
@@ -78,6 +84,9 @@ The application references two shared libraries in `Libs/`:
 │    • Connection state management                                    │
 │    • Power control commands                                         │
 │    • Settings persistence                                           │
+│    • Car management (CRUD, tuning)                                  │
+│  CarViewModel - Car wrapper with tune/delete commands               │
+│  CarTuningViewModel - 3-stage tuning wizard state                   │
 └─────────────────────────────────┬───────────────────────────────────┘
                                   │
 ┌─────────────────────────────────▼───────────────────────────────────┐
@@ -170,14 +179,35 @@ Power commands are sent via the `ScalextricProtocol.CommandBuilder`:
 - `DisablePower()` sends `CommandType.NoPowerTimerStopped`
 - **TODO**: Heartbeat loop (200ms interval) not yet implemented
 
+### Car Tuning Wizard
+
+The car tuning wizard is a 3-stage dialog for calibrating car power settings:
+
+| Stage | Mode | Purpose |
+|-------|------|---------|
+| 1. Default Power | Racing | Set max power for normal driving. Throttle controls car; slider sets limit. |
+| 2. Ghost Max Power | Ghost | Find max speed before crashing. Slider directly controls car speed. |
+| 3. Min Power | Ghost | Find min speed before stalling. Slider directly controls car speed. |
+
+**Behavior:**
+- Stage 1: Power on immediately (racing mode - car controlled by throttle)
+- Stages 2-3: Power off until slider is adjusted (ghost mode - slider = speed)
+- Slot selection allows testing on any track lane
+- Cancel restores original values; Save persists to car
+
 ### Key Domain Entities
 
 | Layer | Entity | Purpose |
 |-------|--------|---------|
+| Model | `Car` | Car entity with DefaultPower, GhostMaxPower, MinPower |
+| Model | `Driver` | Driver entity (for future use) |
+| Model | `CarStorage` | JSON persistence for cars list |
 | Service | `IBleService` | BLE abstraction interface |
 | Service | `BleService` | Windows BLE implementation with retry logic |
 | Service | `AppSettings` | JSON settings persistence |
-| ViewModel | `MainViewModel` | Central state manager, commands |
+| ViewModel | `MainViewModel` | Central state manager, commands, car management |
+| ViewModel | `CarViewModel` | Car wrapper with tune/delete commands |
+| ViewModel | `CarTuningViewModel` | 3-stage tuning wizard state |
 | Library | `ScalextricProtocol` | BLE protocol constants and command builders |
 | Library | `ThrottleProfileType` | Throttle curve types enum |
 
@@ -219,7 +249,8 @@ BLE operations include robust error handling:
 - Implement heartbeat loop (200ms power command interval)
 - Process BLE notifications (throttle, lap timing)
 - Add lap counting and timing display
-- Support ghost mode for autonomous cars
+- Driver management and assignment to cars
+- Race session management
 - Cross-platform support (macOS/Linux via InTheHand.BluetoothLE)
 
 ### Related Documentation

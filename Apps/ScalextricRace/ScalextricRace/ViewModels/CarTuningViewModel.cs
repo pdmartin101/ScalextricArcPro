@@ -37,6 +37,7 @@ public partial class CarTuningViewModel : ObservableObject
     private readonly IBleService? _bleService;
     private readonly CarViewModel _carViewModel;
     private readonly Car _originalValues;
+    private bool _suppressPowerCommand;
 
     /// <summary>
     /// Event raised when tuning is complete and values should be saved.
@@ -89,17 +90,6 @@ public partial class CarTuningViewModel : ObservableObject
     [ObservableProperty]
     private int _powerLevel;
 
-    /// <summary>
-    /// Whether the track is currently powered for this slot.
-    /// </summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(PowerButtonText))]
-    private bool _isTrackPowered;
-
-    /// <summary>
-    /// Gets the power button text based on current state.
-    /// </summary>
-    public string PowerButtonText => IsTrackPowered ? "Stop" : "Start";
 
     /// <summary>
     /// Gets whether we're on the Default Power stage.
@@ -181,30 +171,9 @@ public partial class CarTuningViewModel : ObservableObject
         _powerLevel = carViewModel.DefaultPower;
 
         Log.Information("Car tuning started for {CarName}", CarName);
-    }
 
-    /// <summary>
-    /// Toggles track power for the selected slot.
-    /// </summary>
-    [RelayCommand]
-    private async Task TogglePower()
-    {
-        if (_bleService == null)
-        {
-            Log.Warning("BLE service not available for tuning");
-            return;
-        }
-
-        IsTrackPowered = !IsTrackPowered;
-
-        if (IsTrackPowered)
-        {
-            await SendPowerCommand();
-        }
-        else
-        {
-            await SendStopCommand();
-        }
+        // Auto-start power for stage 1 (racing mode - car controlled by throttle)
+        _ = SendPowerCommand();
     }
 
     /// <summary>
@@ -237,36 +206,40 @@ public partial class CarTuningViewModel : ObservableObject
     [RelayCommand]
     private async Task SaveAndContinue()
     {
-        // Stop track power first
-        if (IsTrackPowered)
-        {
-            await SendStopCommand();
-            IsTrackPowered = false;
-        }
-
         // Save current stage value to car and move to next stage
         switch (CurrentStage)
         {
             case TuningStage.DefaultPower:
                 _carViewModel.DefaultPower = PowerLevel;
                 Log.Information("Default power set to {Power} for {CarName}", PowerLevel, CarName);
+                // Stop power before changing to ghost mode stage
+                await SendStopCommand();
                 // Move to Ghost Max Power stage, initialize with current GhostMaxPower
+                // Don't send power - wait for user to adjust slider
+                _suppressPowerCommand = true;
                 PowerLevel = _carViewModel.GhostMaxPower;
+                _suppressPowerCommand = false;
                 CurrentStage = TuningStage.GhostMaxPower;
                 break;
 
             case TuningStage.GhostMaxPower:
                 _carViewModel.GhostMaxPower = PowerLevel;
                 Log.Information("Ghost max power set to {Power} for {CarName}", PowerLevel, CarName);
+                // Stop power before changing stage
+                await SendStopCommand();
                 // Move to Min Power stage, initialize with current MinPower
+                // Don't send power - wait for user to adjust slider
+                _suppressPowerCommand = true;
                 PowerLevel = _carViewModel.MinPower;
+                _suppressPowerCommand = false;
                 CurrentStage = TuningStage.MinPower;
                 break;
 
             case TuningStage.MinPower:
                 _carViewModel.MinPower = PowerLevel;
                 Log.Information("Min power set to {Power} for {CarName}", PowerLevel, CarName);
-                // All stages complete
+                // Stop power and complete
+                await SendStopCommand();
                 TuningComplete?.Invoke(this, EventArgs.Empty);
                 break;
         }
@@ -279,11 +252,7 @@ public partial class CarTuningViewModel : ObservableObject
     private async Task Cancel()
     {
         // Stop track power
-        if (IsTrackPowered)
-        {
-            await SendStopCommand();
-            IsTrackPowered = false;
-        }
+        await SendStopCommand();
 
         // Restore original values
         _carViewModel.DefaultPower = _originalValues.DefaultPower;
@@ -295,25 +264,22 @@ public partial class CarTuningViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Called when power level changes - update track if powered.
+    /// Called when power level changes - update track power.
     /// </summary>
     partial void OnPowerLevelChanged(int value)
     {
-        if (IsTrackPowered)
+        if (!_suppressPowerCommand)
         {
             _ = SendPowerCommand();
         }
     }
 
     /// <summary>
-    /// Called when selected slot changes - stop and restart if powered.
+    /// Called when selected slot changes - update track power.
     /// </summary>
     partial void OnSelectedSlotChanged(int value)
     {
-        if (IsTrackPowered)
-        {
-            _ = SendPowerCommand();
-        }
+        _ = SendPowerCommand();
     }
 
     /// <summary>
@@ -383,10 +349,6 @@ public partial class CarTuningViewModel : ObservableObject
     /// </summary>
     public async Task OnClosing()
     {
-        if (IsTrackPowered)
-        {
-            await SendStopCommand();
-            IsTrackPowered = false;
-        }
+        await SendStopCommand();
     }
 }

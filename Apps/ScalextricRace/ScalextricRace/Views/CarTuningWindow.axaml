@@ -105,15 +105,7 @@
                     </Grid>
                 </StackPanel>
 
-                <!-- Start/Stop Button -->
-                <Button Content="{Binding PowerButtonText}"
-                        Command="{Binding TogglePowerCommand}"
-                        HorizontalAlignment="Center"
-                        Padding="40,12"
-                        FontSize="16"
-                        FontWeight="SemiBold" />
-
-                <!-- Stage-specific help text (inside main content) -->
+                <!-- Stage-specific help text -->
                 <TextBlock Text="Use the throttle to test the car at this power limit."
                            FontSize="11"
                            Foreground="Gray"
