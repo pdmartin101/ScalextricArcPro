@@ -28,6 +28,11 @@ public partial class CarViewModel : ObservableObject
     public event EventHandler? TuneRequested;
 
     /// <summary>
+    /// Event raised when image selection is requested for this car.
+    /// </summary>
+    public event EventHandler? ImageChangeRequested;
+
+    /// <summary>
     /// Gets whether this is the default car (cannot be deleted).
     /// </summary>
     public bool IsDefault { get; }
@@ -52,7 +57,13 @@ public partial class CarViewModel : ObservableObject
     /// Optional path to car image for UI display.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasImage))]
     private string? _imagePath;
+
+    /// <summary>
+    /// Gets whether this car has an image set.
+    /// </summary>
+    public bool HasImage => !string.IsNullOrEmpty(ImagePath);
 
     /// <summary>
     /// Default power level for normal driving (0-63).
@@ -145,5 +156,14 @@ public partial class CarViewModel : ObservableObject
     private void RequestTune()
     {
         TuneRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Requests image change for this car.
+    /// </summary>
+    [RelayCommand]
+    private void RequestImageChange()
+    {
+        ImageChangeRequested?.Invoke(this, EventArgs.Empty);
     }
 }

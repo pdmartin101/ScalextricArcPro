@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Platform.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using ScalextricRace.Services;
 using ScalextricRace.ViewModels;
@@ -20,12 +21,13 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        // Subscribe to tune window request after DataContext is set
+        // Subscribe to events after DataContext is set
         DataContextChanged += (_, _) =>
         {
             if (DataContext is MainViewModel viewModel)
             {
                 viewModel.TuneWindowRequested += OnTuneWindowRequested;
+                viewModel.ImageChangeRequested += OnImageChangeRequested;
             }
         };
     }
@@ -64,6 +66,35 @@ public partial class MainWindow : Window
         if (result == true)
         {
             // Tuning completed successfully - values were saved to car
+        }
+    }
+
+    /// <summary>
+    /// Opens a file picker to select an image for the specified car.
+    /// </summary>
+    private async void OnImageChangeRequested(object? sender, CarViewModel car)
+    {
+        var storageProvider = StorageProvider;
+
+        var options = new FilePickerOpenOptions
+        {
+            Title = "Select Car Image",
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType("Images")
+                {
+                    Patterns = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp"]
+                }
+            ]
+        };
+
+        var result = await storageProvider.OpenFilePickerAsync(options);
+
+        if (result.Count > 0)
+        {
+            var file = result[0];
+            car.ImagePath = file.Path.LocalPath;
         }
     }
 }

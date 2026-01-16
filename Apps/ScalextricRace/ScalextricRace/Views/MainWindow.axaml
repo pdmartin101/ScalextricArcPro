@@ -301,18 +301,34 @@
                                             Margin="0,0,15,15"
                                             Padding="15">
                                         <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-                                            <!-- Car Image Placeholder -->
-                                            <Border Grid.Row="0"
-                                                    Background="#F5F5F5"
-                                                    CornerRadius="6"
-                                                    Height="100"
-                                                    Margin="0,0,0,10">
-                                                <TextBlock Text="&#x1F3CE;"
-                                                           FontSize="48"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"
-                                                           Foreground="#CCCCCC" />
-                                            </Border>
+                                            <!-- Car Image (clickable to change) -->
+                                            <Button Grid.Row="0"
+                                                    Command="{Binding RequestImageChangeCommand}"
+                                                    Background="Transparent"
+                                                    Padding="0"
+                                                    Margin="0,0,0,10"
+                                                    HorizontalAlignment="Stretch"
+                                                    VerticalAlignment="Stretch"
+                                                    Cursor="Hand">
+                                                <Border Background="#F5F5F5"
+                                                        CornerRadius="6"
+                                                        Height="100"
+                                                        ClipToBounds="True">
+                                                    <!-- Placeholder icon (shown when no image) -->
+                                                    <Panel>
+                                                        <TextBlock Text="&#x1F3CE;"
+                                                                   FontSize="48"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="#CCCCCC"
+                                                                   IsVisible="{Binding !HasImage}" />
+                                                        <!-- Actual image (shown when image is set) -->
+                                                        <Image Source="{Binding ImagePath}"
+                                                               Stretch="UniformToFill"
+                                                               IsVisible="{Binding HasImage}" />
+                                                    </Panel>
+                                                </Border>
+                                            </Button>
 
                                             <!-- Car Name -->
                                             <TextBox Grid.Row="1"

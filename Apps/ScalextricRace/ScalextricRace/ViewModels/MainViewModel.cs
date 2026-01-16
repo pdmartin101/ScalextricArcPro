@@ -395,6 +395,7 @@ public partial class MainViewModel : ObservableObject
         viewModel.DeleteRequested += OnCarDeleteRequested;
         viewModel.Changed += OnCarChanged;
         viewModel.TuneRequested += OnCarTuneRequested;
+        viewModel.ImageChangeRequested += OnCarImageChangeRequested;
         Cars.Add(viewModel);
         SelectedCar = viewModel;
         Log.Information("Added new car: {CarName} (copied settings from default)", newCar.Name);
@@ -438,6 +439,24 @@ public partial class MainViewModel : ObservableObject
     public event EventHandler<CarViewModel>? TuneWindowRequested;
 
     /// <summary>
+    /// Event raised when image selection is requested for a car.
+    /// The view subscribes to this event and shows a file picker.
+    /// </summary>
+    public event EventHandler<CarViewModel>? ImageChangeRequested;
+
+    /// <summary>
+    /// Handles image change request from a car view model.
+    /// </summary>
+    private void OnCarImageChangeRequested(object? sender, EventArgs e)
+    {
+        if (sender is CarViewModel car)
+        {
+            Log.Information("Image change requested for car: {CarName}", car.Name);
+            ImageChangeRequested?.Invoke(this, car);
+        }
+    }
+
+    /// <summary>
     /// Deletes the specified car (cannot delete the default car).
     /// </summary>
     /// <param name="car">The car view model to delete.</param>
@@ -452,6 +471,7 @@ public partial class MainViewModel : ObservableObject
         car.DeleteRequested -= OnCarDeleteRequested;
         car.Changed -= OnCarChanged;
         car.TuneRequested -= OnCarTuneRequested;
+        car.ImageChangeRequested -= OnCarImageChangeRequested;
         Cars.Remove(car);
         if (SelectedCar == car)
         {
@@ -497,6 +517,7 @@ public partial class MainViewModel : ObservableObject
             viewModel.DeleteRequested += OnCarDeleteRequested;
             viewModel.Changed += OnCarChanged;
             viewModel.TuneRequested += OnCarTuneRequested;
+            viewModel.ImageChangeRequested += OnCarImageChangeRequested;
             Cars.Add(viewModel);
         }
 
