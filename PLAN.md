@@ -389,7 +389,8 @@ These are larger refactoring efforts to consider after critical issues are resol
 | Throttle profile selector | Per-slot throttle profile selection (Linear, Exponential, Stepped) | Low | ✅ Done |
 | Ghost Control Window | Dedicated window with large sliders for ghost car throttle control | Low | ✅ Done |
 | Separate power/ghost values | PowerLevel for controller max power, GhostThrottleLevel for ghost speed | Low | ✅ Done |
-| Advanced Ghost cars | Record laps and replay chosen lap's throttle values as ghost car | Medium | Planned |
+| Advanced Ghost cars | Record laps and replay chosen lap's throttle values as ghost car | Medium | ✅ Done |
+| Ghost lap persistence | Save recorded laps to JSON and restore on startup | Low | ✅ Done |
 | Multiple powerbase support | Connect to more than one device | High | - |
 | Data logging and export | Record race sessions to file | Medium | - |
 | Cross-platform BLE | macOS/Linux via InTheHand.BluetoothLE | High | - |
@@ -698,6 +699,8 @@ public class RecordedLap { SlotNumber, RecordedAt, LapTime, List<ThrottleSample>
 | 2026-01-15 | Enhancement | Implemented: Throttle Profile Selector - per-slot selection of Linear/Exponential/Stepped profiles with persistence |
 | 2026-01-15 | Enhancement | Implemented: Ghost Control Window - dedicated window with large sliders and +/- buttons for ghost car throttle control |
 | 2026-01-15 | Enhancement | Implemented: Separated PowerLevel (controller max power) from GhostThrottleLevel (ghost car speed) for clearer UX |
+| 2026-01-16 | Enhancement | Implemented: Advanced Ghost Cars - recording service with lap boundary detection, two-phase playback (approach speed then recorded lap) |
+| 2026-01-16 | Enhancement | Implemented: Ghost lap persistence - JSON storage in LocalApplicationData, auto-save on recording complete, auto-load on startup |
 
 ---
 

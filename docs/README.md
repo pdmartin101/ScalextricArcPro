@@ -27,7 +27,8 @@ The application automatically scans for Scalextric devices, establishes a GATT c
 | Power Control | Enable/disable track power with adjustable level (0-63) |
 | Per-Slot Power | Individual power levels for each controller slot |
 | Ghost Mode | Autonomous car control - car runs at set power level without controller input |
-| Settings Persistence | Power levels and ghost mode saved to JSON and restored on startup |
+| Ghost Recording | Record throttle inputs during live driving and replay as ghost car |
+| Settings Persistence | Power levels, ghost mode, and recorded laps saved to JSON and restored on startup |
 | Characteristic Reader | Read values from any readable GATT characteristic |
 | Notification Log | Live stream of notification data with hex/decoded views |
 
@@ -96,6 +97,11 @@ ScalextricBleMonitor/
     ├── BleMonitorService.cs     # Windows BLE implementation
     ├── IWindowService.cs        # Window management abstraction
     ├── WindowService.cs         # Window lifecycle management
+    ├── IGhostRecordingService.cs # Ghost lap recording abstraction
+    ├── GhostRecordingService.cs # Records throttle samples during laps
+    ├── IGhostPlaybackService.cs # Ghost lap playback abstraction
+    ├── GhostPlaybackService.cs  # Replays recorded throttle values
+    ├── RecordedLapStorage.cs    # JSON persistence for recorded laps
     ├── ServiceConfiguration.cs  # DI container configuration
     ├── ScalextricProtocol.cs    # Protocol constants and builders
     └── AppSettings.cs           # JSON settings persistence
@@ -408,30 +414,36 @@ private static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(500);
 - [ ] Custom throttle profile editor
 - [ ] Multiple powerbase support
 - [ ] Data logging and export
-- [ ] **Advanced Ghost cars** - Record laps and replay throttle inputs as ghost opponents
+- [x] ~~**Advanced Ghost cars**~~ (Implemented) - Record laps and replay throttle inputs as ghost opponents
 
-### Advanced Ghost Cars
+### Advanced Ghost Cars (Implemented)
 
-A planned enhancement to extend the existing ghost mode with lap recording and replay capabilities:
+The ghost mode has been extended with lap recording and replay capabilities:
 
 | Feature | Description |
 |---------|-------------|
-| **Recording** | Capture throttle inputs (0-63) during live driving with timestamps |
+| **Recording** | Capture throttle inputs (0-63) during live driving, scaled by power level |
 | **Lap Detection** | Auto-complete recording when finish line is crossed |
-| **Replay** | Play back recorded throttle values through ghost mode protocol |
+| **Multi-Lap Recording** | Record 1-5 consecutive laps in a single session |
+| **Two-Phase Playback** | Approach at fixed speed until finish line, then replay recorded lap |
 | **Multi-Ghost** | Run multiple ghost cars on different slots simultaneously |
-| **Lap Library** | Save, manage, and select from recorded laps |
+| **Persistence** | Recorded laps saved to JSON and restored on startup |
 
 **How it works:**
-1. Enable recording on a slot while driving with a physical controller
-2. Throttle values are captured at ~50Hz with timestamps relative to lap start
-3. When the finish line is crossed, the lap is saved and a new recording begins
-4. Select any recorded lap to replay on a ghost slot
-5. The ghost car follows the exact throttle profile from the recording
+1. Set the ghost source to "Recorded Lap" in the Ghost Control Window
+2. Click "Record" and drive a lap with a physical controller
+3. Throttle values are captured at ~50Hz and scaled by your power level
+4. When the finish line is crossed, the lap is saved automatically
+5. Select the recorded lap from the dropdown to use for ghost playback
+6. The ghost car approaches at fixed speed until it crosses the finish line, then replays your exact inputs
 
-This enables "race against yourself" functionality - compare your current driving to your best recorded lap.
+**Two-Phase Playback:**
+Since the app doesn't know where the car is on the track when playback starts, it uses a two-phase approach:
+- **Phase 1 (Approach)**: Car runs at the fixed "Ghost Throttle Level" until it crosses the finish line
+- **Phase 2 (Replay)**: Car follows the recorded throttle values, looping each time it completes a lap
 
-See [PLAN.md](../PLAN.md) for detailed technical design including data models, services, and implementation phases.
+**Persistence:**
+Recorded laps are saved to `%LocalAppData%\ScalextricBleMonitor\recorded_laps.json` and automatically loaded when the app starts.
 
 ## Related Documentation
 

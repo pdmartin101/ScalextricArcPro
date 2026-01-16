@@ -23,6 +23,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly IBleMonitorService _bleMonitorService;
     private readonly IGhostRecordingService _ghostRecordingService;
+    private readonly IGhostPlaybackService _ghostPlaybackService;
     private readonly AppSettings _settings;
     private IWindowService? _windowService;
     private bool _disposed;
@@ -184,15 +185,22 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // Subscribe to ghost source changes to persist settings
             controller.GhostSourceChanged += OnControllerGhostSourceChanged;
 
-            // Subscribe to ghost mode changes to update HasAnyGhostMode
+            // Subscribe to ghost mode changes to update HasAnyGhostMode and playback state
             controller.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(ControllerViewModel.IsGhostMode))
+                {
                     OnPropertyChanged(nameof(HasAnyGhostMode));
+                    if (s is ControllerViewModel ctrl)
+                        UpdatePlaybackForController(ctrl);
+                }
             };
 
             // Subscribe to recording state changes
             controller.RecordingStateChanged += OnControllerRecordingStateChanged;
+
+            // Subscribe to selected lap changes for playback control
+            controller.SelectedRecordedLapChanged += OnControllerSelectedLapChanged;
 
             // Populate available recorded laps from the service
             foreach (var lap in _ghostRecordingService.GetRecordedLaps(i + 1))
@@ -227,6 +235,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 _settings.SlotGhostSources[index] = source.ToString();
                 _settings.Save();
             }
+
+            // Update playback state when ghost source changes
+            UpdatePlaybackForController(controller);
         }
     }
 
@@ -243,6 +254,54 @@ public partial class MainViewModel : ObservableObject, IDisposable
             {
                 _ghostRecordingService.StopRecording(controller.SlotNumber);
                 Log.Information("Stopped recording for slot {SlotNumber}", controller.SlotNumber);
+            }
+        }
+    }
+
+    private void OnControllerSelectedLapChanged(object? sender, Models.RecordedLap? selectedLap)
+    {
+        if (sender is ControllerViewModel controller)
+        {
+            // Start or stop playback based on selected lap and ghost mode settings
+            UpdatePlaybackForController(controller);
+        }
+    }
+
+    /// <summary>
+    /// Updates playback state for a controller based on its current settings.
+    /// Starts playback if ghost mode is enabled, source is RecordedLap, and a lap is selected.
+    /// Stops playback otherwise.
+    /// </summary>
+    private void UpdatePlaybackForController(ControllerViewModel controller)
+    {
+        int slotNumber = controller.SlotNumber;
+
+        // Should playback be active?
+        bool shouldPlay = controller.IsGhostMode &&
+                          controller.GhostSource == GhostSourceType.RecordedLap &&
+                          controller.SelectedRecordedLap != null &&
+                          IsPowerEnabled;
+
+        if (shouldPlay && controller.SelectedRecordedLap != null)
+        {
+            // Start or update playback with the selected lap
+            if (!_ghostPlaybackService.IsPlaying(slotNumber) ||
+                _ghostPlaybackService.GetCurrentLap(slotNumber)?.Id != controller.SelectedRecordedLap.Id)
+            {
+                // Use GhostThrottleLevel as the approach speed while waiting for the first lap
+                byte approachSpeed = (byte)controller.GhostThrottleLevel;
+                _ghostPlaybackService.StartPlayback(slotNumber, controller.SelectedRecordedLap, approachSpeed);
+                Log.Information("Started playback for slot {SlotNumber}: {LapName}, approach speed={ApproachSpeed}",
+                    slotNumber, controller.SelectedRecordedLap.DisplayName, approachSpeed);
+            }
+        }
+        else
+        {
+            // Stop playback if active
+            if (_ghostPlaybackService.IsPlaying(slotNumber))
+            {
+                _ghostPlaybackService.StopPlayback(slotNumber);
+                Log.Information("Stopped playback for slot {SlotNumber}", slotNumber);
             }
         }
     }
@@ -272,6 +331,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 controller.AvailableRecordedLaps.Add(e.RecordedLap);
                 controller.RecordedLapCount++;
 
+                // Save to persistent storage after each lap is recorded
+                _ghostRecordingService.SaveToStorage();
+
                 Log.Information(
                     "Recording completed for slot {SlotNumber}: lap {LapNum}/{TotalLaps}, {SampleCount} samples, {LapTime:F2}s",
                     e.SlotNumber, controller.RecordedLapCount, controller.LapsToRecord,
@@ -288,22 +350,23 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 }
                 else
                 {
-                    // All laps recorded - stop and select the best lap
+                    // All laps recorded - stop recording
                     controller.IsRecording = false;
                     controller.IsActivelyRecording = false;
 
-                    // Auto-select the best (fastest) recorded lap from this session
-                    var bestLap = controller.AvailableRecordedLaps
-                        .OrderBy(l => l.LapTimeSeconds)
-                        .FirstOrDefault();
-                    controller.SelectedRecordedLap = bestLap;
+                    // Find the best lap from this recording session (most recent laps)
+                    var sessionLaps = controller.AvailableRecordedLaps
+                        .OrderByDescending(l => l.RecordedAt)
+                        .Take(controller.LapsToRecord)
+                        .ToList();
+                    var bestLap = sessionLaps.OrderBy(l => l.LapTimeSeconds).FirstOrDefault();
 
-                    if (controller.LapsToRecord > 1)
-                    {
-                        Log.Information(
-                            "Multi-lap recording completed for slot {SlotNumber}: {LapCount} laps, best time {BestTime:F2}s",
-                            e.SlotNumber, controller.LapsToRecord, bestLap?.LapTimeSeconds ?? 0);
-                    }
+                    Log.Information(
+                        "Recording completed for slot {SlotNumber}: {LapCount} lap(s) recorded, best time {BestTime:F2}s. Select a lap to play back.",
+                        e.SlotNumber, controller.LapsToRecord, bestLap?.LapTimeSeconds ?? 0);
+
+                    // Note: We do NOT auto-select the lap to avoid immediately starting playback.
+                    // The user should manually select which lap they want to use for ghost playback.
                 }
             }
         });
@@ -334,7 +397,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Creates a MainViewModel with default services. Used for design-time and simple instantiation.
     /// </summary>
-    public MainViewModel() : this(new BleMonitorService(), new GhostRecordingService(), AppSettings.Load())
+    public MainViewModel() : this(new BleMonitorService(), new GhostRecordingService(), new GhostPlaybackService(), AppSettings.Load())
     {
     }
 
@@ -343,11 +406,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     /// <param name="bleMonitorService">The BLE monitoring service.</param>
     /// <param name="ghostRecordingService">The ghost recording service.</param>
+    /// <param name="ghostPlaybackService">The ghost playback service.</param>
     /// <param name="settings">The application settings.</param>
-    public MainViewModel(IBleMonitorService bleMonitorService, IGhostRecordingService ghostRecordingService, AppSettings settings)
+    public MainViewModel(IBleMonitorService bleMonitorService, IGhostRecordingService ghostRecordingService, IGhostPlaybackService ghostPlaybackService, AppSettings settings)
     {
         _bleMonitorService = bleMonitorService;
         _ghostRecordingService = ghostRecordingService;
+        _ghostPlaybackService = ghostPlaybackService;
         _settings = settings;
 
         _bleMonitorService.ConnectionStateChanged += OnConnectionStateChanged;
@@ -363,6 +428,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // Initialize from persisted settings
         _powerLevel = _settings.PowerLevel;
         _usePerSlotPower = _settings.UsePerSlotPower;
+
+        // Load recorded laps from storage before initializing controllers
+        _ghostRecordingService.LoadFromStorage();
 
         InitializeControllers();
 
@@ -622,7 +690,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (_ghostRecordingService.IsRecording(controller.SlotNumber))
             {
                 byte throttleValue = (byte)(data[i] & ScalextricProtocol.ThrottleData.ThrottleMask);
-                _ghostRecordingService.RecordThrottleSample(controller.SlotNumber, throttleValue, timestamp);
+                // Pass the current power level so the recording captures actual power delivered
+                int powerLevel = UsePerSlotPower ? controller.PowerLevel : PowerLevel;
+                _ghostRecordingService.RecordThrottleSample(controller.SlotNumber, throttleValue, powerLevel, timestamp);
             }
         }
     }
@@ -717,6 +787,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     }
 
                     _ghostRecordingService.NotifyLapCompleted(slotId, controller.LastLapTimeSeconds, trueEventTime);
+                }
+
+                // Notify playback service if a lap was completed (to restart ghost car playback)
+                if (lapCompleted && _ghostPlaybackService.IsPlaying(slotId))
+                {
+                    _ghostPlaybackService.NotifyLapCompleted(slotId);
+                    Log.Debug("Ghost car lap completed for slot {SlotId}, restarting playback", slotId);
                 }
             }
         }
@@ -918,6 +995,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IsPowerEnabled = true;
         StatusText = $"Power enabled at level {PowerLevel}";
 
+        // Start playback for any controllers configured for recorded lap ghost mode
+        foreach (var controller in Controllers)
+        {
+            UpdatePlaybackForController(controller);
+        }
+
         // Cancel any existing heartbeat
         _powerHeartbeatCts?.Cancel();
         _powerHeartbeatCts = new CancellationTokenSource();
@@ -999,9 +1082,18 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 }
                 else // RecordedLap
                 {
-                    // Recorded lap mode: use 0 throttle (car stopped) until playback is implemented
-                    // TODO: Phase 4-5 will implement playback service to provide interpolated throttle values
-                    slot.PowerMultiplier = 0;
+                    // Recorded lap mode: get interpolated throttle from playback service
+                    // The recorded values are already scaled by the power level that was in
+                    // effect during recording, so we use them directly.
+                    if (_ghostPlaybackService.IsPlaying(i + 1))
+                    {
+                        slot.PowerMultiplier = _ghostPlaybackService.GetCurrentThrottleValue(i + 1);
+                    }
+                    else
+                    {
+                        // Playback not started - car stopped
+                        slot.PowerMultiplier = 0;
+                    }
                 }
             }
             else
@@ -1032,6 +1124,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private async Task DisablePowerAsync()
     {
         StatusText = "Sending power off command...";
+
+        // Stop all playback
+        for (int i = 1; i <= 6; i++)
+        {
+            _ghostPlaybackService.StopPlayback(i);
+        }
 
         await SendPowerOffSequenceAsync();
 

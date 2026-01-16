@@ -114,7 +114,7 @@ public class GhostRecordingService : IGhostRecordingService
     }
 
     /// <inheritdoc />
-    public void RecordThrottleSample(int slotNumber, byte throttleValue, DateTime timestamp)
+    public void RecordThrottleSample(int slotNumber, byte throttleValue, int powerLevel, DateTime timestamp)
     {
         ValidateSlotNumber(slotNumber);
         var state = _recordingStates[slotNumber - 1];
@@ -123,8 +123,16 @@ public class GhostRecordingService : IGhostRecordingService
         if (state.Phase == RecordingPhase.Idle)
             return;
 
+        // Scale the throttle value by power level to capture actual power delivered.
+        // During recording: Final Power = (PowerLevel/63) × ThrottleProfile[ThrottleValue]
+        // For playback in ghost mode: Final Power = ThrottleProfile[PowerMultiplier]
+        // So we store: scaledThrottle = (throttleValue × powerLevel) / 63
+        // This way playback directly uses the scaled value without needing the original power level.
+        int scaledThrottle = (throttleValue * powerLevel) / 63;
+        byte clampedThrottle = (byte)Math.Clamp(scaledThrottle, 0, 63);
+
         // Add to circular buffer with wall-clock timestamp
-        var bufferedSample = new BufferedThrottleSample(timestamp, throttleValue);
+        var bufferedSample = new BufferedThrottleSample(timestamp, clampedThrottle);
         state.ThrottleBuffer.Add(bufferedSample);
 
         // Trim old samples to prevent unbounded growth
@@ -132,8 +140,8 @@ public class GhostRecordingService : IGhostRecordingService
 
         var rawTimeSec = timestamp.TimeOfDay.TotalSeconds;
         var phaseLabel = state.Phase == RecordingPhase.WaitingForLapStart ? "WAITING" : "RECORDING";
-        Log.Debug("THROTTLE slot {SlotNumber} [{Phase}]: throttle={Throttle} raw={RawTime:F3}s buffer={BufferSize}",
-            slotNumber, phaseLabel, throttleValue, rawTimeSec, state.ThrottleBuffer.Count);
+        Log.Debug("THROTTLE slot {SlotNumber} [{Phase}]: raw={RawThrottle} scaled={ScaledThrottle} power={PowerLevel} time={RawTime:F3}s buffer={BufferSize}",
+            slotNumber, phaseLabel, throttleValue, clampedThrottle, powerLevel, rawTimeSec, state.ThrottleBuffer.Count);
     }
 
     /// <inheritdoc />
@@ -362,6 +370,27 @@ public class GhostRecordingService : IGhostRecordingService
             slotLaps.Clear();
         }
         Log.Information("Cleared all recorded laps");
+    }
+
+    /// <inheritdoc />
+    public void LoadFromStorage()
+    {
+        var laps = RecordedLapStorage.Load();
+        foreach (var lap in laps)
+        {
+            if (lap.SlotNumber >= 1 && lap.SlotNumber <= MaxSlots)
+            {
+                _recordedLaps[lap.SlotNumber - 1].Add(lap);
+            }
+        }
+        Log.Information("Loaded {Count} recorded laps from storage", laps.Count);
+    }
+
+    /// <inheritdoc />
+    public void SaveToStorage()
+    {
+        var allLaps = GetAllRecordedLaps();
+        RecordedLapStorage.Save(allLaps);
     }
 
     private static void ValidateSlotNumber(int slotNumber)

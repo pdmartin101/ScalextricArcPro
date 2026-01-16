@@ -96,11 +96,13 @@ public interface IGhostRecordingService
     /// Records a throttle sample for the specified slot.
     /// Call this method when throttle notification data is received.
     /// Samples are only recorded after the first finish line crossing.
+    /// The throttle value is scaled by the power level to capture the actual power delivered.
     /// </summary>
     /// <param name="slotNumber">The slot number (1-6).</param>
-    /// <param name="throttleValue">The throttle value (0-63).</param>
+    /// <param name="throttleValue">The raw throttle value from the controller (0-63).</param>
+    /// <param name="powerLevel">The power level/multiplier in effect during recording (0-63).</param>
     /// <param name="timestamp">The timestamp of the sample.</param>
-    void RecordThrottleSample(int slotNumber, byte throttleValue, DateTime timestamp);
+    void RecordThrottleSample(int slotNumber, byte throttleValue, int powerLevel, DateTime timestamp);
 
     /// <summary>
     /// Notifies the service that a finish line was crossed for the specified slot.
@@ -142,4 +144,14 @@ public interface IGhostRecordingService
     /// Clears all recorded laps.
     /// </summary>
     void ClearAllRecordedLaps();
+
+    /// <summary>
+    /// Loads recorded laps from persistent storage.
+    /// </summary>
+    void LoadFromStorage();
+
+    /// <summary>
+    /// Saves all recorded laps to persistent storage.
+    /// </summary>
+    void SaveToStorage();
 }
