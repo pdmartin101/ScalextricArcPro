@@ -499,7 +499,7 @@
                                                           Padding="8,4">
                                                     <ComboBox.ItemTemplate>
                                                         <DataTemplate x:DataType="models:SkillLevel">
-                                                            <TextBlock Text="{Binding Name}" />
+                                                            <TextBlock Text="{Binding DisplayText}" />
                                                         </DataTemplate>
                                                     </ComboBox.ItemTemplate>
                                                 </ComboBox>

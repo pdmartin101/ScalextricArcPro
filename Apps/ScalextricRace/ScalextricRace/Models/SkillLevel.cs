@@ -23,6 +23,11 @@ public class SkillLevel
     /// Gets whether this skill level has no power restriction.
     /// </summary>
     public bool IsNoLimit => PowerLimit >= 63;
+
+    /// <summary>
+    /// Gets the display text showing name and power limit value.
+    /// </summary>
+    public string DisplayText => IsNoLimit ? Name : $"{Name} ({PowerLimit})";
 }
 
 /// <summary>
