@@ -1,4 +1,4 @@
-using ScalextricBle;
+using Scalextric;
 
 namespace ScalextricBleMonitor.Tests;
 

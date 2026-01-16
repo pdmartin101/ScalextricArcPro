@@ -30,6 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Libs\Scalextric\Scalextric.csproj" />
     <ProjectReference Include="..\..\..\Libs\ScalextricBle\ScalextricBle.csproj" />
   </ItemGroup>
 </Project>
