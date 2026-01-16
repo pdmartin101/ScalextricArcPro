@@ -1,0 +1,131 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ScalextricRace.ViewModels"
+        x:Class="ScalextricRace.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="{Binding Title}"
+        Width="800" Height="600"
+        MinWidth="600" MinHeight="400">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+
+        <!-- Header: Title and Settings -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,20">
+            <TextBlock Grid.Column="0"
+                       Text="{Binding Title}"
+                       FontSize="28"
+                       FontWeight="Bold" />
+
+            <!-- Settings Button with Flyout -->
+            <Button Grid.Column="1"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="8"
+                    ToolTip.Tip="Power Settings">
+                <Button.Flyout>
+                    <Flyout Placement="BottomEdgeAlignedRight">
+                        <Border Background="{DynamicResource SystemControlBackgroundAltHighBrush}"
+                                Padding="20"
+                                MinWidth="320">
+                            <StackPanel Spacing="15">
+                                <!-- Flyout Header -->
+                                <TextBlock Text="Power Settings"
+                                           FontSize="18"
+                                           FontWeight="SemiBold" />
+
+                                <!-- Power Toggle Button -->
+                                <Button Content="{Binding PowerButtonText}"
+                                        Command="{Binding TogglePowerCommand}"
+                                        IsEnabled="{Binding IsConnected}"
+                                        HorizontalAlignment="Stretch"
+                                        Height="45"
+                                        FontSize="14"
+                                        FontWeight="Bold" />
+
+                                <!-- Power Level -->
+                                <StackPanel Spacing="5">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="Power Level"
+                                                   FontSize="12"
+                                                   Foreground="Gray" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding PowerLevel}"
+                                                   FontSize="14"
+                                                   FontWeight="Bold" />
+                                    </Grid>
+                                    <Slider Minimum="0"
+                                            Maximum="63"
+                                            Value="{Binding PowerLevel}" />
+                                </StackPanel>
+
+                                <!-- Throttle Profile -->
+                                <StackPanel Spacing="5">
+                                    <TextBlock Text="Throttle Profile"
+                                               FontSize="12"
+                                               Foreground="Gray" />
+                                    <ComboBox ItemsSource="{Binding AvailableThrottleProfiles}"
+                                              SelectedItem="{Binding SelectedThrottleProfile}"
+                                              HorizontalAlignment="Stretch" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Flyout>
+                </Button.Flyout>
+
+                <!-- Gear Icon (using Unicode) -->
+                <TextBlock Text="&#x2699;"
+                           FontSize="24"
+                           VerticalAlignment="Center" />
+            </Button>
+        </Grid>
+
+        <!-- Main Content: Race Info -->
+        <Border Grid.Row="1"
+                Background="#FAFAFA"
+                CornerRadius="8"
+                Padding="20">
+            <!-- Race Status Placeholder -->
+            <StackPanel VerticalAlignment="Center"
+                        HorizontalAlignment="Center">
+                <TextBlock Text="Race Status"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,10" />
+                <TextBlock Text="Connect to a Scalextric powerbase to begin"
+                           FontSize="14"
+                           Foreground="Gray"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+        </Border>
+
+        <!-- Footer: Status Bar with Connection Indicator -->
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" Margin="0,10,0,0">
+            <!-- Connection Status Indicator -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                <Ellipse Width="12" Height="12"
+                         Fill="{Binding StatusIndicatorColor}" />
+                <TextBlock Text="{Binding ConnectionStatusText}"
+                           FontSize="11"
+                           Foreground="Gray"
+                           VerticalAlignment="Center" />
+            </StackPanel>
+
+            <!-- Status Message -->
+            <TextBlock Grid.Column="1"
+                       Text="{Binding StatusMessage}"
+                       FontSize="11"
+                       Foreground="Gray"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+
+            <!-- Version -->
+            <TextBlock Grid.Column="2"
+                       Text="{Binding Version, StringFormat='v{0}'}"
+                       FontSize="11"
+                       Foreground="Gray"
+                       VerticalAlignment="Center" />
+        </Grid>
+    </Grid>
+</Window>
