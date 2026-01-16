@@ -6,56 +6,57 @@ using Serilog;
 namespace ScalextricRace.Services;
 
 /// <summary>
-/// Default settings for a single controller slot.
-/// These values are used as initial defaults for new races/sessions.
+/// Startup settings for a single controller slot.
+/// These are ultra-safe values loaded on app launch before any race/car/driver is selected.
 /// </summary>
-public class DefaultSlotSettings
+public class StartupSlotSettings
 {
     /// <summary>
-    /// Default power level for this slot (0-63).
+    /// Startup power level for this slot (0-63).
     /// </summary>
     public int PowerLevel { get; set; } = 63;
 
     /// <summary>
-    /// Default throttle profile type name for this slot.
+    /// Startup throttle profile type name for this slot.
     /// </summary>
     public string ThrottleProfile { get; set; } = "Linear";
 }
 
 /// <summary>
-/// Default power and throttle settings used as initial values for new races/sessions.
-/// These can be overridden by race-specific or session-specific settings.
+/// Startup power and throttle settings loaded on app launch.
+/// These are ultra-safe values used before any race/car/driver is selected.
+/// Runtime power is calculated from Car and Driver settings when assigned.
 /// </summary>
-public class DefaultSettings
+public class StartupSettings
 {
     /// <summary>
-    /// Default global power level for track power (0-63).
+    /// Startup global power level for track power (0-63).
     /// Used when IsPerSlotPowerMode is false.
     /// </summary>
     public int PowerLevel { get; set; } = 63;
 
     /// <summary>
-    /// Default throttle profile type name.
+    /// Startup throttle profile type name.
     /// Valid values: "Linear", "Exponential", "Stepped"
     /// Used when IsPerSlotPowerMode is false.
     /// </summary>
     public string ThrottleProfile { get; set; } = "Linear";
 
     /// <summary>
-    /// Whether per-slot power mode is enabled by default.
-    /// When true, each slot can have individual power and throttle settings.
+    /// Whether per-slot power mode is enabled on startup.
+    /// When true, each slot can have individual power settings.
     /// </summary>
     public bool IsPerSlotPowerMode { get; set; } = false;
 
     /// <summary>
-    /// Default per-slot settings (indexed 0-5 for slots 1-6).
+    /// Startup per-slot settings (indexed 0-5 for slots 1-6).
     /// Used when IsPerSlotPowerMode is true.
     /// </summary>
-    public DefaultSlotSettings[] SlotSettings { get; set; } = CreateDefaultSlotSettings();
+    public StartupSlotSettings[] SlotSettings { get; set; } = CreateStartupSlotSettings();
 
-    private static DefaultSlotSettings[] CreateDefaultSlotSettings()
+    private static StartupSlotSettings[] CreateStartupSlotSettings()
     {
-        return new DefaultSlotSettings[]
+        return new StartupSlotSettings[]
         {
             new() { PowerLevel = 63, ThrottleProfile = "Linear" },
             new() { PowerLevel = 63, ThrottleProfile = "Linear" },
@@ -79,9 +80,10 @@ public class AppSettings
     public bool StartWithPowerEnabled { get; set; } = false;
 
     /// <summary>
-    /// Default power and throttle settings used as initial values.
+    /// Startup power and throttle settings loaded on app launch.
+    /// These are ultra-safe values used before any race/car/driver is selected.
     /// </summary>
-    public DefaultSettings Defaults { get; set; } = new();
+    public StartupSettings Startup { get; set; } = new();
 
     /// <summary>
     /// Gets the path to the settings file.
@@ -110,24 +112,24 @@ public class AppSettings
                 var settings = JsonSerializer.Deserialize<AppSettings>(json);
                 if (settings != null)
                 {
-                    // Ensure Defaults object exists
-                    settings.Defaults ??= new DefaultSettings();
+                    // Ensure Startup object exists
+                    settings.Startup ??= new StartupSettings();
 
                     // Validate loaded values
-                    settings.Defaults.PowerLevel = Math.Clamp(settings.Defaults.PowerLevel, 0, 63);
+                    settings.Startup.PowerLevel = Math.Clamp(settings.Startup.PowerLevel, 0, 63);
 
                     // Validate throttle profile
                     var validProfiles = new[] { "Linear", "Exponential", "Stepped" };
-                    if (string.IsNullOrEmpty(settings.Defaults.ThrottleProfile) ||
-                        Array.IndexOf(validProfiles, settings.Defaults.ThrottleProfile) < 0)
+                    if (string.IsNullOrEmpty(settings.Startup.ThrottleProfile) ||
+                        Array.IndexOf(validProfiles, settings.Startup.ThrottleProfile) < 0)
                     {
-                        settings.Defaults.ThrottleProfile = "Linear";
+                        settings.Startup.ThrottleProfile = "Linear";
                     }
 
                     // Ensure SlotSettings array has 6 elements
-                    if (settings.Defaults.SlotSettings == null || settings.Defaults.SlotSettings.Length != 6)
+                    if (settings.Startup.SlotSettings == null || settings.Startup.SlotSettings.Length != 6)
                     {
-                        settings.Defaults.SlotSettings = new DefaultSlotSettings[]
+                        settings.Startup.SlotSettings = new StartupSlotSettings[]
                         {
                             new() { PowerLevel = 63, ThrottleProfile = "Linear" },
                             new() { PowerLevel = 63, ThrottleProfile = "Linear" },
@@ -140,7 +142,7 @@ public class AppSettings
                     else
                     {
                         // Validate each slot's settings
-                        foreach (var slot in settings.Defaults.SlotSettings)
+                        foreach (var slot in settings.Startup.SlotSettings)
                         {
                             slot.PowerLevel = Math.Clamp(slot.PowerLevel, 0, 63);
                             if (string.IsNullOrEmpty(slot.ThrottleProfile) ||
