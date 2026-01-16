@@ -377,7 +377,7 @@ Each pop-out window is a singleton - only one instance can be open at a time.
 
 ## Protocol Implementation
 
-See [ArcPro-BLE-Protocol.md](ArcPro-BLE-Protocol.md) for detailed protocol documentation.
+See [ArcPro-BLE-Protocol.md](../../../Docs/ArcPro-BLE-Protocol.md) for detailed protocol documentation.
 
 ### Key Points
 
@@ -464,7 +464,7 @@ Recorded laps are saved to `%LocalAppData%\ScalextricBleMonitor\recorded_laps.js
 
 ## Related Documentation
 
-- [ArcPro-BLE-Protocol.md](ArcPro-BLE-Protocol.md) - Protocol specification
+- [ArcPro-BLE-Protocol.md](../../../Docs/ArcPro-BLE-Protocol.md) - Protocol specification
 - [Scalextric Library](../../../Libs/Scalextric/Docs/README.md) - Core domain logic
 - [ScalextricBle Library](../../../Libs/ScalextricBle/Docs/README.md) - BLE protocol library
 - [CLAUDE.md](../CLAUDE.md) - Build instructions for AI assistants

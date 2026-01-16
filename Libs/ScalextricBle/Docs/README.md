@@ -169,5 +169,5 @@ The powerbase requires continuous command packets to maintain track power. Send 
 ## Related Documentation
 
 For complete protocol specification, see:
-- [ArcPro-BLE-Protocol.md](../../../Apps/ScalextricBleMonitor/Docs/ArcPro-BLE-Protocol.md)
+- [ArcPro-BLE-Protocol.md](../../../Docs/ArcPro-BLE-Protocol.md)
 - [ScalextricArcBleProtocolExplorer](https://github.com/RazManager/ScalextricArcBleProtocolExplorer)

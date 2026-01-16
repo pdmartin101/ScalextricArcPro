@@ -35,11 +35,14 @@ ScalextricArcPro/                         # Repository root
 │       ├── CLAUDE.md                    # AI assistant build instructions (this file)
 │       ├── PLAN.md                      # Code quality improvement plan
 │       ├── Docs/
-│       │   ├── README.md                # Comprehensive documentation
-│       │   └── ArcPro-BLE-Protocol.md   # BLE protocol specification
+│       │   └── README.md                # Comprehensive documentation
 │       ├── ScalextricBleMonitor/        # Main application project
 │       └── ScalextricBleMonitor.Tests/  # Unit test project
-├── Libs/                                 # Shared libraries (future)
+├── Libs/
+│   ├── Scalextric/                      # Core domain library (lap timing, profile types)
+│   └── ScalextricBle/                   # BLE protocol library (commands, decoding)
+├── Docs/
+│   └── ArcPro-BLE-Protocol.md           # BLE protocol specification
 ├── .gitignore
 └── README.md                            # Repository overview
 ```
@@ -52,8 +55,7 @@ Apps/ScalextricBleMonitor/
 ├── CLAUDE.md                             # AI assistant build instructions (this file)
 ├── PLAN.md                               # Code quality improvement plan with issue tracking
 ├── Docs/
-│   ├── README.md                         # Comprehensive documentation
-│   └── ArcPro-BLE-Protocol.md           # BLE protocol specification
+│   └── README.md                         # Comprehensive documentation
 ├── ScalextricBleMonitor/                 # Main application project
 │   ├── ScalextricBleMonitor.csproj       # .NET 9.0 Windows project config
 │   ├── Program.cs                        # Application entry point
@@ -88,9 +90,7 @@ Apps/ScalextricBleMonitor/
 │       ├── BleMonitorService.cs          # Windows BLE implementation
 │       ├── IWindowService.cs             # Window management interface
 │       ├── WindowService.cs              # Child window lifecycle
-│       ├── ScalextricProtocol.cs         # Protocol constants & builders
-│       ├── ScalextricProtocolDecoder.cs  # Protocol data decoding
-│       ├── LapTimingEngine.cs            # Lap timing calculations
+│       ├── ThrottleProfileHelper.cs      # Maps ThrottleProfileType to curves
 │       ├── AppSettings.cs                # JSON settings persistence
 │       ├── LoggingConfiguration.cs       # Serilog setup
 │       └── ServiceConfiguration.cs       # DI container setup
@@ -233,8 +233,10 @@ Program.Main()
 | ViewModel | `NotificationDataViewModel` | Notification entry wrapper |
 | Service | `IBleMonitorService` | BLE abstraction interface |
 | Service | `IWindowService` | Window management abstraction |
-| Service | `ScalextricProtocolDecoder` | Protocol data decoding |
-| Service | `LapTimingEngine` | Lap timing calculations |
+| Library | `ScalextricProtocol` | Protocol constants & command builders (ScalextricBle) |
+| Library | `ScalextricProtocolDecoder` | Protocol data decoding (ScalextricBle) |
+| Library | `LapTimingEngine` | Lap timing calculations (Scalextric) |
+| Library | `ThrottleProfileType` | Throttle curve types enum (Scalextric) |
 
 ### Platform Support
 
@@ -264,8 +266,17 @@ Currently Windows-only (`net9.0-windows10.0.19041.0`). BLE code is wrapped in `#
 
 See [PLAN.md](PLAN.md) for identified issues and improvement plan organized by priority phase.
 
+### Shared Libraries
+
+| Library | Namespace | Location | Purpose |
+|---------|-----------|----------|---------|
+| Scalextric | `Scalextric` | `Libs/Scalextric/` | Core domain logic (lap timing, profile types) |
+| ScalextricBle | `ScalextricBle` | `Libs/ScalextricBle/` | BLE protocol (commands, decoding) |
+
 ### Related Documentation
 
 - [Docs/README.md](Docs/README.md) - Comprehensive user and developer documentation
-- [Docs/ArcPro-BLE-Protocol.md](Docs/ArcPro-BLE-Protocol.md) - BLE protocol specification
+- [ArcPro-BLE-Protocol.md](../../Docs/ArcPro-BLE-Protocol.md) - BLE protocol specification
+- [Scalextric Library](../../Libs/Scalextric/Docs/README.md) - Core domain library documentation
+- [ScalextricBle Library](../../Libs/ScalextricBle/Docs/README.md) - BLE protocol library documentation
 - [PLAN.md](PLAN.md) - Code quality improvement plan with issue tracking
