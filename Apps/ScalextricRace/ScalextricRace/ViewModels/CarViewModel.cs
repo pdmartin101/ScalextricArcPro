@@ -1,3 +1,4 @@
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ScalextricRace.Models;
@@ -58,12 +59,34 @@ public partial class CarViewModel : ObservableObject
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasImage))]
+    [NotifyPropertyChangedFor(nameof(ImageBitmap))]
     private string? _imagePath;
 
     /// <summary>
     /// Gets whether this car has an image set.
     /// </summary>
     public bool HasImage => !string.IsNullOrEmpty(ImagePath);
+
+    /// <summary>
+    /// Gets the car image as a bitmap for display.
+    /// </summary>
+    public Bitmap? ImageBitmap
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(ImagePath) || !System.IO.File.Exists(ImagePath))
+                return null;
+
+            try
+            {
+                return new Bitmap(ImagePath);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
 
     /// <summary>
     /// Default power level for normal driving (0-63).

@@ -323,7 +323,7 @@
                                                                    Foreground="#CCCCCC"
                                                                    IsVisible="{Binding !HasImage}" />
                                                         <!-- Actual image (shown when image is set) -->
-                                                        <Image Source="{Binding ImagePath}"
+                                                        <Image Source="{Binding ImageBitmap}"
                                                                Stretch="UniformToFill"
                                                                IsVisible="{Binding HasImage}" />
                                                     </Panel>
