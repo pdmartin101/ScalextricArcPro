@@ -118,6 +118,75 @@ In ghost mode, the PowerMultiplier is used as an **index** into the throttle pro
 
 The power multiplier effectively acts as a "speed limiter" that scales down the maximum power available to each car. This is useful for handicapping faster drivers or balancing different car performances.
 
+### Race States (Command Types) - Detailed Usage
+
+The command type byte (byte 0) controls the race state machine. Understanding these states enables proper race management:
+
+| State | Value | Track Power | Timer | Use Case |
+|-------|-------|-------------|-------|----------|
+| NoPowerTimerStopped | 0 | Off | Stopped | Initial state, idle, between races |
+| NoPowerTimerTicking | 1 | Off | Running | Countdown sequence (3-2-1) before race start |
+| PowerOnRaceTrigger | 2 | On | Waiting | Cars powered but waiting for green light trigger |
+| PowerOnRacing | 3 | On | Running | Normal racing - this is the primary racing state |
+| PowerOnTimerHalt | 4 | On | Paused | Pause/caution period - cars can move but time frozen |
+| NoPowerRebootPic18 | 5 | Off | N/A | Reboot the PIC18 microcontroller (recovery command) |
+
+**Typical Race Start Sequence:**
+1. `NoPowerTimerStopped` (0) - Setup phase, configuring cars
+2. `NoPowerTimerTicking` (1) - Countdown begins (5-4-3-2-1)
+3. `PowerOnRaceTrigger` (2) - Power on, light sequence, cars staged
+4. `PowerOnRacing` (3) - Green light, race begins
+
+**Pause/Resume:**
+- Switch from `PowerOnRacing` (3) to `PowerOnTimerHalt` (4) to pause
+- Switch back to `PowerOnRacing` (3) to resume
+
+### KERS (Kinetic Energy Recovery System)
+
+KERS provides a temporary power boost similar to real F1 cars:
+
+| Byte 19 | Description |
+|---------|-------------|
+| Bit 0 | KERS enabled for slot 1 |
+| Bit 1 | KERS enabled for slot 2 |
+| ... | ... |
+| Bit 5 | KERS enabled for slot 6 |
+
+**KERS Behavior:**
+- When charging: Power output limited to ~80%
+- When fully charged and activated: 100% power for ~3 seconds
+- Creates an asymmetric power curve (peaks at 80% most of the time)
+
+### Rumble Control (Bytes 7-12)
+
+Per-slot vibration feedback values:
+
+| Byte | Description |
+|------|-------------|
+| 7 | Rumble intensity for slot 1 (0-255) |
+| 8 | Rumble intensity for slot 2 (0-255) |
+| ... | ... |
+| 12 | Rumble intensity for slot 6 (0-255) |
+
+**Rumble Use Cases:**
+- Track boundary warnings
+- Weather effects (storms)
+- Collision feedback
+- Low fuel warnings
+
+### Brake Control (Bytes 13-18)
+
+Per-slot brake values (documented as "internal use only"):
+
+| Byte | Description |
+|------|-------------|
+| 13 | Brake value for slot 1 (0-255) |
+| 14 | Brake value for slot 2 (0-255) |
+| ... | ... |
+| 18 | Brake value for slot 6 (0-255) |
+
+**Note:** The brake controller button is primarily used for pit stop activation (hold for 2 seconds). The brake value in the command packet has limited practical effect during normal racing.
+
 ### Continuous Heartbeat Required
 
 The powerbase requires **continuous command packets** to maintain power. Send the command every 100-200ms to keep the track powered. If commands stop, the powerbase will cut power.
@@ -392,6 +461,68 @@ Scalextric provides the full protocol documentation to developers upon request:
 **Email:** customerservices.uk@scalextric.com
 **Subject:** Request for ARC BLE Protocol Documentation
 
+## ARC AIR/PRO Advanced Features
+
+These features are available on ARC AIR and ARC PRO powerbases, typically managed through the official Scalextric ARC app:
+
+### Weather Conditions (ARC AIR/PRO)
+
+Dynamic weather affects car behavior during races:
+
+| Weather | Effect |
+|---------|--------|
+| Sun | Normal conditions |
+| Rain | Reduced grip, slower speeds |
+| Thunderstorm | Extreme grip reduction, controller rumble |
+
+Weather changes are typically time-based during race sessions.
+
+### Fuel & Tire Simulation (ARC AIR/PRO)
+
+**Fuel System:**
+- Cars consume fuel during racing
+- Running out of fuel risks disqualification
+- Pit stops required to refuel
+- Consumption rate customizable based on track length
+
+**Tire Wear:**
+- Tires degrade over time
+- Degraded tires reduce grip/performance
+- Strategic pit stops for tire changes
+- Wear rate adjustable per track
+
+### Pit Lane Management
+
+**Pit Stop Activation:**
+- Hold brake button for 2 seconds to initiate pit stop
+- Car automatically enters pit lane (if track supports it)
+- Pit stop duration varies by services needed (fuel, tires)
+
+### Race Incidents (ARC AIR/PRO)
+
+Random incidents can occur during races:
+- Dramatically change race positions
+- Add unpredictability to races
+- Can be enabled/disabled in race settings
+
+### Arcade Mode Powerups (ARC AIR only)
+
+Player-vs-player mechanics:
+- Powerups acquired at start/finish line
+- Can be activated to sabotage opponents
+- Adds party-game style racing
+
+## Features Not Yet Fully Documented
+
+The following features exist in the protocol but require further investigation:
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Pit lane sensors | Partial | Speed trap via pit exit sensors |
+| Pace car mode | Unknown | May use ghost mode with fixed speed |
+| Formation lap | Unknown | Likely uses race state sequence |
+| Safety car | Unknown | May pause timer + limit speed |
+
 ## References
 
 - [ScalextricArcBleProtocolExplorer](https://github.com/RazManager/ScalextricArcBleProtocolExplorer) - Linux C# implementation
@@ -400,5 +531,5 @@ Scalextric provides the full protocol documentation to developers upon request:
 
 ---
 
-*Last Updated: January 2025*
+*Last Updated: January 2026*
 *Sources: ScalextricArcBleProtocolExplorer, SlotForum community, Scalextric documentation*
