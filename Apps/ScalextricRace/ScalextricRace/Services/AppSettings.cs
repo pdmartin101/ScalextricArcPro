@@ -6,6 +6,22 @@ using Serilog;
 namespace ScalextricRace.Services;
 
 /// <summary>
+/// Settings for a single controller slot.
+/// </summary>
+public class SlotSettings
+{
+    /// <summary>
+    /// Power level for this slot (0-63).
+    /// </summary>
+    public int PowerLevel { get; set; } = 63;
+
+    /// <summary>
+    /// Throttle profile type name for this slot.
+    /// </summary>
+    public string ThrottleProfile { get; set; } = "Linear";
+}
+
+/// <summary>
 /// Application settings that persist between sessions.
 /// Stored in %LocalAppData%/ScalextricPdm/ScalextricRace/settings.json
 /// </summary>
@@ -18,14 +34,41 @@ public class AppSettings
 
     /// <summary>
     /// Global power level for track power (0-63).
+    /// Used when IsPerSlotPowerMode is false.
     /// </summary>
     public int PowerLevel { get; set; } = 63;
 
     /// <summary>
     /// The selected throttle profile type name.
     /// Valid values: "Linear", "Exponential", "Stepped"
+    /// Used when IsPerSlotPowerMode is false.
     /// </summary>
     public string ThrottleProfile { get; set; } = "Linear";
+
+    /// <summary>
+    /// Whether per-slot power mode is enabled.
+    /// When true, each slot can have individual power and throttle settings.
+    /// </summary>
+    public bool IsPerSlotPowerMode { get; set; } = false;
+
+    /// <summary>
+    /// Per-slot settings (indexed 0-5 for slots 1-6).
+    /// Only used when IsPerSlotPowerMode is true.
+    /// </summary>
+    public SlotSettings[] SlotSettings { get; set; } = CreateDefaultSlotSettings();
+
+    private static SlotSettings[] CreateDefaultSlotSettings()
+    {
+        return new SlotSettings[]
+        {
+            new() { PowerLevel = 63, ThrottleProfile = "Linear" },
+            new() { PowerLevel = 63, ThrottleProfile = "Linear" },
+            new() { PowerLevel = 63, ThrottleProfile = "Linear" },
+            new() { PowerLevel = 63, ThrottleProfile = "Linear" },
+            new() { PowerLevel = 63, ThrottleProfile = "Linear" },
+            new() { PowerLevel = 63, ThrottleProfile = "Linear" }
+        };
+    }
 
     /// <summary>
     /// Gets the path to the settings file.
@@ -63,6 +106,25 @@ public class AppSettings
                         Array.IndexOf(validProfiles, settings.ThrottleProfile) < 0)
                     {
                         settings.ThrottleProfile = "Linear";
+                    }
+
+                    // Ensure SlotSettings array has 6 elements
+                    if (settings.SlotSettings == null || settings.SlotSettings.Length != 6)
+                    {
+                        settings.SlotSettings = CreateDefaultSlotSettings();
+                    }
+                    else
+                    {
+                        // Validate each slot's settings
+                        foreach (var slot in settings.SlotSettings)
+                        {
+                            slot.PowerLevel = Math.Clamp(slot.PowerLevel, 0, 63);
+                            if (string.IsNullOrEmpty(slot.ThrottleProfile) ||
+                                Array.IndexOf(validProfiles, slot.ThrottleProfile) < 0)
+                            {
+                                slot.ThrottleProfile = "Linear";
+                            }
+                        }
                     }
 
                     Log.Information("Settings loaded from {FilePath}", filePath);

@@ -1,9 +1,9 @@
-using Avalonia.Media;
-using Avalonia.Threading;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Scalextric;
 using ScalextricBle;
+using ScalextricRace.Models;
 using ScalextricRace.Services;
 using Serilog;
 
@@ -19,12 +19,8 @@ public partial class MainViewModel : ObservableObject
 
     private readonly IBleService? _bleService;
     private readonly AppSettings _settings;
-
-    /// <summary>
-    /// Tracks whether power should be enabled once connected.
-    /// Set from saved settings on startup.
-    /// </summary>
-    private bool _pendingPowerEnable;
+    private readonly SynchronizationContext? _syncContext;
+    private bool _isInitializing = true;
 
     #endregion
 
@@ -35,7 +31,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ConnectionStatusText))]
-    [NotifyPropertyChangedFor(nameof(StatusIndicatorColor))]
+    [NotifyPropertyChangedFor(nameof(CurrentConnectionState))]
     private bool _isScanning;
 
     /// <summary>
@@ -43,7 +39,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ConnectionStatusText))]
-    [NotifyPropertyChangedFor(nameof(StatusIndicatorColor))]
+    [NotifyPropertyChangedFor(nameof(CurrentConnectionState))]
     private bool _isDeviceDetected;
 
     /// <summary>
@@ -52,7 +48,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ConnectionStatusText))]
     [NotifyPropertyChangedFor(nameof(IsConnected))]
-    [NotifyPropertyChangedFor(nameof(StatusIndicatorColor))]
+    [NotifyPropertyChangedFor(nameof(CurrentConnectionState))]
     private bool _isGattConnected;
 
     /// <summary>
@@ -78,17 +74,15 @@ public partial class MainViewModel : ObservableObject
     };
 
     /// <summary>
-    /// Gets the brush color for the connection status indicator.
-    /// Red = Disconnected/Not scanning
-    /// Blue = Scanning/Connecting
-    /// Green = Connected
+    /// Gets the current connection state for UI display.
+    /// Used with a converter to determine status indicator color.
     /// </summary>
-    public IBrush StatusIndicatorColor => (IsScanning, IsDeviceDetected, IsGattConnected) switch
+    public ConnectionState CurrentConnectionState => (IsScanning, IsDeviceDetected, IsGattConnected) switch
     {
-        (_, _, true) => Brushes.Green,      // Connected
-        (_, true, false) => Brushes.Blue,   // Device found, connecting
-        (true, false, _) => Brushes.Blue,   // Scanning
-        _ => Brushes.Red                     // Disconnected
+        (_, _, true) => ConnectionState.Connected,
+        (_, true, false) => ConnectionState.Connecting,
+        (true, false, _) => ConnectionState.Connecting,
+        _ => ConnectionState.Disconnected
     };
 
     #endregion
@@ -125,6 +119,24 @@ public partial class MainViewModel : ObservableObject
     public static ThrottleProfileType[] AvailableThrottleProfiles { get; } =
         Enum.GetValues<ThrottleProfileType>();
 
+    /// <summary>
+    /// Whether per-slot power mode is enabled.
+    /// When true, each controller has individual power settings.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PerSlotToggleText))]
+    private bool _isPerSlotPowerMode;
+
+    /// <summary>
+    /// Gets the text for the per-slot power mode toggle button.
+    /// </summary>
+    public string PerSlotToggleText => IsPerSlotPowerMode ? "Global Mode" : "Per-Slot Mode";
+
+    /// <summary>
+    /// Collection of controller view models for per-slot power settings.
+    /// </summary>
+    public ObservableCollection<ControllerViewModel> Controllers { get; } = [];
+
     #endregion
 
     #region Application Info
@@ -152,18 +164,44 @@ public partial class MainViewModel : ObservableObject
     {
         _settings = settings;
         _bleService = bleService;
+        _syncContext = SynchronizationContext.Current;
 
-        // Load settings
+        // Load global settings
         PowerLevel = _settings.PowerLevel;
         SelectedThrottleProfile = Enum.TryParse<ThrottleProfileType>(_settings.ThrottleProfile, out var profile)
             ? profile
             : ThrottleProfileType.Linear;
 
-        // If power was enabled when app closed, enable it once connected
-        _pendingPowerEnable = _settings.PowerEnabled;
+        // Load per-slot power mode setting
+        IsPerSlotPowerMode = _settings.IsPerSlotPowerMode;
 
-        Log.Information("MainViewModel initialized. PowerLevel={PowerLevel}, ThrottleProfile={ThrottleProfile}, PendingPower={PendingPower}",
-            PowerLevel, SelectedThrottleProfile, _pendingPowerEnable);
+        // Load power enabled state - will be applied when connected
+        IsPowerEnabled = _settings.PowerEnabled;
+
+        // Initialize controllers for all 6 slots
+        for (int i = 1; i <= 6; i++)
+        {
+            var controller = new ControllerViewModel(i);
+
+            // Load per-slot settings
+            var slotSettings = _settings.SlotSettings[i - 1];
+            controller.PowerLevel = slotSettings.PowerLevel;
+            controller.ThrottleProfile = Enum.TryParse<ThrottleProfileType>(slotSettings.ThrottleProfile, out var slotProfile)
+                ? slotProfile
+                : ThrottleProfileType.Linear;
+
+            // Subscribe to changes for auto-save
+            controller.PowerLevelChanged += OnControllerPowerLevelChanged;
+            controller.ThrottleProfileChanged += OnControllerThrottleProfileChanged;
+
+            Controllers.Add(controller);
+        }
+
+        // Initialization complete - enable auto-save
+        _isInitializing = false;
+
+        Log.Information("MainViewModel initialized. PowerLevel={PowerLevel}, ThrottleProfile={ThrottleProfile}, PerSlotMode={PerSlotMode}, PowerEnabled={PowerEnabled}",
+            PowerLevel, SelectedThrottleProfile, IsPerSlotPowerMode, IsPowerEnabled);
 
         // Subscribe to BLE service events
         if (_bleService != null)
@@ -244,16 +282,31 @@ public partial class MainViewModel : ObservableObject
         SaveSettings();
     }
 
+    /// <summary>
+    /// Toggles between global and per-slot power mode.
+    /// </summary>
+    [RelayCommand]
+    private void TogglePerSlotPowerMode()
+    {
+        IsPerSlotPowerMode = !IsPerSlotPowerMode;
+        Log.Information("Per-slot power mode toggled to {PerSlotMode}", IsPerSlotPowerMode);
+        SaveSettings();
+    }
+
     #endregion
 
     #region Partial Methods (Property Change Handlers)
 
     /// <summary>
-    /// Called when PowerLevel changes. Saves settings.
+    /// Called when PowerLevel changes. Saves settings and sends command if power is on.
     /// </summary>
     partial void OnPowerLevelChanged(int value)
     {
         SaveSettings();
+        if (IsPowerEnabled && !IsPerSlotPowerMode)
+        {
+            SendPowerCommand();
+        }
     }
 
     /// <summary>
@@ -262,6 +315,17 @@ public partial class MainViewModel : ObservableObject
     partial void OnSelectedThrottleProfileChanged(ThrottleProfileType value)
     {
         SaveSettings();
+    }
+
+    /// <summary>
+    /// Called when IsPerSlotPowerMode changes. Sends power command if power is on.
+    /// </summary>
+    partial void OnIsPerSlotPowerModeChanged(bool value)
+    {
+        if (IsPowerEnabled)
+        {
+            SendPowerCommand();
+        }
     }
 
     #endregion
@@ -273,19 +337,18 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private void OnConnectionStateChanged(object? sender, BleConnectionStateEventArgs e)
     {
-        // Marshal to UI thread
-        Dispatcher.UIThread.Post(() =>
+        // Marshal to UI thread using SynchronizationContext
+        PostToUIThread(() =>
         {
             var wasConnected = IsGattConnected;
+
             IsDeviceDetected = e.IsDeviceDetected;
             IsGattConnected = e.IsGattConnected;
 
-            // Check if we just connected and have pending power enable
-            if (!wasConnected && IsGattConnected && _pendingPowerEnable)
+            // If we just connected and power should be on, send the power command
+            if (!wasConnected && IsGattConnected && IsPowerEnabled)
             {
                 Log.Information("Connection established, enabling power from saved settings");
-                _pendingPowerEnable = false;
-                IsPowerEnabled = true;
                 EnablePower();
             }
         });
@@ -296,7 +359,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private void OnStatusMessageChanged(object? sender, string message)
     {
-        Dispatcher.UIThread.Post(() =>
+        PostToUIThread(() =>
         {
             StatusMessage = message;
         });
@@ -311,6 +374,26 @@ public partial class MainViewModel : ObservableObject
         // TODO: Implement notification handling
     }
 
+    /// <summary>
+    /// Handles power level changes from individual controllers.
+    /// </summary>
+    private void OnControllerPowerLevelChanged(object? sender, int value)
+    {
+        SaveSettings();
+        if (IsPowerEnabled && IsPerSlotPowerMode)
+        {
+            SendPowerCommand();
+        }
+    }
+
+    /// <summary>
+    /// Handles throttle profile changes from individual controllers.
+    /// </summary>
+    private void OnControllerThrottleProfileChanged(object? sender, ThrottleProfileType value)
+    {
+        SaveSettings();
+    }
+
     #endregion
 
     #region Private Methods
@@ -320,9 +403,25 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private void SaveSettings()
     {
+        // Don't save during initialization - we're loading values, not changing them
+        if (_isInitializing)
+        {
+            return;
+        }
+
         _settings.PowerEnabled = IsPowerEnabled;
         _settings.PowerLevel = PowerLevel;
         _settings.ThrottleProfile = SelectedThrottleProfile.ToString();
+        _settings.IsPerSlotPowerMode = IsPerSlotPowerMode;
+
+        // Save per-slot settings
+        for (int i = 0; i < Controllers.Count; i++)
+        {
+            var controller = Controllers[i];
+            _settings.SlotSettings[i].PowerLevel = controller.PowerLevel;
+            _settings.SlotSettings[i].ThrottleProfile = controller.ThrottleProfile.ToString();
+        }
+
         _settings.Save();
     }
 
@@ -331,22 +430,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private async void EnablePower()
     {
-        if (_bleService == null) return;
-
-        Log.Information("Enabling track power at level {PowerLevel}", PowerLevel);
-
-        // Build and send power-on command using ScalextricBle library
-        var builder = new ScalextricProtocol.CommandBuilder
-        {
-            Type = ScalextricProtocol.CommandType.PowerOnRacing
-        };
-        builder.SetAllPower((byte)PowerLevel);
-
-        byte[] command = builder.Build();
-
-        var success = await _bleService.WriteCharacteristicAsync(
-            ScalextricProtocol.Characteristics.Command,
-            command);
+        var success = await SendPowerCommandAsync();
 
         if (success)
         {
@@ -361,6 +445,50 @@ public partial class MainViewModel : ObservableObject
             IsPowerEnabled = false;
             SaveSettings();
         }
+    }
+
+    /// <summary>
+    /// Sends the current power settings to the powerbase.
+    /// Called when power is enabled or when settings change while power is on.
+    /// </summary>
+    private async void SendPowerCommand()
+    {
+        await SendPowerCommandAsync();
+    }
+
+    /// <summary>
+    /// Sends the current power settings to the powerbase.
+    /// </summary>
+    /// <returns>True if the command was sent successfully.</returns>
+    private async Task<bool> SendPowerCommandAsync()
+    {
+        if (_bleService == null) return false;
+
+        // Build power-on command using ScalextricBle library
+        var builder = new ScalextricProtocol.CommandBuilder
+        {
+            Type = ScalextricProtocol.CommandType.PowerOnRacing
+        };
+
+        if (IsPerSlotPowerMode)
+        {
+            // Set individual power levels per slot
+            for (int i = 0; i < Controllers.Count; i++)
+            {
+                builder.SetSlotPower(i + 1, (byte)Controllers[i].PowerLevel);
+            }
+        }
+        else
+        {
+            // Set global power level for all slots
+            builder.SetAllPower((byte)PowerLevel);
+        }
+
+        byte[] command = builder.Build();
+
+        return await _bleService.WriteCharacteristicAsync(
+            ScalextricProtocol.Characteristics.Command,
+            command);
     }
 
     /// <summary>
@@ -389,6 +517,23 @@ public partial class MainViewModel : ObservableObject
         {
             Log.Warning("Failed to disable power");
             StatusMessage = "Failed to disable power";
+        }
+    }
+
+    /// <summary>
+    /// Posts an action to the UI thread using SynchronizationContext.
+    /// Falls back to direct execution if no context is available.
+    /// </summary>
+    private void PostToUIThread(Action action)
+    {
+        if (_syncContext != null)
+        {
+            _syncContext.Post(_ => action(), null);
+        }
+        else
+        {
+            // No sync context - execute directly (may be on wrong thread)
+            action();
         }
     }
 
