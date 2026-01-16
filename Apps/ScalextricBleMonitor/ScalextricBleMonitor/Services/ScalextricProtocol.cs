@@ -1,34 +1,7 @@
 using System;
+using ScalextricBleMonitor.Models;
 
 namespace ScalextricBleMonitor.Services;
-
-/// <summary>
-/// Throttle profile curve types for different throttle response characteristics.
-/// </summary>
-public enum ThrottleProfileType
-{
-    /// <summary>Proportional response - input maps linearly to output.</summary>
-    Linear,
-
-    /// <summary>Gentle at low input, aggressive at high - better control at low speeds.</summary>
-    Exponential,
-
-    /// <summary>Distinct power bands - beginner-friendly with clear speed zones.</summary>
-    Stepped
-}
-
-/// <summary>
-/// Ghost mode throttle source types.
-/// Determines where the ghost car gets its throttle values from.
-/// </summary>
-public enum GhostSourceType
-{
-    /// <summary>Fixed speed - uses GhostThrottleLevel as constant throttle value.</summary>
-    FixedSpeed,
-
-    /// <summary>Recorded lap - replays throttle values from a previously recorded lap.</summary>
-    RecordedLap
-}
 
 /// <summary>
 /// Scalextric ARC Pro BLE Protocol constants and command builders.

@@ -1,5 +1,3 @@
-using ScalextricBleMonitor.Services;
-
 namespace ScalextricBleMonitor.Models;
 
 /// <summary>

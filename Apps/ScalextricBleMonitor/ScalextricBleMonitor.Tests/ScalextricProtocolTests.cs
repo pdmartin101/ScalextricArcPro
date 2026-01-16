@@ -1,3 +1,4 @@
+using ScalextricBleMonitor.Models;
 using ScalextricBleMonitor.Services;
 using static ScalextricBleMonitor.Services.ScalextricProtocol;
 
