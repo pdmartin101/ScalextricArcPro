@@ -1,5 +1,5 @@
+using Scalextric;
 using ScalextricBle;
-using ScalextricBleMonitor.Models;
 using ScalextricBleMonitor.Services;
 using static ScalextricBle.ScalextricProtocol;
 

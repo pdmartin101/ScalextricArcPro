@@ -1,4 +1,4 @@
-namespace ScalextricBleMonitor.Models;
+namespace Scalextric;
 
 /// <summary>
 /// Throttle profile curve types for different throttle response characteristics.

@@ -1,5 +1,5 @@
+using Scalextric;
 using ScalextricBle;
-using ScalextricBleMonitor.Models;
 
 namespace ScalextricBleMonitor.Services;
 
