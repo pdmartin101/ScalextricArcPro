@@ -491,20 +491,12 @@
                                                            FontSize="11"
                                                            Foreground="Gray"
                                                            VerticalAlignment="Center" />
-                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5">
-                                                    <NumericUpDown Value="{Binding PowerLimit}"
-                                                                   Minimum="0"
-                                                                   Maximum="63"
-                                                                   Width="80"
-                                                                   FontSize="11"
-                                                                   IsVisible="{Binding HasPowerLimit}" />
-                                                    <TextBlock Text="No Limit"
-                                                               FontSize="11"
-                                                               FontWeight="SemiBold"
-                                                               Foreground="#4CAF50"
-                                                               VerticalAlignment="Center"
-                                                               IsVisible="{Binding !HasPowerLimit}" />
-                                                </StackPanel>
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding PowerLimitDisplay}"
+                                                           FontSize="11"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{Binding HasPowerLimit, Converter={x:Static converters:BoolToColorConverter.Instance}}"
+                                                           VerticalAlignment="Center" />
                                             </Grid>
 
                                             <!-- Action Buttons -->
