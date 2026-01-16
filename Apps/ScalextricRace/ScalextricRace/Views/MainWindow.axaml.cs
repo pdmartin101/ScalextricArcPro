@@ -28,6 +28,7 @@ public partial class MainWindow : Window
             {
                 viewModel.TuneWindowRequested += OnTuneWindowRequested;
                 viewModel.ImageChangeRequested += OnImageChangeRequested;
+                viewModel.DriverImageChangeRequested += OnDriverImageChangeRequested;
             }
         };
     }
@@ -122,6 +123,63 @@ public partial class MainWindow : Window
                 Serilog.Log.Warning(ex, "Failed to copy image for car {CarId}", car.Id);
                 // Fall back to using original path
                 car.ImagePath = sourcePath;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Opens a file picker to select an image for the specified driver.
+    /// Copies the image to the app's Images folder for persistence.
+    /// </summary>
+    private async void OnDriverImageChangeRequested(object? sender, DriverViewModel driver)
+    {
+        var storageProvider = StorageProvider;
+
+        var options = new FilePickerOpenOptions
+        {
+            Title = "Select Driver Image",
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType("Images")
+                {
+                    Patterns = ["*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp"]
+                }
+            ]
+        };
+
+        var result = await storageProvider.OpenFilePickerAsync(options);
+
+        if (result.Count > 0)
+        {
+            var sourceFile = result[0];
+            var sourcePath = sourceFile.Path.LocalPath;
+
+            try
+            {
+                // Ensure Images folder exists
+                var imagesFolder = AppSettings.ImagesFolder;
+                if (!System.IO.Directory.Exists(imagesFolder))
+                {
+                    System.IO.Directory.CreateDirectory(imagesFolder);
+                }
+
+                // Generate unique filename using driver ID and original extension
+                var extension = System.IO.Path.GetExtension(sourcePath);
+                var destFileName = $"driver_{driver.Id}{extension}";
+                var destPath = System.IO.Path.Combine(imagesFolder, destFileName);
+
+                // Copy the file (overwrite if exists)
+                System.IO.File.Copy(sourcePath, destPath, overwrite: true);
+
+                // Update driver with local path
+                driver.ImagePath = destPath;
+            }
+            catch (System.Exception ex)
+            {
+                Serilog.Log.Warning(ex, "Failed to copy image for driver {DriverId}", driver.Id);
+                // Fall back to using original path
+                driver.ImagePath = sourcePath;
             }
         }
     }

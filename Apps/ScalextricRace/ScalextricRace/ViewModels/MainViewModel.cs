@@ -194,6 +194,21 @@ public partial class MainViewModel : ObservableObject
 
     #endregion
 
+    #region Driver Management
+
+    /// <summary>
+    /// Collection of all drivers available for racing.
+    /// </summary>
+    public ObservableCollection<DriverViewModel> Drivers { get; } = [];
+
+    /// <summary>
+    /// The currently selected driver for editing.
+    /// </summary>
+    [ObservableProperty]
+    private DriverViewModel? _selectedDriver;
+
+    #endregion
+
     #region Application Info
 
     /// <summary>
@@ -252,8 +267,9 @@ public partial class MainViewModel : ObservableObject
             Controllers.Add(controller);
         }
 
-        // Load cars from storage
+        // Load cars and drivers from storage
         LoadCars();
+        LoadDrivers();
 
         // Initialization complete - enable auto-save
         _isInitializing = false;
@@ -533,6 +549,127 @@ public partial class MainViewModel : ObservableObject
 
         var cars = Cars.Select(vm => vm.GetModel());
         CarStorage.Save(cars);
+    }
+
+    /// <summary>
+    /// Adds a new driver.
+    /// </summary>
+    [RelayCommand]
+    private void AddDriver()
+    {
+        var newDriver = new Driver($"Driver {Drivers.Count + 1}");
+        var viewModel = new DriverViewModel(newDriver, isDefault: false);
+        viewModel.DeleteRequested += OnDriverDeleteRequested;
+        viewModel.Changed += OnDriverChanged;
+        viewModel.ImageChangeRequested += OnDriverImageChangeRequested;
+        Drivers.Add(viewModel);
+        SelectedDriver = viewModel;
+        Log.Information("Added new driver: {DriverName}", newDriver.Name);
+        SaveDrivers();
+    }
+
+    /// <summary>
+    /// Handles delete request from a driver view model.
+    /// </summary>
+    private void OnDriverDeleteRequested(object? sender, EventArgs e)
+    {
+        if (sender is DriverViewModel driver)
+        {
+            DeleteDriver(driver);
+        }
+    }
+
+    /// <summary>
+    /// Handles property change on a driver view model.
+    /// </summary>
+    private void OnDriverChanged(object? sender, EventArgs e)
+    {
+        SaveDrivers();
+    }
+
+    /// <summary>
+    /// Event raised when image selection is requested for a driver.
+    /// The view subscribes to this event and shows a file picker.
+    /// </summary>
+    public event EventHandler<DriverViewModel>? DriverImageChangeRequested;
+
+    /// <summary>
+    /// Handles image change request from a driver view model.
+    /// </summary>
+    private void OnDriverImageChangeRequested(object? sender, EventArgs e)
+    {
+        if (sender is DriverViewModel driver)
+        {
+            Log.Information("Image change requested for driver: {DriverName}", driver.Name);
+            DriverImageChangeRequested?.Invoke(this, driver);
+        }
+    }
+
+    /// <summary>
+    /// Deletes the specified driver (cannot delete the default driver).
+    /// </summary>
+    /// <param name="driver">The driver view model to delete.</param>
+    private void DeleteDriver(DriverViewModel? driver)
+    {
+        if (driver == null || driver.IsDefault)
+        {
+            Log.Warning("Cannot delete null or default driver");
+            return;
+        }
+
+        driver.DeleteRequested -= OnDriverDeleteRequested;
+        driver.Changed -= OnDriverChanged;
+        driver.ImageChangeRequested -= OnDriverImageChangeRequested;
+        Drivers.Remove(driver);
+        if (SelectedDriver == driver)
+        {
+            SelectedDriver = null;
+        }
+        Log.Information("Deleted driver: {DriverName}", driver.Name);
+        SaveDrivers();
+    }
+
+    /// <summary>
+    /// Loads drivers from storage.
+    /// Ensures the default driver is always present.
+    /// </summary>
+    private void LoadDrivers()
+    {
+        var storedDrivers = DriverStorage.Load();
+
+        // Check if default driver exists in storage
+        var hasDefaultDriver = storedDrivers.Any(d => d.Id == Driver.DefaultDriverId);
+
+        if (!hasDefaultDriver)
+        {
+            // Create default driver if not in storage
+            var defaultDriver = Driver.CreateDefault();
+            storedDrivers.Insert(0, defaultDriver);
+        }
+
+        // Create view models for all drivers
+        foreach (var driver in storedDrivers)
+        {
+            var isDefault = driver.Id == Driver.DefaultDriverId;
+            var viewModel = new DriverViewModel(driver, isDefault);
+            viewModel.DeleteRequested += OnDriverDeleteRequested;
+            viewModel.Changed += OnDriverChanged;
+            viewModel.ImageChangeRequested += OnDriverImageChangeRequested;
+            Drivers.Add(viewModel);
+        }
+
+        Log.Information("Loaded {Count} drivers", Drivers.Count);
+    }
+
+    /// <summary>
+    /// Saves all drivers to storage.
+    /// </summary>
+    private void SaveDrivers()
+    {
+        if (_isInitializing) return;
+
+        var drivers = Drivers.Select(vm => vm.GetModel());
+        DriverStorage.Save(drivers);
     }
 
     #endregion
