@@ -61,8 +61,9 @@ Access power settings via the gear icon in the top-right corner:
 
 Navigate to the Cars page using the hamburger menu:
 
-- **Add Car** - Create a new car configuration
+- **Add Car** - Create a new car configuration (copies settings from Default car)
 - **Edit Name** - Click the car name to rename
+- **Set Image** - Click the image placeholder to select a car photo
 - **Tune** - Open the tuning wizard to calibrate power settings
 - **Delete** - Remove a car (default car cannot be deleted)
 
@@ -91,7 +92,8 @@ Settings are stored in:
 ```
 %LocalAppData%/ScalextricPdm/ScalextricRace/
 ├── settings.json    # App settings (power level, throttle profile)
-└── cars.json        # Car configurations
+├── cars.json        # Car configurations
+└── Images/          # Car images (copied from originals)
 ```
 
 ## Logging

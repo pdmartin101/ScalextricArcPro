@@ -158,13 +158,11 @@ Power controls are accessed via a gear icon (⚙) flyout in the top-right corner
 
 ### Settings Persistence
 
-Settings are stored in `%LocalAppData%/ScalextricPdm/ScalextricRace/settings.json`:
-```json
-{
-  "PowerEnabled": true,
-  "PowerLevel": 63,
-  "ThrottleProfile": "Linear"
-}
+Settings and data are stored in `%LocalAppData%/ScalextricPdm/ScalextricRace/`:
+```
+├── settings.json    # App settings (power level, throttle profile)
+├── cars.json        # Car configurations
+└── Images/          # Car images (copied from originals)
 ```
 
 On startup:
@@ -199,14 +197,14 @@ The car tuning wizard is a 3-stage dialog for calibrating car power settings:
 
 | Layer | Entity | Purpose |
 |-------|--------|---------|
-| Model | `Car` | Car entity with DefaultPower, GhostMaxPower, MinPower |
+| Model | `Car` | Car entity with DefaultPower, GhostMaxPower, MinPower, ImagePath |
 | Model | `Driver` | Driver entity (for future use) |
 | Model | `CarStorage` | JSON persistence for cars list |
 | Service | `IBleService` | BLE abstraction interface |
 | Service | `BleService` | Windows BLE implementation with retry logic |
 | Service | `AppSettings` | JSON settings persistence |
 | ViewModel | `MainViewModel` | Central state manager, commands, car management |
-| ViewModel | `CarViewModel` | Car wrapper with tune/delete commands |
+| ViewModel | `CarViewModel` | Car wrapper with tune/delete/image commands |
 | ViewModel | `CarTuningViewModel` | 3-stage tuning wizard state |
 | Library | `ScalextricProtocol` | BLE protocol constants and command builders |
 | Library | `ThrottleProfileType` | Throttle curve types enum |
