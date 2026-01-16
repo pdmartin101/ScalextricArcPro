@@ -27,15 +27,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly IBleMonitorService _bleMonitorService;
     private readonly IGhostRecordingService _ghostRecordingService;
     private readonly IGhostPlaybackService _ghostPlaybackService;
+    private readonly IPowerHeartbeatService _powerHeartbeatService;
+    private readonly ITimingCalibrationService _timingCalibrationService;
     private readonly AppSettings _settings;
     private IWindowService? _windowService;
     private bool _disposed;
-    private CancellationTokenSource? _powerHeartbeatCts;
-
-    // Timing calibration fields for measuring slot notification delays
-    // After power-on, we capture the first slot notification to estimate powerbase t=0
-    private bool _awaitingFirstSlotNotification;
-    private DateTime? _estimatedPowerbaseT0;  // Wall-clock time when powerbase clock was at t=0
 
     // Brush constants for connection states
     private static readonly ISolidColorBrush ConnectedBrush = new SolidColorBrush(Color.FromRgb(0, 200, 83));   // Green
@@ -400,7 +396,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Creates a MainViewModel with default services. Used for design-time and simple instantiation.
     /// </summary>
-    public MainViewModel() : this(new BleMonitorService(), new GhostRecordingService(), new GhostPlaybackService(), AppSettings.Load())
+    public MainViewModel() : this(
+        new BleMonitorService(),
+        new GhostRecordingService(),
+        new GhostPlaybackService(),
+        new PowerHeartbeatService(new BleMonitorService()),
+        new TimingCalibrationService(),
+        AppSettings.Load())
     {
     }
 
@@ -410,12 +412,22 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <param name="bleMonitorService">The BLE monitoring service.</param>
     /// <param name="ghostRecordingService">The ghost recording service.</param>
     /// <param name="ghostPlaybackService">The ghost playback service.</param>
+    /// <param name="powerHeartbeatService">The power heartbeat service.</param>
+    /// <param name="timingCalibrationService">The timing calibration service.</param>
     /// <param name="settings">The application settings.</param>
-    public MainViewModel(IBleMonitorService bleMonitorService, IGhostRecordingService ghostRecordingService, IGhostPlaybackService ghostPlaybackService, AppSettings settings)
+    public MainViewModel(
+        IBleMonitorService bleMonitorService,
+        IGhostRecordingService ghostRecordingService,
+        IGhostPlaybackService ghostPlaybackService,
+        IPowerHeartbeatService powerHeartbeatService,
+        ITimingCalibrationService timingCalibrationService,
+        AppSettings settings)
     {
         _bleMonitorService = bleMonitorService;
         _ghostRecordingService = ghostRecordingService;
         _ghostPlaybackService = ghostPlaybackService;
+        _powerHeartbeatService = powerHeartbeatService;
+        _timingCalibrationService = timingCalibrationService;
         _settings = settings;
 
         _bleMonitorService.ConnectionStateChanged += OnConnectionStateChanged;
@@ -427,6 +439,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // Subscribe to recording events
         _ghostRecordingService.RecordingStarted += OnRecordingStarted;
         _ghostRecordingService.RecordingCompleted += OnRecordingCompleted;
+
+        // Subscribe to power heartbeat errors
+        _powerHeartbeatService.HeartbeatError += OnPowerHeartbeatError;
 
         // Initialize from persisted settings
         _powerLevel = _settings.PowerLevel;
@@ -443,6 +458,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
             null,
             NotificationBatchIntervalMs,
             NotificationBatchIntervalMs);
+    }
+
+    private void OnPowerHeartbeatError(object? sender, string message)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            StatusText = message;
+            IsPowerEnabled = false;
+        });
     }
 
     /// <summary>
@@ -467,7 +491,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         Dispatcher.UIThread.Post(() =>
         {
             var wasGattConnected = IsGattConnected;
-            IsConnected = e.IsConnected;
+            IsConnected = e.IsDeviceDetected;
             IsGattConnected = e.IsGattConnected;
             DeviceName = e.DeviceName ?? string.Empty;
 
@@ -481,10 +505,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (!e.IsGattConnected)
             {
                 // Stop power heartbeat when GATT connection is lost
-                StopPowerHeartbeat();
+                _powerHeartbeatService.Stop();
+                IsPowerEnabled = false;
             }
 
-            if (!e.IsConnected)
+            if (!e.IsDeviceDetected)
             {
                 Services.Clear();
                 ResetControllers();
@@ -497,31 +522,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // Small delay to ensure connection is stable
         await Task.Delay(100);
 
-        await SendPowerOffSequenceAsync();
-    }
-
-    /// <summary>
-    /// Sends the power-off sequence: clear ghost commands followed by power-off commands.
-    /// This shared method is used by both initial power-off and disable power operations.
-    /// </summary>
-    private async Task SendPowerOffSequenceAsync()
-    {
-        // First, send PowerOnRacing commands with all slots at power 0 and ghost mode OFF
-        // This clears any latched ghost mode state from a previous session
-        var clearGhostCommand = BuildClearGhostCommand();
-        for (int i = 0; i < 3; i++)
-        {
-            await _bleMonitorService.WriteCharacteristicAwaitAsync(ScalextricProtocol.Characteristics.Command, clearGhostCommand);
-            await Task.Delay(BleWriteDelayMs);
-        }
-
-        // Now send the actual power-off commands
-        var powerOffCommand = BuildPowerOffCommand();
-        for (int i = 0; i < 3; i++)
-        {
-            await _bleMonitorService.WriteCharacteristicAwaitAsync(ScalextricProtocol.Characteristics.Command, powerOffCommand);
-            await Task.Delay(BleWriteDelayMs);
-        }
+        await _powerHeartbeatService.SendPowerOffSequenceAsync();
     }
 
     private void ResetControllers()
@@ -713,56 +714,14 @@ public partial class MainViewModel : ObservableObject, IDisposable
             // Extract Lane 2 entry timestamp (t2)
             uint lane2Timestamp = ReadUInt32LittleEndian(data, ScalextricProtocol.SlotData.Lane2EntryOffset);
 
-            // Extract Lane 1 exit timestamp (t3) and Lane 2 exit timestamp (t4) if data is long enough
-            uint lane1ExitTimestamp = 0;
-            uint lane2ExitTimestamp = 0;
-            if (data.Length >= 18)
-            {
-                lane1ExitTimestamp = ReadUInt32LittleEndian(data, ScalextricProtocol.SlotData.Lane1ExitOffset);
-                lane2ExitTimestamp = ReadUInt32LittleEndian(data, ScalextricProtocol.SlotData.Lane2ExitOffset);
-            }
-
             // Capture wall-clock time when notification arrived
             var notificationArrivalTime = DateTime.UtcNow;
-            var rawTimeSec = notificationArrivalTime.TimeOfDay.TotalSeconds;
 
-            // Convert powerbase timestamps (centiseconds) to seconds
-            double t1Sec = lane1Timestamp / 100.0;
-            double t2Sec = lane2Timestamp / 100.0;
-            double t3Sec = lane1ExitTimestamp / 100.0;
-            double t4Sec = lane2ExitTimestamp / 100.0;
+            // Process timing calibration if awaiting first slot notification
+            _timingCalibrationService.ProcessSlotNotification(lane1Timestamp, lane2Timestamp, notificationArrivalTime);
 
-            // Use max of t1 and t2 as the most recent lane crossing timestamp
-            double maxTimestampSec = Math.Max(t1Sec, t2Sec);
-
-            // Timing calibration: capture first slot notification after power-on
-            // We use the first notification regardless of t1/t2 values - the powerbase sends
-            // notifications periodically (~300ms) and we want to capture the clock value immediately
-            if (_awaitingFirstSlotNotification)
-            {
-                // First notification after power-on
-                // Estimate when powerbase clock was at t=0:
-                // wallClockAtT0 = notificationArrivalTime - maxTimestamp (assuming minimal delay)
-                // If t1 and t2 are both 0, then t=0 is approximately now
-                _estimatedPowerbaseT0 = notificationArrivalTime.AddSeconds(-maxTimestampSec);
-                _awaitingFirstSlotNotification = false;
-
-                Log.Information("TIMING: First slot notification received. t1={T1:F2}s t2={T2:F2}s (max={MaxTs:F2}s) arrived at raw={RawTime:F3}s",
-                    t1Sec, t2Sec, maxTimestampSec, rawTimeSec);
-                Log.Information("TIMING: Estimated powerbase t=0 at wall-clock {T0:HH:mm:ss.fff}",
-                    _estimatedPowerbaseT0.Value);
-            }
-
-            // Calculate and log notification delay if we have calibration and a non-zero timestamp
-            // (delay calculation only makes sense when we have an actual crossing event)
-            double? estimatedDelaySec = null;
-            if (_estimatedPowerbaseT0.HasValue && maxTimestampSec > 0)
-            {
-                // Expected wall-clock time for this event = t0 + powerbase timestamp
-                var expectedArrivalTime = _estimatedPowerbaseT0.Value.AddSeconds(maxTimestampSec);
-                // Actual delay = when we received it - when the event actually happened
-                estimatedDelaySec = (notificationArrivalTime - expectedArrivalTime).TotalSeconds;
-            }
+            // Use max of lane timestamps for event time calculation
+            uint maxTimestamp = Math.Max(lane1Timestamp, lane2Timestamp);
 
             // Valid slot IDs are 1-6
             if (slotId >= 1 && slotId <= MaxControllers)
@@ -776,20 +735,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 if (lapCompleted && _ghostRecordingService.IsRecording(slotId))
                 {
                     // Calculate the true event time using calibration
-                    // trueEventTime = estimatedT0 + maxTimestamp (powerbase clock value)
-                    DateTime trueEventTime;
-                    if (_estimatedPowerbaseT0.HasValue && maxTimestampSec > 0)
+                    var trueEventTime = _timingCalibrationService.CalculateTrueEventTime(maxTimestamp);
+                    if (trueEventTime.HasValue)
                     {
-                        trueEventTime = _estimatedPowerbaseT0.Value.AddSeconds(maxTimestampSec);
+                        _ghostRecordingService.NotifyLapCompleted(slotId, controller.LastLapTimeSeconds, trueEventTime.Value);
                     }
                     else
                     {
                         // Fallback if calibration not available - use notification arrival time
-                        trueEventTime = notificationArrivalTime;
                         Log.Warning("TIMING: No calibration available for lap recording, using notification time as fallback");
+                        _ghostRecordingService.NotifyLapCompleted(slotId, controller.LastLapTimeSeconds, notificationArrivalTime);
                     }
-
-                    _ghostRecordingService.NotifyLapCompleted(slotId, controller.LastLapTimeSeconds, trueEventTime);
                 }
 
                 // Notify playback service if a lap was completed (to restart ghost car playback)
@@ -836,11 +792,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         _settings.Save();
 
-        // Stop power heartbeat
-        _powerHeartbeatCts?.Cancel();
-        _powerHeartbeatCts?.Dispose();
-        _powerHeartbeatCts = null;
-
         // Stop notification batch timer
         _notificationBatchTimer?.Dispose();
         _notificationBatchTimer = null;
@@ -862,6 +813,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _ghostRecordingService.RecordingStarted -= OnRecordingStarted;
         _ghostRecordingService.RecordingCompleted -= OnRecordingCompleted;
 
+        _powerHeartbeatService.HeartbeatError -= OnPowerHeartbeatError;
+        _powerHeartbeatService.Dispose();
+
         GC.SuppressFinalize(this);
     }
 
@@ -874,23 +828,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         try
         {
-            // Build commands upfront
-            var clearGhostCommand = BuildClearGhostCommand();
-            var powerOffCommand = BuildPowerOffCommand();
-
-            // Use a short timeout CTS for each write to avoid blocking
-            using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
-
-            // Best-effort: send one clear ghost and one power-off command
-            // We don't wait for responses - just fire and let the BLE service handle it
+            // Best-effort: send power-off sequence
+            // We don't wait for responses - just fire and let the service handle it
             // This is acceptable during shutdown since we're disposing anyway
-            _bleMonitorService.WriteCharacteristicAwaitAsync(
-                ScalextricProtocol.Characteristics.Command, clearGhostCommand)
-                .Wait(100); // Very short wait, just enough to queue the write
-
-            _bleMonitorService.WriteCharacteristicAwaitAsync(
-                ScalextricProtocol.Characteristics.Command, powerOffCommand)
-                .Wait(100);
+            _powerHeartbeatService.SendPowerOffSequenceAsync().Wait(200);
         }
         catch
         {
@@ -958,9 +899,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
     // Delay between BLE write operations to avoid flooding the connection
     private const int BleWriteDelayMs = 50;
 
-    // Interval for sending power heartbeat commands (ms)
-    private const int PowerHeartbeatIntervalMs = 200;
-
     /// <summary>
     /// Enables track power with the current power level.
     /// </summary>
@@ -989,10 +927,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         await Task.Delay(BleWriteDelayMs);
 
         // Reset timing calibration - wait for first slot notification after power-on
-        // This allows us to estimate when powerbase clock started (t=0)
-        _awaitingFirstSlotNotification = true;
-        _estimatedPowerbaseT0 = null;
-        Log.Information("TIMING: Power-on initiated, awaiting first slot notification for calibration");
+        _timingCalibrationService.Reset();
 
         // Start the power heartbeat
         IsPowerEnabled = true;
@@ -1004,53 +939,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
             UpdatePlaybackForController(controller);
         }
 
-        // Cancel any existing heartbeat
-        _powerHeartbeatCts?.Cancel();
-        _powerHeartbeatCts = new CancellationTokenSource();
-
-        // Start continuous power command sending
-        var token = _powerHeartbeatCts.Token;
-        RunFireAndForget(() => PowerHeartbeatLoopAsync(token), "PowerHeartbeatLoop");
-    }
-
-    /// <summary>
-    /// Continuously sends power commands to keep the track powered.
-    /// The powerbase requires periodic commands to maintain power.
-    /// </summary>
-    private async Task PowerHeartbeatLoopAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            while (!cancellationToken.IsCancellationRequested && IsGattConnected && IsPowerEnabled)
-            {
-                var command = BuildPowerCommand();
-                var success = await _bleMonitorService.WriteCharacteristicAwaitAsync(
-                    ScalextricProtocol.Characteristics.Command, command);
-
-                if (!success)
-                {
-                    // Write failed - connection may be lost
-                    Dispatcher.UIThread.Post(() =>
-                    {
-                        StatusText = "Power command failed - connection lost?";
-                    });
-                    break;
-                }
-
-                await Task.Delay(PowerHeartbeatIntervalMs, cancellationToken);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Normal cancellation, ignore
-        }
-        catch (Exception ex)
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                StatusText = $"Power heartbeat error: {ex.Message}";
-            });
-        }
+        // Start continuous power command sending using the heartbeat service
+        _powerHeartbeatService.Start(BuildPowerCommand);
     }
 
     /// <summary>
@@ -1118,8 +1008,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (!IsGattConnected) return;
 
         // Stop the heartbeat first
-        _powerHeartbeatCts?.Cancel();
-        _powerHeartbeatCts = null;
+        _powerHeartbeatService.Stop();
 
         RunFireAndForget(DisablePowerAsync, "DisablePower");
     }
@@ -1134,48 +1023,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
             _ghostPlaybackService.StopPlayback(i);
         }
 
-        await SendPowerOffSequenceAsync();
+        await _powerHeartbeatService.SendPowerOffSequenceAsync();
 
         IsPowerEnabled = false;
         StatusText = "Power disabled";
-    }
-
-    /// <summary>
-    /// Builds a command that keeps power on but clears ghost mode on all slots with power 0.
-    /// This is used to transition out of ghost mode before cutting power.
-    /// </summary>
-    private static byte[] BuildClearGhostCommand()
-    {
-        return BuildCommandWithAllSlotsZeroed(ScalextricProtocol.CommandType.PowerOnRacing);
-    }
-
-    /// <summary>
-    /// Builds a power-off command that clears ghost mode on all slots.
-    /// </summary>
-    private static byte[] BuildPowerOffCommand()
-    {
-        return BuildCommandWithAllSlotsZeroed(ScalextricProtocol.CommandType.NoPowerTimerStopped);
-    }
-
-    /// <summary>
-    /// Helper method to build a command with all slots set to power 0 and ghost mode disabled.
-    /// Reduces duplication between BuildClearGhostCommand and BuildPowerOffCommand.
-    /// </summary>
-    private static byte[] BuildCommandWithAllSlotsZeroed(ScalextricProtocol.CommandType commandType)
-    {
-        var builder = new ScalextricProtocol.CommandBuilder
-        {
-            Type = commandType
-        };
-
-        for (int i = 1; i <= 6; i++)
-        {
-            var slot = builder.GetSlot(i);
-            slot.PowerMultiplier = 0;
-            slot.GhostMode = false;
-        }
-
-        return builder.Build();
     }
 
     /// <summary>
@@ -1228,16 +1079,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
         StatusText = "Throttle profiles written successfully";
         return true;
-    }
-
-    /// <summary>
-    /// Stops the power heartbeat when connection is lost.
-    /// </summary>
-    private void StopPowerHeartbeat()
-    {
-        _powerHeartbeatCts?.Cancel();
-        _powerHeartbeatCts = null;
-        IsPowerEnabled = false;
     }
 
     /// <summary>

@@ -17,7 +17,7 @@ public partial class MainViewModel : ObservableObject
 {
     #region Fields
 
-    private readonly IBleService? _bleService;
+    private readonly Services.IBleService? _bleService;
     private readonly AppSettings _settings;
     private readonly SynchronizationContext? _syncContext;
     private bool _isInitializing = true;
@@ -230,7 +230,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     /// <param name="bleService">The BLE service for device communication.</param>
     /// <param name="settings">The application settings.</param>
-    public MainViewModel(AppSettings settings, IBleService? bleService = null)
+    public MainViewModel(AppSettings settings, Services.IBleService? bleService = null)
     {
         _settings = settings;
         _bleService = bleService;

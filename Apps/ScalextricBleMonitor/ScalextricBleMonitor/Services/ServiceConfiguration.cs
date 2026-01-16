@@ -19,6 +19,8 @@ public static class ServiceConfiguration
         services.AddSingleton<IBleMonitorService, BleMonitorService>();
         services.AddSingleton<IGhostRecordingService, GhostRecordingService>();
         services.AddSingleton<IGhostPlaybackService, GhostPlaybackService>();
+        services.AddSingleton<IPowerHeartbeatService, PowerHeartbeatService>();
+        services.AddSingleton<ITimingCalibrationService, TimingCalibrationService>();
         services.AddSingleton<AppSettings>(_ => AppSettings.Load());
 
         // Register ViewModels
