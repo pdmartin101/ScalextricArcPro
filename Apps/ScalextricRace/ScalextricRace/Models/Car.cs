@@ -70,4 +70,28 @@ public class Car
         GhostMaxPower = Math.Clamp(ghostMaxPower, 0, 63);
         MinPower = Math.Clamp(minPower, 0, 63);
     }
+
+    /// <summary>
+    /// The well-known ID for the default car.
+    /// This car is always available and serves as a template for new cars.
+    /// </summary>
+    public static readonly Guid DefaultCarId = new("00000000-0000-0000-0000-000000000001");
+
+    /// <summary>
+    /// Creates the default car with safe, conservative settings.
+    /// This car is always available for quick testing and serves as
+    /// a template when creating new cars.
+    /// </summary>
+    /// <returns>A car with default settings.</returns>
+    public static Car CreateDefault()
+    {
+        return new Car
+        {
+            Id = DefaultCarId,
+            Name = "Default Car",
+            DefaultPower = 63,
+            GhostMaxPower = 45,
+            MinPower = 10
+        };
+    }
 }
