@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ScalextricRace.ViewModels"
+        xmlns:models="using:ScalextricRace.Models"
         xmlns:converters="using:ScalextricRace.Converters"
         x:Class="ScalextricRace.Views.MainWindow"
         x:DataType="vm:MainViewModel"
@@ -10,15 +11,47 @@
 
     <Grid RowDefinitions="Auto,*,Auto" Margin="20">
 
-        <!-- Header: Title and Settings -->
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,20">
-            <TextBlock Grid.Column="0"
-                       Text="{Binding Title}"
-                       FontSize="28"
-                       FontWeight="Bold" />
+        <!-- Header: Hamburger Menu, Title, and Settings -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,20">
 
-            <!-- Settings Button with Flyout -->
-            <Button Grid.Column="1"
+            <!-- Hamburger Menu Button -->
+            <Button Grid.Column="0"
+                    Command="{Binding ToggleMenuCommand}"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Padding="8"
+                    Margin="0,0,15,0"
+                    ToolTip.Tip="Menu">
+                <TextBlock Text="&#x2630;"
+                           FontSize="24"
+                           VerticalAlignment="Center" />
+            </Button>
+
+            <!-- Title (shows current mode) -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="{Binding Title}"
+                           FontSize="28"
+                           FontWeight="Bold" />
+                <TextBlock Text="-"
+                           FontSize="28"
+                           Foreground="Gray"
+                           IsVisible="{Binding !IsRaceMode}" />
+                <TextBlock Text="Cars"
+                           FontSize="28"
+                           Foreground="Gray"
+                           IsVisible="{Binding IsCarsMode}" />
+                <TextBlock Text="Drivers"
+                           FontSize="28"
+                           Foreground="Gray"
+                           IsVisible="{Binding IsDriversMode}" />
+                <TextBlock Text="Settings"
+                           FontSize="28"
+                           Foreground="Gray"
+                           IsVisible="{Binding IsSettingsMode}" />
+            </StackPanel>
+
+            <!-- Settings Button with Flyout (Power Settings) -->
+            <Button Grid.Column="2"
                     Background="Transparent"
                     BorderThickness="0"
                     Padding="8"
@@ -137,25 +170,251 @@
             </Button>
         </Grid>
 
-        <!-- Main Content: Race Info -->
+        <!-- Hamburger Menu Overlay -->
         <Border Grid.Row="1"
-                Background="#FAFAFA"
-                CornerRadius="8"
-                Padding="20">
-            <!-- Race Status Placeholder -->
-            <StackPanel VerticalAlignment="Center"
-                        HorizontalAlignment="Center">
-                <TextBlock Text="Race Status"
-                           FontSize="20"
-                           FontWeight="SemiBold"
-                           HorizontalAlignment="Center"
-                           Margin="0,0,0,10" />
-                <TextBlock Text="Connect to a Scalextric powerbase to begin"
-                           FontSize="14"
-                           Foreground="Gray"
-                           HorizontalAlignment="Center" />
-            </StackPanel>
+                Background="#80000000"
+                IsVisible="{Binding IsMenuOpen}"
+                ZIndex="100">
+            <Border Background="White"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Stretch"
+                    Width="250"
+                    CornerRadius="0,8,8,0"
+                    Padding="0">
+                <StackPanel>
+                    <!-- Menu Header -->
+                    <Border Background="#F0F0F0" Padding="20,15">
+                        <TextBlock Text="Menu"
+                                   FontSize="18"
+                                   FontWeight="SemiBold" />
+                    </Border>
+
+                    <!-- Menu Items -->
+                    <Button Content="Race"
+                            Command="{Binding NavigateToCommand}"
+                            CommandParameter="{x:Static models:NavigationMode.Race}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="20,15"
+                            FontSize="16" />
+
+                    <Button Content="Cars"
+                            Command="{Binding NavigateToCommand}"
+                            CommandParameter="{x:Static models:NavigationMode.Cars}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="20,15"
+                            FontSize="16" />
+
+                    <Button Content="Drivers"
+                            Command="{Binding NavigateToCommand}"
+                            CommandParameter="{x:Static models:NavigationMode.Drivers}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="20,15"
+                            FontSize="16" />
+
+                    <Separator Margin="10,5" />
+
+                    <Button Content="Settings"
+                            Command="{Binding NavigateToCommand}"
+                            CommandParameter="{x:Static models:NavigationMode.Settings}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="20,15"
+                            FontSize="16" />
+                </StackPanel>
+            </Border>
         </Border>
+
+        <!-- Click-away overlay to close menu -->
+        <Border Grid.Row="1"
+                Background="Transparent"
+                IsVisible="{Binding IsMenuOpen}"
+                ZIndex="99"
+                PointerPressed="OnMenuOverlayPressed" />
+
+        <!-- Main Content Area -->
+        <Grid Grid.Row="1">
+
+            <!-- Race Mode Content -->
+            <Border Background="#FAFAFA"
+                    CornerRadius="8"
+                    Padding="20"
+                    IsVisible="{Binding IsRaceMode}">
+                <StackPanel VerticalAlignment="Center"
+                            HorizontalAlignment="Center">
+                    <TextBlock Text="Race Status"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,10" />
+                    <TextBlock Text="Connect to a Scalextric powerbase to begin"
+                               FontSize="14"
+                               Foreground="Gray"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <!-- Cars Mode Content -->
+            <Border Background="#FAFAFA"
+                    CornerRadius="8"
+                    Padding="20"
+                    IsVisible="{Binding IsCarsMode}">
+                <Grid RowDefinitions="Auto,*">
+                    <!-- Cars Header with Add Button -->
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,15">
+                        <TextBlock Text="My Cars"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                        <Button Grid.Column="1"
+                                Content="+ Add Car"
+                                Command="{Binding AddCarCommand}"
+                                Padding="15,8"
+                                FontSize="13" />
+                    </Grid>
+
+                    <!-- Cars Grid -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Cars}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CarViewModel">
+                                    <Border Background="White"
+                                            BorderBrush="#E0E0E0"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Width="220"
+                                            Margin="0,0,15,15"
+                                            Padding="15">
+                                        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                                            <!-- Car Image Placeholder -->
+                                            <Border Grid.Row="0"
+                                                    Background="#F5F5F5"
+                                                    CornerRadius="6"
+                                                    Height="100"
+                                                    Margin="0,0,0,10">
+                                                <TextBlock Text="&#x1F3CE;"
+                                                           FontSize="48"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center"
+                                                           Foreground="#CCCCCC" />
+                                            </Border>
+
+                                            <!-- Car Name -->
+                                            <TextBox Grid.Row="1"
+                                                     Text="{Binding Name}"
+                                                     FontSize="16"
+                                                     FontWeight="SemiBold"
+                                                     Margin="0,0,0,10"
+                                                     BorderThickness="0"
+                                                     Background="Transparent"
+                                                     Padding="0" />
+
+                                            <!-- Power Stats -->
+                                            <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,0,0,5">
+                                                <TextBlock Text="Default Power"
+                                                           FontSize="11"
+                                                           Foreground="Gray" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding DefaultPower}"
+                                                           FontSize="11"
+                                                           FontWeight="SemiBold" />
+                                            </Grid>
+
+                                            <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="0,0,0,5">
+                                                <TextBlock Text="Ghost Max"
+                                                           FontSize="11"
+                                                           Foreground="Gray" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding GhostMaxPower}"
+                                                           FontSize="11"
+                                                           FontWeight="SemiBold" />
+                                            </Grid>
+
+                                            <!-- Delete Button (not for default car) -->
+                                            <Button Grid.Row="4"
+                                                    Content="Delete"
+                                                    Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteCarCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    IsVisible="{Binding CanDelete}"
+                                                    HorizontalAlignment="Right"
+                                                    Padding="10,5"
+                                                    FontSize="11"
+                                                    Margin="0,10,0,0" />
+
+                                            <!-- Default Car Badge -->
+                                            <Border Grid.Row="4"
+                                                    Background="#E3F2FD"
+                                                    CornerRadius="4"
+                                                    Padding="8,4"
+                                                    HorizontalAlignment="Left"
+                                                    IsVisible="{Binding IsDefault}"
+                                                    Margin="0,10,0,0">
+                                                <TextBlock Text="Default"
+                                                           FontSize="10"
+                                                           Foreground="#1976D2" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <!-- Drivers Mode Content (placeholder) -->
+            <Border Background="#FAFAFA"
+                    CornerRadius="8"
+                    Padding="20"
+                    IsVisible="{Binding IsDriversMode}">
+                <StackPanel VerticalAlignment="Center"
+                            HorizontalAlignment="Center">
+                    <TextBlock Text="Drivers"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,10" />
+                    <TextBlock Text="Driver management coming soon..."
+                               FontSize="14"
+                               Foreground="Gray"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <!-- Settings Mode Content (placeholder) -->
+            <Border Background="#FAFAFA"
+                    CornerRadius="8"
+                    Padding="20"
+                    IsVisible="{Binding IsSettingsMode}">
+                <StackPanel VerticalAlignment="Center"
+                            HorizontalAlignment="Center">
+                    <TextBlock Text="Settings"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,10" />
+                    <TextBlock Text="Application settings coming soon..."
+                               FontSize="14"
+                               Foreground="Gray"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+        </Grid>
 
         <!-- Footer: Status Bar with Connection Indicator -->
         <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" Margin="0,10,0,0">

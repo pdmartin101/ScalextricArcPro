@@ -139,6 +139,61 @@ public partial class MainViewModel : ObservableObject
 
     #endregion
 
+    #region Navigation
+
+    /// <summary>
+    /// The current navigation mode/page.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsRaceMode))]
+    [NotifyPropertyChangedFor(nameof(IsCarsMode))]
+    [NotifyPropertyChangedFor(nameof(IsDriversMode))]
+    [NotifyPropertyChangedFor(nameof(IsSettingsMode))]
+    private NavigationMode _currentMode = NavigationMode.Race;
+
+    /// <summary>
+    /// Whether the hamburger menu is currently open.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isMenuOpen;
+
+    /// <summary>
+    /// Gets whether Race mode is active.
+    /// </summary>
+    public bool IsRaceMode => CurrentMode == NavigationMode.Race;
+
+    /// <summary>
+    /// Gets whether Cars mode is active.
+    /// </summary>
+    public bool IsCarsMode => CurrentMode == NavigationMode.Cars;
+
+    /// <summary>
+    /// Gets whether Drivers mode is active.
+    /// </summary>
+    public bool IsDriversMode => CurrentMode == NavigationMode.Drivers;
+
+    /// <summary>
+    /// Gets whether Settings mode is active.
+    /// </summary>
+    public bool IsSettingsMode => CurrentMode == NavigationMode.Settings;
+
+    #endregion
+
+    #region Car Management
+
+    /// <summary>
+    /// Collection of all cars available for racing.
+    /// </summary>
+    public ObservableCollection<CarViewModel> Cars { get; } = [];
+
+    /// <summary>
+    /// The currently selected car for editing.
+    /// </summary>
+    [ObservableProperty]
+    private CarViewModel? _selectedCar;
+
+    #endregion
+
     #region Application Info
 
     /// <summary>
@@ -196,6 +251,10 @@ public partial class MainViewModel : ObservableObject
 
             Controllers.Add(controller);
         }
+
+        // Initialize with default car (always present, non-deletable)
+        var defaultCar = Car.CreateDefault();
+        Cars.Add(new CarViewModel(defaultCar, isDefault: true));
 
         // Initialization complete - enable auto-save
         _isInitializing = false;
@@ -291,6 +350,61 @@ public partial class MainViewModel : ObservableObject
         IsPerSlotPowerMode = !IsPerSlotPowerMode;
         Log.Information("Per-slot power mode toggled to {PerSlotMode}", IsPerSlotPowerMode);
         SaveSettings();
+    }
+
+    /// <summary>
+    /// Toggles the hamburger menu open/closed state.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleMenu()
+    {
+        IsMenuOpen = !IsMenuOpen;
+    }
+
+    /// <summary>
+    /// Navigates to the specified mode and closes the menu.
+    /// </summary>
+    /// <param name="mode">The navigation mode to switch to.</param>
+    [RelayCommand]
+    private void NavigateTo(NavigationMode mode)
+    {
+        CurrentMode = mode;
+        IsMenuOpen = false;
+        Log.Information("Navigated to {Mode} mode", mode);
+    }
+
+    /// <summary>
+    /// Adds a new car based on the default car template.
+    /// </summary>
+    [RelayCommand]
+    private void AddCar()
+    {
+        var newCar = new Car($"Car {Cars.Count + 1}");
+        var viewModel = new CarViewModel(newCar, isDefault: false);
+        Cars.Add(viewModel);
+        SelectedCar = viewModel;
+        Log.Information("Added new car: {CarName}", newCar.Name);
+    }
+
+    /// <summary>
+    /// Deletes the specified car (cannot delete the default car).
+    /// </summary>
+    /// <param name="car">The car view model to delete.</param>
+    [RelayCommand]
+    private void DeleteCar(CarViewModel? car)
+    {
+        if (car == null || car.IsDefault)
+        {
+            Log.Warning("Cannot delete null or default car");
+            return;
+        }
+
+        Cars.Remove(car);
+        if (SelectedCar == car)
+        {
+            SelectedCar = null;
+        }
+        Log.Information("Deleted car: {CarName}", car.Name);
     }
 
     #endregion
