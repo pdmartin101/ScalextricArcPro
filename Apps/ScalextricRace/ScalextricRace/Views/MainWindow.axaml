@@ -324,7 +324,7 @@
                                                                    IsVisible="{Binding !HasImage}" />
                                                         <!-- Actual image (shown when image is set) -->
                                                         <Image Source="{Binding ImageBitmap}"
-                                                               Stretch="UniformToFill"
+                                                               Stretch="Uniform"
                                                                IsVisible="{Binding HasImage}" />
                                                     </Panel>
                                                 </Border>
