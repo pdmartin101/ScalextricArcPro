@@ -12,6 +12,7 @@ namespace ScalextricRace.ViewModels;
 public partial class DriverViewModel : ObservableObject
 {
     private readonly Driver _driver;
+    private readonly SkillLevelConfig _skillLevels;
 
     /// <summary>
     /// Event raised when deletion is requested for this driver.
@@ -93,23 +94,30 @@ public partial class DriverViewModel : ObservableObject
     private int? _powerLimit;
 
     /// <summary>
-    /// Gets whether this driver has a power limit set.
+    /// Gets whether this driver has a power limit set (less than 63).
     /// </summary>
-    public bool HasPowerLimit => PowerLimit.HasValue;
+    public bool HasPowerLimit => PowerLimit.HasValue && PowerLimit.Value < 63;
 
     /// <summary>
-    /// Gets the power limit display string.
+    /// Gets the power limit display string using skill level names.
     /// </summary>
-    public string PowerLimitDisplay => PowerLimit.HasValue ? PowerLimit.Value.ToString() : "No Limit";
+    public string PowerLimitDisplay => _skillLevels.GetLevelName(PowerLimit);
+
+    /// <summary>
+    /// Gets the available skill levels for the UI.
+    /// </summary>
+    public List<SkillLevel> AvailableSkillLevels => _skillLevels.Levels;
 
     /// <summary>
     /// Creates a new DriverViewModel wrapping the specified driver.
     /// </summary>
     /// <param name="driver">The driver model to wrap.</param>
     /// <param name="isDefault">Whether this is the default driver (non-deletable).</param>
-    public DriverViewModel(Driver driver, bool isDefault = false)
+    /// <param name="skillLevels">The skill level configuration (optional, loads default if null).</param>
+    public DriverViewModel(Driver driver, bool isDefault = false, SkillLevelConfig? skillLevels = null)
     {
         _driver = driver;
+        _skillLevels = skillLevels ?? SkillLevelConfig.Load();
         IsDefault = isDefault;
 
         // Initialize from model
@@ -164,20 +172,19 @@ public partial class DriverViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Clears the power limit (sets to no limit).
+    /// Sets the power limit to the specified skill level.
     /// </summary>
+    /// <param name="skillLevel">The skill level to apply.</param>
     [RelayCommand]
-    private void ClearPowerLimit()
+    private void SetSkillLevel(SkillLevel skillLevel)
     {
-        PowerLimit = null;
-    }
-
-    /// <summary>
-    /// Sets a default power limit for beginners.
-    /// </summary>
-    [RelayCommand]
-    private void SetBeginnerLimit()
-    {
-        PowerLimit = 30;
+        if (skillLevel.IsNoLimit)
+        {
+            PowerLimit = null;
+        }
+        else
+        {
+            PowerLimit = skillLevel.PowerLimit;
+        }
     }
 }
