@@ -91,6 +91,7 @@ public partial class DriverViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPowerLimit))]
     [NotifyPropertyChangedFor(nameof(PowerLimitDisplay))]
+    [NotifyPropertyChangedFor(nameof(SelectedSkillLevel))]
     private int? _powerLimit;
 
     /// <summary>
@@ -107,6 +108,47 @@ public partial class DriverViewModel : ObservableObject
     /// Gets the available skill levels for the UI.
     /// </summary>
     public List<SkillLevel> AvailableSkillLevels => _skillLevels.Levels;
+
+    /// <summary>
+    /// Gets or sets the selected skill level for the dropdown.
+    /// </summary>
+    public SkillLevel? SelectedSkillLevel
+    {
+        get => GetCurrentSkillLevel();
+        set
+        {
+            if (value != null)
+            {
+                SetSkillLevel(value);
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets the current skill level based on power limit.
+    /// </summary>
+    private SkillLevel? GetCurrentSkillLevel()
+    {
+        // Find matching skill level by power limit
+        if (!PowerLimit.HasValue || PowerLimit.Value >= 63)
+        {
+            return _skillLevels.Levels.FirstOrDefault(l => l.IsNoLimit);
+        }
+
+        // Try exact match first
+        var exactMatch = _skillLevels.Levels.FirstOrDefault(l => l.PowerLimit == PowerLimit.Value);
+        if (exactMatch != null)
+        {
+            return exactMatch;
+        }
+
+        // No exact match - return closest lower level
+        return _skillLevels.Levels
+            .Where(l => l.PowerLimit <= PowerLimit.Value)
+            .OrderByDescending(l => l.PowerLimit)
+            .FirstOrDefault();
+    }
 
     /// <summary>
     /// Creates a new DriverViewModel wrapping the specified driver.
@@ -175,7 +217,6 @@ public partial class DriverViewModel : ObservableObject
     /// Sets the power limit to the specified skill level.
     /// </summary>
     /// <param name="skillLevel">The skill level to apply.</param>
-    [RelayCommand]
     private void SetSkillLevel(SkillLevel skillLevel)
     {
         if (skillLevel.IsNoLimit)
