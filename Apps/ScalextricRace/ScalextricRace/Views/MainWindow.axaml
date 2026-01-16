@@ -285,7 +285,7 @@
 
                     <!-- Cars Grid -->
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding Cars}">
+                        <ItemsControl x:Name="CarsItemsControl" ItemsSource="{Binding Cars}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <WrapPanel Orientation="Horizontal" />
@@ -348,7 +348,7 @@
                                             <!-- Delete Button (not for default car) -->
                                             <Button Grid.Row="4"
                                                     Content="Delete"
-                                                    Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteCarCommand}"
+                                                    Command="{Binding #CarsItemsControl.((vm:MainViewModel)DataContext).DeleteCarCommand}"
                                                     CommandParameter="{Binding}"
                                                     IsVisible="{Binding CanDelete}"
                                                     HorizontalAlignment="Right"
