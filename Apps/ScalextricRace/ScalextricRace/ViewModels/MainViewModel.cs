@@ -378,14 +378,26 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void AddCar()
     {
+        // Find the default car to copy settings from
+        var defaultCar = Cars.FirstOrDefault(c => c.IsDefault);
+
         var newCar = new Car($"Car {Cars.Count + 1}");
+
+        // Copy power settings from default car if available
+        if (defaultCar != null)
+        {
+            newCar.DefaultPower = defaultCar.DefaultPower;
+            newCar.GhostMaxPower = defaultCar.GhostMaxPower;
+            newCar.MinPower = defaultCar.MinPower;
+        }
+
         var viewModel = new CarViewModel(newCar, isDefault: false);
         viewModel.DeleteRequested += OnCarDeleteRequested;
         viewModel.Changed += OnCarChanged;
         viewModel.TuneRequested += OnCarTuneRequested;
         Cars.Add(viewModel);
         SelectedCar = viewModel;
-        Log.Information("Added new car: {CarName}", newCar.Name);
+        Log.Information("Added new car: {CarName} (copied settings from default)", newCar.Name);
         SaveCars();
     }
 
