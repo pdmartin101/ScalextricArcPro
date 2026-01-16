@@ -5,11 +5,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build Commands
 
 ```bash
-# Build the solution
-dotnet build ScalextricTest.sln
+# Build the solution (from Apps/ScalextricBleMonitor folder)
+dotnet build ScalextricBleMonitor.sln
 
 # Build in Release mode
-dotnet build ScalextricTest.sln -c Release
+dotnet build ScalextricBleMonitor.sln -c Release
 
 # Run the application
 dotnet run --project ScalextricBleMonitor/ScalextricBleMonitor.csproj
@@ -18,21 +18,40 @@ dotnet run --project ScalextricBleMonitor/ScalextricBleMonitor.csproj
 dotnet test ScalextricBleMonitor.Tests/ScalextricBleMonitor.Tests.csproj
 
 # Clean build artifacts
-dotnet clean ScalextricTest.sln
+dotnet clean ScalextricBleMonitor.sln
 ```
 
 ## Architecture
 
 This is a .NET 9.0 Windows desktop application using **Avalonia UI** with the Fluent theme. The project **ScalextricBleMonitor** monitors Scalextric ARC Pro slot car powerbases via Bluetooth Low Energy.
 
+### Repository Structure
+
+```
+ScalextricArcPro/                         # Repository root
+├── Apps/
+│   └── ScalextricBleMonitor/            # BLE Monitor application
+│       ├── ScalextricBleMonitor.sln     # Visual Studio solution file
+│       ├── CLAUDE.md                    # AI assistant build instructions (this file)
+│       ├── PLAN.md                      # Code quality improvement plan
+│       ├── Docs/
+│       │   ├── README.md                # Comprehensive documentation
+│       │   └── ArcPro-BLE-Protocol.md   # BLE protocol specification
+│       ├── ScalextricBleMonitor/        # Main application project
+│       └── ScalextricBleMonitor.Tests/  # Unit test project
+├── Libs/                                 # Shared libraries (future)
+├── .gitignore
+└── README.md                            # Repository overview
+```
+
 ### Project Structure
 
 ```
-ScalextricTest/
-├── ScalextricTest.sln                    # Visual Studio solution file
+Apps/ScalextricBleMonitor/
+├── ScalextricBleMonitor.sln              # Visual Studio solution file
 ├── CLAUDE.md                             # AI assistant build instructions (this file)
 ├── PLAN.md                               # Code quality improvement plan with issue tracking
-├── docs/
+├── Docs/
 │   ├── README.md                         # Comprehensive documentation
 │   └── ArcPro-BLE-Protocol.md           # BLE protocol specification
 ├── ScalextricBleMonitor/                 # Main application project
@@ -247,6 +266,6 @@ See [PLAN.md](PLAN.md) for identified issues and improvement plan organized by p
 
 ### Related Documentation
 
-- [docs/README.md](docs/README.md) - Comprehensive user and developer documentation
-- [docs/ArcPro-BLE-Protocol.md](docs/ArcPro-BLE-Protocol.md) - BLE protocol specification
+- [Docs/README.md](Docs/README.md) - Comprehensive user and developer documentation
+- [Docs/ArcPro-BLE-Protocol.md](Docs/ArcPro-BLE-Protocol.md) - BLE protocol specification
 - [PLAN.md](PLAN.md) - Code quality improvement plan with issue tracking
