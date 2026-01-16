@@ -166,27 +166,27 @@ public partial class MainViewModel : ObservableObject
         _bleService = bleService;
         _syncContext = SynchronizationContext.Current;
 
-        // Load global settings
-        PowerLevel = _settings.PowerLevel;
-        SelectedThrottleProfile = Enum.TryParse<ThrottleProfileType>(_settings.ThrottleProfile, out var profile)
+        // Load default global settings
+        PowerLevel = _settings.Defaults.PowerLevel;
+        SelectedThrottleProfile = Enum.TryParse<ThrottleProfileType>(_settings.Defaults.ThrottleProfile, out var profile)
             ? profile
             : ThrottleProfileType.Linear;
 
         // Load per-slot power mode setting
-        IsPerSlotPowerMode = _settings.IsPerSlotPowerMode;
+        IsPerSlotPowerMode = _settings.Defaults.IsPerSlotPowerMode;
 
-        // Load power enabled state - will be applied when connected
-        IsPowerEnabled = _settings.PowerEnabled;
+        // Load startup power state - will be applied when connected
+        IsPowerEnabled = _settings.StartWithPowerEnabled;
 
         // Initialize controllers for all 6 slots
         for (int i = 1; i <= 6; i++)
         {
             var controller = new ControllerViewModel(i);
 
-            // Load per-slot settings
-            var slotSettings = _settings.SlotSettings[i - 1];
-            controller.PowerLevel = slotSettings.PowerLevel;
-            controller.ThrottleProfile = Enum.TryParse<ThrottleProfileType>(slotSettings.ThrottleProfile, out var slotProfile)
+            // Load default per-slot settings
+            var slotDefaults = _settings.Defaults.SlotSettings[i - 1];
+            controller.PowerLevel = slotDefaults.PowerLevel;
+            controller.ThrottleProfile = Enum.TryParse<ThrottleProfileType>(slotDefaults.ThrottleProfile, out var slotProfile)
                 ? slotProfile
                 : ThrottleProfileType.Linear;
 
@@ -409,17 +409,17 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
-        _settings.PowerEnabled = IsPowerEnabled;
-        _settings.PowerLevel = PowerLevel;
-        _settings.ThrottleProfile = SelectedThrottleProfile.ToString();
-        _settings.IsPerSlotPowerMode = IsPerSlotPowerMode;
+        _settings.StartWithPowerEnabled = IsPowerEnabled;
+        _settings.Defaults.PowerLevel = PowerLevel;
+        _settings.Defaults.ThrottleProfile = SelectedThrottleProfile.ToString();
+        _settings.Defaults.IsPerSlotPowerMode = IsPerSlotPowerMode;
 
-        // Save per-slot settings
+        // Save per-slot default settings
         for (int i = 0; i < Controllers.Count; i++)
         {
             var controller = Controllers[i];
-            _settings.SlotSettings[i].PowerLevel = controller.PowerLevel;
-            _settings.SlotSettings[i].ThrottleProfile = controller.ThrottleProfile.ToString();
+            _settings.Defaults.SlotSettings[i].PowerLevel = controller.PowerLevel;
+            _settings.Defaults.SlotSettings[i].ThrottleProfile = controller.ThrottleProfile.ToString();
         }
 
         _settings.Save();
