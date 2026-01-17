@@ -150,6 +150,13 @@ public partial class RaceViewModel : ObservableObject
     public string RaceStageDisplay => GetStageDisplay(RaceStageMode, RaceStageLapCount, RaceStageTimeMinutes);
 
     /// <summary>
+    /// Default power level (0-63) for entries without a car/driver configured.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StagesSummary))]
+    private int _defaultPower;
+
+    /// <summary>
     /// Gets a summary of the enabled stages for card display.
     /// </summary>
     public string StagesSummary
@@ -160,7 +167,8 @@ public partial class RaceViewModel : ObservableObject
             if (FreePracticeEnabled) stages.Add($"FP: {FreePracticeDisplay}");
             if (QualifyingEnabled) stages.Add($"Q: {QualifyingDisplay}");
             if (RaceStageEnabled) stages.Add($"R: {RaceStageDisplay}");
-            return stages.Count > 0 ? string.Join(" | ", stages) : "No stages enabled";
+            var stagesPart = stages.Count > 0 ? string.Join(" | ", stages) : "No stages enabled";
+            return $"{stagesPart} | Power: {DefaultPower}";
         }
     }
 
@@ -195,6 +203,9 @@ public partial class RaceViewModel : ObservableObject
         _raceStageMode = race.RaceStage.Mode;
         _raceStageLapCount = race.RaceStage.LapCount;
         _raceStageTimeMinutes = race.RaceStage.TimeMinutes;
+
+        // Default power
+        _defaultPower = race.DefaultPower;
     }
 
     /// <summary>
@@ -219,6 +230,12 @@ public partial class RaceViewModel : ObservableObject
     partial void OnImagePathChanged(string? value)
     {
         _race.ImagePath = value;
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    partial void OnDefaultPowerChanged(int value)
+    {
+        _race.DefaultPower = Math.Clamp(value, 0, 63);
         Changed?.Invoke(this, EventArgs.Empty);
     }
 

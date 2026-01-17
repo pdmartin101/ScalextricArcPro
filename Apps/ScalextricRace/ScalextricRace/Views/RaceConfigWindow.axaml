@@ -4,8 +4,8 @@
         x:Class="ScalextricRace.Views.RaceConfigWindow"
         x:DataType="vm:RaceViewModel"
         Title="Edit Race Configuration"
-        Width="400" Height="520"
-        MinWidth="350" MinHeight="480"
+        Width="400" Height="600"
+        MinWidth="350" MinHeight="550"
         WindowStartupLocation="CenterOwner"
         CanResize="False">
 
@@ -242,6 +242,34 @@
                                         VerticalContentAlignment="Center" />
                             </Grid>
                         </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Default Power -->
+                <Border Background="#F5F5F5"
+                        CornerRadius="6"
+                        Padding="15">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Default Power"
+                                   FontSize="14"
+                                   FontWeight="SemiBold" />
+                        <TextBlock Text="Power level used when no car/driver is selected"
+                                   FontSize="11"
+                                   Foreground="Gray" />
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,5,0,0">
+                            <Slider Grid.Column="0"
+                                    Minimum="0" Maximum="63"
+                                    Value="{Binding DefaultPower}"
+                                    VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding DefaultPower}"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       Width="30"
+                                       TextAlignment="Center"
+                                       Margin="10,0,0,0" />
+                        </Grid>
                     </StackPanel>
                 </Border>
 

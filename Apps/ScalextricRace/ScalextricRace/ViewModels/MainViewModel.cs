@@ -146,10 +146,11 @@ public partial class MainViewModel : ObservableObject
     #region Navigation
 
     /// <summary>
-    /// The current top-level application mode (Setup or Racing).
+    /// The current top-level application mode (Setup, Configure, or Racing).
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSetupMode))]
+    [NotifyPropertyChangedFor(nameof(IsConfigureMode))]
     [NotifyPropertyChangedFor(nameof(IsRacingMode))]
     [NotifyPropertyChangedFor(nameof(IsRaceMode))]
     [NotifyPropertyChangedFor(nameof(IsRaceConfigMode))]
@@ -164,15 +165,120 @@ public partial class MainViewModel : ObservableObject
     public bool IsSetupMode => CurrentAppMode == AppMode.Setup;
 
     /// <summary>
+    /// Gets whether the app is in Configure mode (setting up a race before starting).
+    /// </summary>
+    public bool IsConfigureMode => CurrentAppMode == AppMode.Configure;
+
+    /// <summary>
     /// Gets whether the app is in Racing mode.
     /// </summary>
     public bool IsRacingMode => CurrentAppMode == AppMode.Racing;
 
     /// <summary>
-    /// The race configuration currently being run.
+    /// The race configuration currently being set up or run.
     /// </summary>
     [ObservableProperty]
     private RaceViewModel? _activeRace;
+
+    /// <summary>
+    /// Collection of race entries (car/driver pairings) for the current race.
+    /// </summary>
+    public ObservableCollection<RaceEntryViewModel> RaceEntries { get; } = [];
+
+    /// <summary>
+    /// Gets whether the race can be started (at least one configured entry).
+    /// </summary>
+    [ObservableProperty]
+    private bool _canStartRace;
+
+    // Runtime race settings (overrides from the race template)
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfigFreePracticeDisplay))]
+    private bool _configFreePracticeEnabled;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfigFreePracticeDisplay))]
+    private RaceStageMode _configFreePracticeMode;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfigFreePracticeDisplay))]
+    private int _configFreePracticeLapCount;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfigFreePracticeDisplay))]
+    private int _configFreePracticeTimeMinutes;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfigQualifyingDisplay))]
+    private bool _configQualifyingEnabled;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfigQualifyingDisplay))]
+    private RaceStageMode _configQualifyingMode;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfigQualifyingDisplay))]
+    private int _configQualifyingLapCount;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfigQualifyingDisplay))]
+    private int _configQualifyingTimeMinutes;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfigRaceDisplay))]
+    private bool _configRaceEnabled;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfigRaceDisplay))]
+    private RaceStageMode _configRaceMode;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfigRaceDisplay))]
+    private int _configRaceLapCount;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfigRaceDisplay))]
+    private int _configRaceTimeMinutes;
+
+    /// <summary>
+    /// Default power level (0-63) for entries without a car/driver configured.
+    /// </summary>
+    [ObservableProperty]
+    private int _configDefaultPower = 40;
+
+    /// <summary>
+    /// Whether test mode is active (power on for testing controllers).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TestButtonText))]
+    private bool _isTestModeActive;
+
+    /// <summary>
+    /// Gets the text for the test mode toggle button.
+    /// </summary>
+    public string TestButtonText => IsTestModeActive ? "Stop Test" : "Test";
+
+    /// <summary>
+    /// Gets the display string for Free Practice configuration.
+    /// </summary>
+    public string ConfigFreePracticeDisplay => GetStageDisplay(ConfigFreePracticeMode, ConfigFreePracticeLapCount, ConfigFreePracticeTimeMinutes);
+
+    /// <summary>
+    /// Gets the display string for Qualifying configuration.
+    /// </summary>
+    public string ConfigQualifyingDisplay => GetStageDisplay(ConfigQualifyingMode, ConfigQualifyingLapCount, ConfigQualifyingTimeMinutes);
+
+    /// <summary>
+    /// Gets the display string for Race configuration.
+    /// </summary>
+    public string ConfigRaceDisplay => GetStageDisplay(ConfigRaceMode, ConfigRaceLapCount, ConfigRaceTimeMinutes);
+
+    private static string GetStageDisplay(RaceStageMode mode, int laps, int minutes)
+    {
+        return mode == RaceStageMode.Laps
+            ? $"{laps} lap{(laps == 1 ? "" : "s")}"
+            : $"{minutes} min";
+    }
 
     /// <summary>
     /// The current navigation mode/page (within Setup mode).
@@ -462,17 +568,175 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Starts racing with the specified race configuration.
+    /// Opens the configure screen for the specified race.
     /// </summary>
-    /// <param name="race">The race to start.</param>
+    /// <param name="race">The race to configure.</param>
     [RelayCommand]
     private void StartRacing(RaceViewModel? race)
     {
         if (race == null) return;
 
         ActiveRace = race;
+
+        // Copy race settings to config properties
+        ConfigFreePracticeEnabled = race.FreePracticeEnabled;
+        ConfigFreePracticeMode = race.FreePracticeMode;
+        ConfigFreePracticeLapCount = race.FreePracticeLapCount;
+        ConfigFreePracticeTimeMinutes = race.FreePracticeTimeMinutes;
+
+        ConfigQualifyingEnabled = race.QualifyingEnabled;
+        ConfigQualifyingMode = race.QualifyingMode;
+        ConfigQualifyingLapCount = race.QualifyingLapCount;
+        ConfigQualifyingTimeMinutes = race.QualifyingTimeMinutes;
+
+        ConfigRaceEnabled = race.RaceStageEnabled;
+        ConfigRaceMode = race.RaceStageMode;
+        ConfigRaceLapCount = race.RaceStageLapCount;
+        ConfigRaceTimeMinutes = race.RaceStageTimeMinutes;
+
+        ConfigDefaultPower = race.DefaultPower;
+
+        // Initialize all 6 race entries (reset to default state)
+        InitializeRaceEntries();
+
+        CurrentAppMode = AppMode.Configure;
+        Log.Information("Configuring race: {RaceName}", race.Name);
+    }
+
+    /// <summary>
+    /// Initializes all 6 race entries for a new race configuration.
+    /// Creates entries if they don't exist, loads saved entries from race if available.
+    /// </summary>
+    private void InitializeRaceEntries()
+    {
+        if (RaceEntries.Count == 0)
+        {
+            // Create all 6 entries
+            for (int i = 1; i <= 6; i++)
+            {
+                var entry = new RaceEntryViewModel(i, Cars, Drivers);
+                entry.PropertyChanged += OnRaceEntryPropertyChanged;
+                entry.RaceDefaultPower = ConfigDefaultPower;
+                RaceEntries.Add(entry);
+            }
+        }
+        else
+        {
+            // Reset existing entries first
+            foreach (var entry in RaceEntries)
+            {
+                entry.Reset();
+                entry.RaceDefaultPower = ConfigDefaultPower;
+            }
+        }
+
+        // Load saved entries from the active race
+        if (ActiveRace != null)
+        {
+            var savedEntries = ActiveRace.GetModel().Entries;
+            foreach (var savedEntry in savedEntries)
+            {
+                var entryVm = RaceEntries.FirstOrDefault(e => e.SlotNumber == savedEntry.SlotNumber);
+                if (entryVm != null)
+                {
+                    entryVm.IsEnabled = savedEntry.IsEnabled;
+                    if (savedEntry.CarId.HasValue)
+                    {
+                        entryVm.SelectedCar = Cars.FirstOrDefault(c => c.Id == savedEntry.CarId.Value);
+                    }
+                    if (savedEntry.DriverId.HasValue)
+                    {
+                        entryVm.SelectedDriver = Drivers.FirstOrDefault(d => d.Id == savedEntry.DriverId.Value);
+                    }
+                }
+            }
+        }
+
+        UpdateCanStartRace();
+    }
+
+    /// <summary>
+    /// Saves the current race entries to the active race.
+    /// </summary>
+    private void SaveRaceEntries()
+    {
+        if (ActiveRace == null) return;
+
+        var race = ActiveRace.GetModel();
+        race.Entries.Clear();
+
+        foreach (var entry in RaceEntries)
+        {
+            race.Entries.Add(new Models.RaceEntry
+            {
+                SlotNumber = entry.SlotNumber,
+                IsEnabled = entry.IsEnabled,
+                CarId = entry.SelectedCar?.Id,
+                DriverId = entry.SelectedDriver?.Id
+            });
+        }
+
+        // Trigger save
+        _raceStorage.Save(Races.Select(r => r.GetModel()).ToList());
+        Log.Information("Saved race entries for {RaceName}", ActiveRace.Name);
+    }
+
+    private void OnRaceEntryPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(RaceEntryViewModel.IsConfigured))
+        {
+            UpdateCanStartRace();
+        }
+    }
+
+    private void UpdateCanStartRace()
+    {
+        CanStartRace = RaceEntries.Any(e => e.IsConfigured);
+    }
+
+    private void ClearRaceEntries()
+    {
+        // Reset all entries to default state
+        foreach (var entry in RaceEntries)
+        {
+            entry.Reset();
+        }
+        CanStartRace = false;
+    }
+
+    /// <summary>
+    /// Proceeds from configure mode to racing mode.
+    /// </summary>
+    [RelayCommand]
+    private void ProceedToRacing()
+    {
+        if (!CanStartRace) return;
+
+        // Save entries before starting race
+        SaveRaceEntries();
+
         CurrentAppMode = AppMode.Racing;
-        Log.Information("Started racing: {RaceName}", race.Name);
+        Log.Information("Started racing: {RaceName} with {EntryCount} entries",
+            ActiveRace?.Name, RaceEntries.Count(e => e.IsConfigured));
+    }
+
+    /// <summary>
+    /// Exits configure mode and returns to setup.
+    /// </summary>
+    [RelayCommand]
+    private void ExitConfigure()
+    {
+        Log.Information("Exiting configure mode");
+
+        // Stop test mode if active
+        StopTestMode();
+
+        // Save entries before exiting
+        SaveRaceEntries();
+
+        ClearRaceEntries();
+        CurrentAppMode = AppMode.Setup;
+        ActiveRace = null;
     }
 
     /// <summary>
@@ -482,8 +746,83 @@ public partial class MainViewModel : ObservableObject
     private void ExitRacing()
     {
         Log.Information("Exiting racing mode");
+
+        // Stop test mode if active
+        StopTestMode();
+
+        ClearRaceEntries();
         CurrentAppMode = AppMode.Setup;
         ActiveRace = null;
+    }
+
+    /// <summary>
+    /// Toggles test mode on/off. When on, sends power to all enabled controllers
+    /// based on their MaxThrottle settings.
+    /// </summary>
+    [RelayCommand]
+    private void ToggleTestMode()
+    {
+        if (IsTestModeActive)
+        {
+            StopTestMode();
+        }
+        else
+        {
+            StartTestMode();
+        }
+    }
+
+    /// <summary>
+    /// Starts test mode - enables power for all configured controllers.
+    /// </summary>
+    private void StartTestMode()
+    {
+        if (_bleService == null || !IsConnected)
+        {
+            Log.Warning("Cannot start test mode - not connected");
+            return;
+        }
+
+        IsTestModeActive = true;
+        Log.Information("Test mode started");
+
+        // Start heartbeat with test power settings
+        _powerHeartbeatService?.Start(BuildTestPowerCommand);
+    }
+
+    /// <summary>
+    /// Stops test mode - disables power.
+    /// </summary>
+    private void StopTestMode()
+    {
+        if (!IsTestModeActive) return;
+
+        IsTestModeActive = false;
+        Log.Information("Test mode stopped");
+
+        // Stop heartbeat and send power off
+        _ = _powerHeartbeatService?.SendPowerOffSequenceAsync();
+        _powerHeartbeatService?.Stop();
+    }
+
+    /// <summary>
+    /// Builds the power command for test mode based on race entry MaxThrottle values.
+    /// </summary>
+    private byte[] BuildTestPowerCommand()
+    {
+        var builder = new ScalextricProtocol.CommandBuilder
+        {
+            Type = ScalextricProtocol.CommandType.PowerOnRacing
+        };
+
+        // Set power for each slot based on enabled entries and their MaxThrottle
+        foreach (var entry in RaceEntries)
+        {
+            var power = entry.IsEnabled ? (byte)entry.MaxThrottle : (byte)0;
+            builder.SetSlotPower(entry.SlotNumber, power);
+        }
+
+        return builder.Build();
     }
 
     /// <summary>
@@ -942,6 +1281,17 @@ public partial class MainViewModel : ObservableObject
         if (IsPowerEnabled)
         {
             SendPowerCommand();
+        }
+    }
+
+    /// <summary>
+    /// Called when ConfigDefaultPower changes. Updates all race entries with the new default power.
+    /// </summary>
+    partial void OnConfigDefaultPowerChanged(int value)
+    {
+        foreach (var entry in RaceEntries)
+        {
+            entry.RaceDefaultPower = value;
         }
     }
 

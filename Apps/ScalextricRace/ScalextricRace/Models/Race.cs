@@ -41,6 +41,16 @@ public class Race
     public RaceStage RaceStage { get; set; } = new() { LapCount = 10, TimeMinutes = 10 };
 
     /// <summary>
+    /// Default power level (0-63) for entries without a car/driver configured.
+    /// </summary>
+    public int DefaultPower { get; set; } = 40;
+
+    /// <summary>
+    /// Saved controller entries (car/driver pairings) for this race.
+    /// </summary>
+    public List<RaceEntry> Entries { get; set; } = [];
+
+    /// <summary>
     /// Creates the default race configuration.
     /// </summary>
     public static Race CreateDefault() => new()

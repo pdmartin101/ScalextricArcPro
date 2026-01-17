@@ -1,5 +1,8 @@
+using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.VisualTree;
 using ScalextricRace.Models;
 using ScalextricRace.ViewModels;
 
@@ -23,7 +26,7 @@ public partial class MainWindow : Window
 
     /// <summary>
     /// Handles key down events.
-    /// Escape key exits racing mode.
+    /// Escape key exits racing or configure mode, or closes menu.
     /// </summary>
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
@@ -32,6 +35,11 @@ public partial class MainWindow : Window
             if (viewModel.CurrentAppMode == AppMode.Racing)
             {
                 viewModel.ExitRacingCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (viewModel.CurrentAppMode == AppMode.Configure)
+            {
+                viewModel.ExitConfigureCommand.Execute(null);
                 e.Handled = true;
             }
             else if (viewModel.IsMenuOpen)
@@ -50,6 +58,53 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel viewModel)
         {
             viewModel.IsMenuOpen = false;
+        }
+    }
+
+    /// <summary>
+    /// Handles car selection changed - closes the flyout.
+    /// </summary>
+    private void OnCarSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ListBox && e.AddedItems.Count > 0)
+        {
+            // Use dispatcher to close after binding updates
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                // Find all car selection buttons and hide their flyouts
+                HideAllFlyoutsInRaceEntries();
+            });
+        }
+    }
+
+    /// <summary>
+    /// Handles driver selection changed - closes the flyout.
+    /// </summary>
+    private void OnDriverSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ListBox && e.AddedItems.Count > 0)
+        {
+            // Use dispatcher to close after binding updates
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                // Find all driver selection buttons and hide their flyouts
+                HideAllFlyoutsInRaceEntries();
+            });
+        }
+    }
+
+    /// <summary>
+    /// Hides all open flyouts in race entry buttons.
+    /// </summary>
+    private void HideAllFlyoutsInRaceEntries()
+    {
+        // Find all buttons with flyouts and hide them
+        foreach (var button in this.GetVisualDescendants().OfType<Button>())
+        {
+            if (button.Flyout is Flyout flyout)
+            {
+                flyout.Hide();
+            }
         }
     }
 }

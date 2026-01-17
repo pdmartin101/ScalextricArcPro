@@ -11,6 +11,11 @@ public enum AppMode
     Setup,
 
     /// <summary>
+    /// Configure mode - set up car/driver pairings and race settings before starting.
+    /// </summary>
+    Configure,
+
+    /// <summary>
     /// Racing mode - actively running a race.
     /// </summary>
     Racing
