@@ -2,6 +2,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ScalextricRace.Models;
+using Serilog;
 
 namespace ScalextricRace.ViewModels;
 
@@ -90,8 +91,9 @@ public partial class DriverViewModel : ObservableObject
                 _cachedImagePath = ImagePath;
                 return _cachedBitmap;
             }
-            catch
+            catch (Exception ex)
             {
+                Log.Warning(ex, "Failed to load image for driver {DriverId} from {ImagePath}", Id, ImagePath);
                 _cachedBitmap = null;
                 _cachedImagePath = null;
                 return null;

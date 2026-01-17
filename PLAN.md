@@ -44,10 +44,10 @@ This document tracks identified issues and their fix status across the codebase.
 
 | # | Issue | Status | Location | Description |
 |---|-------|--------|----------|-------------|
-| 1 | No IWindowService in ScalextricRace | ❌ | `ScalextricRace/Views/` | Only BleMonitor has window service abstraction. Race app handles windows directly in code-behind. |
+| 1 | No IWindowService in ScalextricRace | ✅ | `ScalextricRace/Services/WindowService.cs` | Added `IWindowService` interface and implementation for dialogs and file pickers. |
 | 2 | Heartbeat Logic in ViewModel | ✅ | `ScalextricBleMonitor/Services/PowerHeartbeatService.cs` | Extracted to dedicated `IPowerHeartbeatService`. |
-| 3 | Silent Exception Swallowing | ❌ | `CarViewModel.cs`, `DriverViewModel.cs` | `catch { return null; }` in ImageBitmap getter. No logging of why image failed to load. |
-| 4 | No ScalextricRace Unit Tests | ❌ | `Apps/ScalextricRace/` | No test project exists. Should mirror BleMonitor.Tests structure. |
+| 3 | Silent Exception Swallowing | ✅ | `CarViewModel.cs`, `DriverViewModel.cs` | Added Serilog logging for image load failures with entity ID and path. |
+| 4 | No ScalextricRace Unit Tests | ✅ | `Apps/ScalextricRace/ScalextricRace.Tests/` | Added test project with 26 tests covering Car/Driver models and ViewModels. |
 
 ---
 
@@ -68,9 +68,9 @@ This document tracks identified issues and their fix status across the codebase.
 | Phase 1: Critical | 2 | 2 | 0 | 0 |
 | Phase 2: High | 4 | 4 | 0 | 0 |
 | Phase 3: Medium | 5 | 5 | 0 | 0 |
-| Phase 4: Low | 4 | 1 | 3 | 0 |
+| Phase 4: Low | 4 | 4 | 0 | 0 |
 | Phase 5: Future | 3 | 0 | 3 | 0 |
-| **Total** | **18** | **12** | **6** | **0** |
+| **Total** | **18** | **15** | **3** | **0** |
 
 ---
 
