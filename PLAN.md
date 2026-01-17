@@ -1,7 +1,7 @@
 # ScalextricTest Code Quality Improvement Plan
 
 **Last Updated:** 2026-01-17
-**Total Issues:** 32 (17 previously fixed, 15 remaining)
+**Total Issues:** 32 (22 fixed, 10 remaining)
 
 **Legend:** ✅ Fixed | ❌ Not Started | 🔄 In Progress
 
@@ -11,13 +11,13 @@
 
 | Phase | Category | Total | ✅ Fixed | ❌ Not Started | 🔄 In Progress |
 |-------|----------|-------|----------|----------------|----------------|
-| **Phase 1** | Critical | 3 | 2 | 1 | 0 |
-| **Phase 2** | High Priority | 5 | 0 | 5 | 0 |
+| **Phase 1** | Critical | 3 | 3 | 0 | 0 |
+| **Phase 2** | High Priority | 5 | 4 | 1 | 0 |
 | **Phase 3** | Medium Priority | 4 | 0 | 4 | 0 |
 | **Phase 4** | Low Priority | 2 | 0 | 2 | 0 |
 | **Phase 5** | Future | 3 | 0 | 3 | 0 |
 | **Previous** | Already Fixed | 15 | 15 | 0 | 0 |
-| **TOTAL** | | **32** | **17** | **15** | **0** |
+| **TOTAL** | | **32** | **22** | **10** | **0** |
 
 ---
 
@@ -83,68 +83,77 @@
 
 ---
 
-### 1.3 EventHandler Pattern in ViewModels ❌
+### 1.3 EventHandler Pattern in ViewModels ✅ FIXED
 
 **Severity:** CRITICAL (MVVM Violation)
 **Location:** `CarViewModel.cs`, `DriverViewModel.cs`, `RaceViewModel.cs`
 
 **Problem:** ViewModels declare/raise EventHandler events, violating CLAUDE.md: "Never use EventHandler or event subscriptions in ViewModels"
 
-**Affected Files:**
-- `ViewModels/CarViewModel.cs:18,23,28,33` - DeleteRequested, Changed, TuneRequested, ImageChangeRequested
-- `ViewModels/DriverViewModel.cs` - DeleteRequested, Changed, ImageChangeRequested
-- `ViewModels/RaceViewModel.cs` - DeleteRequested, Changed, EditRequested, StartRequested, ImageChangeRequested
+**Fix Applied (2026-01-17):**
+- Replaced EventHandler events with Action<T> callback delegates
+- CarViewModel: 4 events → Action<CarViewModel> callbacks
+- DriverViewModel: 3 events → Action<DriverViewModel> callbacks
+- RaceViewModel: 5 events → Action<RaceViewModel> callbacks
+- Management ViewModels use factory methods with callback initialization
 
-**Impact:** Tight coupling, violates architecture, difficult to test, potential memory leaks.
-
-**Recommended Fix:** Use CommunityToolkit.Mvvm.Messaging or callback delegates.
-
-**Files to Modify:**
+**Files Modified:**
 - `ViewModels/CarViewModel.cs`
 - `ViewModels/DriverViewModel.cs`
 - `ViewModels/RaceViewModel.cs`
-- `ViewModels/MainViewModel.cs`
+- `ViewModels/CarManagementViewModel.cs`
+- `ViewModels/DriverManagementViewModel.cs`
+- `ViewModels/RaceManagementViewModel.cs`
+
+**Verification:** Build succeeds, 50 tests pass
 
 ---
 
 ## Phase 2: High Priority (Maintainability & Robustness)
 
-### 2.1 Storage Service Code Duplication ❌
+### 2.1 Storage Service Code Duplication ✅ FIXED
 
 **Severity:** HIGH
 **Duplication:** ~70% code similarity
 
-**Affected Files:**
-- `Apps/ScalextricRace/ScalextricRace/Services/CarStorage.cs` (89 lines)
-- `Apps/ScalextricRace/ScalextricRace/Services/DriverStorage.cs` (82 lines)
-- `Apps/ScalextricRace/ScalextricRace/Services/RaceStorage.cs` (87 lines)
-- `Apps/ScalextricBleMonitor/ScalextricBleMonitor/Services/RecordedLapStorage.cs` (89 lines)
+**Fix Applied (2026-01-17):**
+- Created `JsonStorageBase<T>` abstract base class in both apps
+- Refactored all storage services to inherit from base:
+  - CarStorage: 89 → 27 lines
+  - DriverStorage: 82 → 28 lines
+  - RaceStorage: 87 → 33 lines
+  - RecordedLapStorage: 89 → 44 lines (maintains static API)
 
-**Problem:** Identical JSON serialization patterns repeated across 4 services.
+**Files Created:**
+- `Apps/ScalextricRace/ScalextricRace/Services/JsonStorageBase.cs`
+- `Apps/ScalextricBleMonitor/ScalextricBleMonitor/Services/JsonStorageBase.cs`
 
-**Impact:** Bug fixes need 4 changes, inconsistent error handling.
+**Files Modified:**
+- `Services/CarStorage.cs` - inherit from JsonStorageBase<Car>
+- `Services/DriverStorage.cs` - inherit from JsonStorageBase<Driver>
+- `Services/RaceStorage.cs` - inherit from JsonStorageBase<Race>
+- `Services/RecordedLapStorage.cs` - singleton pattern with base class
 
-**Recommended Fix:** Create `JsonStorageBase<T>` abstract base class.
-
-**Files to Create:**
-- `Services/JsonStorageBase.cs`
-
-**Files to Modify:**
-- All 4 storage services to inherit from base
+**Verification:** Build succeeds, 117 tests pass
 
 ---
 
-### 2.2 Inconsistent Error Handling ❌
+### 2.2 Inconsistent Error Handling ✅ FIXED
 
 **Severity:** HIGH
 **Location:** `AppSettings.cs` in both apps
 
 **Problem:** ScalextricBleMonitor silently swallows exceptions (no logging), ScalextricRace logs properly.
 
-**Impact:** Debugging silent failures is extremely difficult.
+**Fix Applied (2026-01-17):**
+- Added Serilog logging to BleMonitor's AppSettings
+- Replaced silent `catch {}` blocks with `Log.Warning(ex, ...)` calls
+- Added success logging for Load and Save operations
 
-**Files to Modify:**
-- `Apps/ScalextricBleMonitor/ScalextricBleMonitor/Services/AppSettings.cs:156,183`
+**Files Modified:**
+- `Apps/ScalextricBleMonitor/ScalextricBleMonitor/Services/AppSettings.cs`
+
+**Verification:** Build succeeds, 67 tests pass
 
 ---
 
@@ -170,39 +179,38 @@ private void OnNotificationReceived(object? sender, BleNotificationEventArgs e)
 
 ---
 
-### 2.4 Async Void Methods ❌
+### 2.4 Async Void Methods ✅ FIXED
 
 **Severity:** HIGH
 **Location:** Multiple ViewModels
 
-**Affected Methods:**
-- `MainViewModel.OnCarTuneRequested:881` - async void
-- `MainViewModel.OnCarImageChangeRequested:895` - async void
-- `MainViewModel.OnDriverImageChangeRequested:1047` - async void
-- `MainViewModel.OnRaceImageChangeRequested:1170` - async void
+**Fix Applied (2026-01-17):**
+- Added `RunFireAndForget()` helper method to ViewModels
+- Converted all async void callback handlers to use the pattern
+- Proper exception logging instead of silent failures
 
-**Problem:** Exceptions silently swallowed, can't track completion, difficult to test.
+**Files Modified:**
+- `ViewModels/CarManagementViewModel.cs` - OnCarTuneRequested, OnCarImageChangeRequested
+- `ViewModels/DriverManagementViewModel.cs` - OnDriverImageChangeRequested
+- `ViewModels/RaceManagementViewModel.cs` - OnRaceImageChangeRequested, OnRaceEditRequested
+- `ViewModels/MainViewModel.cs` - DisablePower
 
-**Recommended Fix:** Use `RunFireAndForget()` helper with error logging.
-
-**Files to Modify:**
-- `ViewModels/MainViewModel.cs`
+**Verification:** Build succeeds, 50 tests pass
 
 ---
 
-### 2.5 Event Subscription Memory Leaks ❌
+### 2.5 Event Subscription Memory Leaks ✅ FIXED (Already Properly Handled)
 
 **Severity:** HIGH
-**Location:** `ViewModels/MainViewModel.cs:618`
+**Location:** `ViewModels/RaceConfigurationViewModel.cs`
 
-**Problem:** No unsubscribe pattern for race entry PropertyChanged subscriptions.
+**Analysis (2026-01-17):**
+- `RaceConfigurationViewModel.InitializeRaceEntries()` creates entries once (if count == 0)
+- Entries are reused, not recreated on mode changes
+- `ClearRaceEntries()` properly unsubscribes from PropertyChanged events
+- MainViewModel persists for app lifetime (singleton in DI)
 
-**Impact:** ViewModels not garbage collected, memory leak over time.
-
-**Recommended Fix:** Track subscriptions and unsubscribe on cleanup.
-
-**Files to Modify:**
-- `ViewModels/MainViewModel.cs`
+**Conclusion:** No memory leak exists in current architecture. Entries are created once and reused, subscriptions are properly managed.
 
 ---
 
@@ -369,6 +377,28 @@ All 15 issues from the original PLAN.md have been successfully fixed:
 ---
 
 ## Recent Changes Log
+
+### 2026-01-17 - Phase 2 Fixes (except 2.3)
+
+**Issue 2.1 - Storage Service Code Duplication:**
+- Created JsonStorageBase<T> abstract class in both apps
+- Refactored 4 storage services to inherit from base (significant line reduction)
+
+**Issue 2.2 - Inconsistent Error Handling:**
+- Added Serilog logging to BleMonitor's AppSettings
+
+**Issue 2.4 - Async Void Methods:**
+- Added RunFireAndForget helper to 4 ViewModels
+- Converted all async void callback handlers
+
+**Issue 2.5 - Event Subscription Memory Leaks:**
+- Verified already properly handled in RaceConfigurationViewModel
+
+### 2026-01-17 - Phase 1 Completion
+
+**Issue 1.3 - EventHandler Pattern:**
+- Replaced EventHandler events with Action<T> callback delegates
+- Updated 6 ViewModels (Car/Driver/RaceViewModel and their management VMs)
 
 ### 2026-01-17 - MainViewModel Refactoring
 
