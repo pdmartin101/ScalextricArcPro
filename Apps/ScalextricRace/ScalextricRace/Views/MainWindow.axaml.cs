@@ -14,6 +14,8 @@ namespace ScalextricRace.Views;
 /// </summary>
 public partial class MainWindow : Window
 {
+    private MainViewModel? _currentViewModel;
+
     /// <summary>
     /// Initializes the main window.
     /// </summary>
@@ -21,14 +23,25 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        // Subscribe to events after DataContext is set
+        // Subscribe to events after DataContext is set, unsubscribe from old context
         DataContextChanged += (_, _) =>
         {
+            // Unsubscribe from old view model
+            if (_currentViewModel != null)
+            {
+                _currentViewModel.TuneWindowRequested -= OnTuneWindowRequested;
+                _currentViewModel.ImageChangeRequested -= OnImageChangeRequested;
+                _currentViewModel.DriverImageChangeRequested -= OnDriverImageChangeRequested;
+                _currentViewModel = null;
+            }
+
+            // Subscribe to new view model
             if (DataContext is MainViewModel viewModel)
             {
                 viewModel.TuneWindowRequested += OnTuneWindowRequested;
                 viewModel.ImageChangeRequested += OnImageChangeRequested;
                 viewModel.DriverImageChangeRequested += OnDriverImageChangeRequested;
+                _currentViewModel = viewModel;
             }
         };
     }

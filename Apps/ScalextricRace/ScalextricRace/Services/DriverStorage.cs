@@ -8,7 +8,7 @@ namespace ScalextricRace.Services;
 /// Handles persistence of driver data to JSON file.
 /// Stored in %LocalAppData%/ScalextricPdm/ScalextricRace/drivers.json
 /// </summary>
-public class DriverStorage
+public class DriverStorage : IDriverStorage
 {
     /// <summary>
     /// Gets the path to the drivers file.
@@ -19,7 +19,7 @@ public class DriverStorage
     /// Loads all drivers from disk.
     /// Returns empty list if file doesn't exist (default driver will be added by caller).
     /// </summary>
-    public static List<Driver> Load()
+    public List<Driver> Load()
     {
         try
         {
@@ -56,7 +56,7 @@ public class DriverStorage
     /// Saves all drivers to disk.
     /// </summary>
     /// <param name="drivers">The drivers to save.</param>
-    public static void Save(IEnumerable<Driver> drivers)
+    public void Save(IEnumerable<Driver> drivers)
     {
         try
         {

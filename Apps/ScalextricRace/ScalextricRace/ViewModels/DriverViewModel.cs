@@ -13,6 +13,8 @@ public partial class DriverViewModel : ObservableObject
 {
     private readonly Driver _driver;
     private readonly SkillLevelConfig _skillLevels;
+    private Bitmap? _cachedBitmap;
+    private string? _cachedImagePath;
 
     /// <summary>
     /// Event raised when deletion is requested for this driver.
@@ -65,20 +67,33 @@ public partial class DriverViewModel : ObservableObject
 
     /// <summary>
     /// Gets the driver image as a bitmap for display.
+    /// Cached for performance - invalidated when ImagePath changes.
     /// </summary>
     public Bitmap? ImageBitmap
     {
         get
         {
             if (string.IsNullOrEmpty(ImagePath) || !System.IO.File.Exists(ImagePath))
+            {
+                _cachedBitmap = null;
+                _cachedImagePath = null;
                 return null;
+            }
+
+            // Return cached bitmap if path hasn't changed
+            if (_cachedBitmap != null && _cachedImagePath == ImagePath)
+                return _cachedBitmap;
 
             try
             {
-                return new Bitmap(ImagePath);
+                _cachedBitmap = new Bitmap(ImagePath);
+                _cachedImagePath = ImagePath;
+                return _cachedBitmap;
             }
             catch
             {
+                _cachedBitmap = null;
+                _cachedImagePath = null;
                 return null;
             }
         }

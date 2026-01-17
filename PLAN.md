@@ -32,11 +32,11 @@ This document tracks identified issues and their fix status across the codebase.
 
 | # | Issue | Status | Location | Description |
 |---|-------|--------|----------|-------------|
-| 1 | ImageBitmap Created on Every Access | ❌ | `CarViewModel.cs:73-89`, `DriverViewModel.cs:69-85` | `new Bitmap(ImagePath)` in getter - no caching. Performance issue with repeated access. |
-| 2 | SkillLevelConfig Mixes Persistence | ❌ | `ScalextricRace/Models/SkillLevel.cs` | `Load()`/`Save()` methods in model class. Should be in separate service. |
-| 3 | Missing Storage Interfaces | ❌ | `ScalextricRace/Services/` | `CarStorage`, `DriverStorage` have no interfaces. Cannot mock for unit tests. |
+| 1 | ImageBitmap Created on Every Access | ✅ | `CarViewModel.cs`, `DriverViewModel.cs` | Added bitmap caching with path tracking. Cache invalidated when ImagePath changes. |
+| 2 | SkillLevelConfig Mixes Persistence | ✅ | `ScalextricRace/Services/SkillLevelConfigService.cs` | Created `ISkillLevelConfigService` interface and service wrapper for persistence. |
+| 3 | Missing Storage Interfaces | ✅ | `ScalextricRace/Services/` | Added `ICarStorage`, `IDriverStorage` interfaces. Storage classes now instance-based. |
 | 4 | Inconsistent BLE Event Args | ✅ | `Libs/ScalextricBle/IBleService.cs` | Unified event args types in shared library. Both apps now use `ScalextricBle.BleConnectionStateEventArgs`. |
-| 5 | Event Subscription Without Unsubscription | ❌ | `ScalextricRace/Views/MainWindow.axaml.cs:25-33` | `DataContextChanged` handler subscribes but never unsubscribes. Potential memory leak. |
+| 5 | Event Subscription Without Unsubscription | ✅ | `ScalextricRace/Views/MainWindow.axaml.cs` | Fixed by tracking old ViewModel and unsubscribing on DataContextChanged. |
 
 ---
 
@@ -67,10 +67,10 @@ This document tracks identified issues and their fix status across the codebase.
 |-------|-------|----------|----------------|----------------|
 | Phase 1: Critical | 2 | 2 | 0 | 0 |
 | Phase 2: High | 4 | 4 | 0 | 0 |
-| Phase 3: Medium | 5 | 1 | 4 | 0 |
+| Phase 3: Medium | 5 | 5 | 0 | 0 |
 | Phase 4: Low | 4 | 1 | 3 | 0 |
 | Phase 5: Future | 3 | 0 | 3 | 0 |
-| **Total** | **18** | **8** | **10** | **0** |
+| **Total** | **18** | **12** | **6** | **0** |
 
 ---
 

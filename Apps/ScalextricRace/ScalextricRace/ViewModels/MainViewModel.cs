@@ -19,6 +19,8 @@ public partial class MainViewModel : ObservableObject
 
     private readonly Services.IBleService? _bleService;
     private readonly AppSettings _settings;
+    private readonly ICarStorage _carStorage;
+    private readonly IDriverStorage _driverStorage;
     private readonly SynchronizationContext? _syncContext;
     private bool _isInitializing = true;
 
@@ -230,10 +232,13 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     /// <param name="bleService">The BLE service for device communication.</param>
     /// <param name="settings">The application settings.</param>
-    public MainViewModel(AppSettings settings, Services.IBleService? bleService = null)
+    public MainViewModel(AppSettings settings, Services.IBleService? bleService = null,
+        ICarStorage? carStorage = null, IDriverStorage? driverStorage = null)
     {
         _settings = settings;
         _bleService = bleService;
+        _carStorage = carStorage ?? new CarStorage();
+        _driverStorage = driverStorage ?? new DriverStorage();
         _syncContext = SynchronizationContext.Current;
 
         // Load startup global settings (ultra-safe values)
@@ -513,7 +518,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private void LoadCars()
     {
-        var storedCars = CarStorage.Load();
+        var storedCars = _carStorage.Load();
 
         // Check if default car exists in storage
         var hasDefaultCar = storedCars.Any(c => c.Id == Car.DefaultCarId);
@@ -548,7 +553,7 @@ public partial class MainViewModel : ObservableObject
         if (_isInitializing) return;
 
         var cars = Cars.Select(vm => vm.GetModel());
-        CarStorage.Save(cars);
+        _carStorage.Save(cars);
     }
 
     /// <summary>
@@ -635,7 +640,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private void LoadDrivers()
     {
-        var storedDrivers = DriverStorage.Load();
+        var storedDrivers = _driverStorage.Load();
 
         // Check if default driver exists in storage
         var hasDefaultDriver = storedDrivers.Any(d => d.Id == Driver.DefaultDriverId);
@@ -669,7 +674,7 @@ public partial class MainViewModel : ObservableObject
         if (_isInitializing) return;
 
         var drivers = Drivers.Select(vm => vm.GetModel());
-        DriverStorage.Save(drivers);
+        _driverStorage.Save(drivers);
     }
 
     #endregion

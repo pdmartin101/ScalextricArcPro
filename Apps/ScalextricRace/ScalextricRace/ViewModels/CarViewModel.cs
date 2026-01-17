@@ -12,6 +12,8 @@ namespace ScalextricRace.ViewModels;
 public partial class CarViewModel : ObservableObject
 {
     private readonly Car _car;
+    private Bitmap? _cachedBitmap;
+    private string? _cachedImagePath;
 
     /// <summary>
     /// Event raised when deletion is requested for this car.
@@ -69,20 +71,33 @@ public partial class CarViewModel : ObservableObject
 
     /// <summary>
     /// Gets the car image as a bitmap for display.
+    /// Cached for performance - invalidated when ImagePath changes.
     /// </summary>
     public Bitmap? ImageBitmap
     {
         get
         {
             if (string.IsNullOrEmpty(ImagePath) || !System.IO.File.Exists(ImagePath))
+            {
+                _cachedBitmap = null;
+                _cachedImagePath = null;
                 return null;
+            }
+
+            // Return cached bitmap if path hasn't changed
+            if (_cachedBitmap != null && _cachedImagePath == ImagePath)
+                return _cachedBitmap;
 
             try
             {
-                return new Bitmap(ImagePath);
+                _cachedBitmap = new Bitmap(ImagePath);
+                _cachedImagePath = ImagePath;
+                return _cachedBitmap;
             }
             catch
             {
+                _cachedBitmap = null;
+                _cachedImagePath = null;
                 return null;
             }
         }

@@ -8,7 +8,7 @@ namespace ScalextricRace.Services;
 /// Handles persistence of car data to JSON file.
 /// Stored in %LocalAppData%/ScalextricPdm/ScalextricRace/cars.json
 /// </summary>
-public class CarStorage
+public class CarStorage : ICarStorage
 {
     /// <summary>
     /// Gets the path to the cars file.
@@ -27,7 +27,7 @@ public class CarStorage
     /// Loads all cars from disk.
     /// Returns empty list if file doesn't exist (default car will be added by caller).
     /// </summary>
-    public static List<Car> Load()
+    public List<Car> Load()
     {
         try
         {
@@ -63,7 +63,7 @@ public class CarStorage
     /// Saves all cars to disk.
     /// </summary>
     /// <param name="cars">The cars to save.</param>
-    public static void Save(IEnumerable<Car> cars)
+    public void Save(IEnumerable<Car> cars)
     {
         try
         {
