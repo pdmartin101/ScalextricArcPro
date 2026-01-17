@@ -99,6 +99,7 @@ public partial class App : Application
         services.AddSingleton<IRaceStorage, RaceStorage>();
 
         // Register ViewModels
+        services.AddSingleton<BleConnectionViewModel>();
         services.AddSingleton<CarManagementViewModel>();
         services.AddSingleton<DriverManagementViewModel>();
         services.AddSingleton<RaceManagementViewModel>();

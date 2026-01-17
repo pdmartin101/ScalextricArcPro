@@ -16,15 +16,14 @@ public partial class MainViewModel : ObservableObject
 {
     #region Fields
 
-    private readonly Services.IBleService? _bleService;
     private readonly IPowerHeartbeatService? _powerHeartbeatService;
     private readonly IWindowService _windowService;
     private readonly AppSettings _settings;
     private readonly ICarStorage _carStorage;
-    private readonly SynchronizationContext? _syncContext;
     private bool _isInitializing = true;
 
     // Child ViewModels
+    private readonly BleConnectionViewModel _connection;
     private readonly CarManagementViewModel _carManagement;
     private readonly DriverManagementViewModel _driverManagement;
     private readonly RaceManagementViewModel _raceManagement;
@@ -33,66 +32,47 @@ public partial class MainViewModel : ObservableObject
 
     #endregion
 
-    #region Connection State
+    #region Connection State (Delegated to BleConnectionViewModel)
 
     /// <summary>
     /// Indicates whether BLE scanning is active.
     /// </summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConnectionStatusText))]
-    [NotifyPropertyChangedFor(nameof(CurrentConnectionState))]
-    private bool _isScanning;
+    public bool IsScanning => _connection.IsScanning;
 
     /// <summary>
     /// Indicates whether a Scalextric device has been detected via BLE advertisement.
     /// </summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConnectionStatusText))]
-    [NotifyPropertyChangedFor(nameof(CurrentConnectionState))]
-    private bool _isDeviceDetected;
+    public bool IsDeviceDetected => _connection.IsDeviceDetected;
 
     /// <summary>
     /// Indicates whether an active GATT connection exists to the powerbase.
     /// </summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConnectionStatusText))]
-    [NotifyPropertyChangedFor(nameof(IsConnected))]
-    [NotifyPropertyChangedFor(nameof(CurrentConnectionState))]
-    private bool _isGattConnected;
+    public bool IsGattConnected => _connection.IsGattConnected;
 
     /// <summary>
     /// Status message to display to the user.
     /// </summary>
-    [ObservableProperty]
-    private string _statusMessage = "Starting...";
+    public string StatusMessage
+    {
+        get => _connection.StatusMessage;
+        set => _connection.StatusMessage = value;
+    }
 
     /// <summary>
     /// Gets whether the device is connected and ready for commands.
     /// </summary>
-    public bool IsConnected => IsGattConnected;
+    public bool IsConnected => _connection.IsConnected;
 
     /// <summary>
     /// Gets the current connection status as a display string.
     /// </summary>
-    public string ConnectionStatusText => (IsScanning, IsDeviceDetected, IsGattConnected) switch
-    {
-        (_, _, true) => "Connected",
-        (_, true, false) => "Connecting...",
-        (true, false, _) => "Scanning",
-        _ => "Disconnected"
-    };
+    public string ConnectionStatusText => _connection.ConnectionStatusText;
 
     /// <summary>
     /// Gets the current connection state for UI display.
     /// Used with a converter to determine status indicator color.
     /// </summary>
-    public ConnectionState CurrentConnectionState => (IsScanning, IsDeviceDetected, IsGattConnected) switch
-    {
-        (_, _, true) => ConnectionState.Connected,
-        (_, true, false) => ConnectionState.Connecting,
-        (true, false, _) => ConnectionState.Connecting,
-        _ => ConnectionState.Disconnected
-    };
+    public ConnectionState CurrentConnectionState => _connection.CurrentConnectionState;
 
     #endregion
 
@@ -393,32 +373,32 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     /// <param name="settings">The application settings.</param>
     /// <param name="windowService">The window service for dialogs.</param>
+    /// <param name="connection">The BLE connection view model.</param>
     /// <param name="carManagement">The car management view model.</param>
     /// <param name="driverManagement">The driver management view model.</param>
     /// <param name="raceManagement">The race management view model.</param>
     /// <param name="powerControl">The power control view model.</param>
     /// <param name="raceConfig">The race configuration view model.</param>
-    /// <param name="bleService">The BLE service for device communication.</param>
     /// <param name="powerHeartbeatService">The power heartbeat service for maintaining track power.</param>
     /// <param name="carStorage">The car storage service.</param>
     public MainViewModel(AppSettings settings, IWindowService windowService,
+        BleConnectionViewModel connection,
         CarManagementViewModel carManagement, DriverManagementViewModel driverManagement,
         RaceManagementViewModel raceManagement, PowerControlViewModel powerControl,
         RaceConfigurationViewModel raceConfig,
-        Services.IBleService? bleService = null, IPowerHeartbeatService? powerHeartbeatService = null,
+        IPowerHeartbeatService? powerHeartbeatService = null,
         ICarStorage? carStorage = null)
     {
         _settings = settings;
         _windowService = windowService;
+        _connection = connection;
         _carManagement = carManagement;
         _driverManagement = driverManagement;
         _raceManagement = raceManagement;
         _powerControl = powerControl;
         _raceConfig = raceConfig;
-        _bleService = bleService;
         _powerHeartbeatService = powerHeartbeatService;
         _carStorage = carStorage ?? new CarStorage();
-        _syncContext = SynchronizationContext.Current;
 
         // Load startup power state - will be applied when connected
         // (Power settings are loaded by PowerControlViewModel)
@@ -428,25 +408,40 @@ public partial class MainViewModel : ObservableObject
         // (Cars/Drivers/Races are loaded by their respective ViewModels)
         _raceManagement.SetStartRequestedCallback(OnRaceStartRequested);
 
-        // Initialization complete - enable auto-save
-        _isInitializing = false;
-
-        Log.Information("MainViewModel initialized. PowerLevel={PowerLevel}, ThrottleProfile={ThrottleProfile}, PerSlotMode={PerSlotMode}, PowerEnabled={PowerEnabled}",
-            PowerLevel, SelectedThrottleProfile, IsPerSlotPowerMode, IsPowerEnabled);
-
-        // Subscribe to BLE service events
-        if (_bleService != null)
+        // Wire up connection events
+        _connection.GattConnected += OnGattConnected;
+        _connection.NotificationReceived += OnNotificationReceived;
+        _connection.PropertyChanged += (s, e) =>
         {
-            _bleService.ConnectionStateChanged += OnConnectionStateChanged;
-            _bleService.StatusMessageChanged += OnStatusMessageChanged;
-            _bleService.NotificationReceived += OnNotificationReceived;
-        }
+            // Forward property change notifications for delegated properties
+            if (e.PropertyName == nameof(BleConnectionViewModel.IsScanning))
+                OnPropertyChanged(nameof(IsScanning));
+            else if (e.PropertyName == nameof(BleConnectionViewModel.IsDeviceDetected))
+                OnPropertyChanged(nameof(IsDeviceDetected));
+            else if (e.PropertyName == nameof(BleConnectionViewModel.IsGattConnected))
+            {
+                OnPropertyChanged(nameof(IsGattConnected));
+                OnPropertyChanged(nameof(IsConnected));
+            }
+            else if (e.PropertyName == nameof(BleConnectionViewModel.StatusMessage))
+                OnPropertyChanged(nameof(StatusMessage));
+            else if (e.PropertyName == nameof(BleConnectionViewModel.ConnectionStatusText))
+                OnPropertyChanged(nameof(ConnectionStatusText));
+            else if (e.PropertyName == nameof(BleConnectionViewModel.CurrentConnectionState))
+                OnPropertyChanged(nameof(CurrentConnectionState));
+        };
 
         // Subscribe to heartbeat service events
         if (_powerHeartbeatService != null)
         {
             _powerHeartbeatService.HeartbeatError += OnHeartbeatError;
         }
+
+        // Initialization complete - enable auto-save
+        _isInitializing = false;
+
+        Log.Information("MainViewModel initialized. PowerLevel={PowerLevel}, ThrottleProfile={ThrottleProfile}, PerSlotMode={PerSlotMode}, PowerEnabled={PowerEnabled}",
+            PowerLevel, SelectedThrottleProfile, IsPerSlotPowerMode, IsPowerEnabled);
     }
 
     #endregion
@@ -459,16 +454,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public void StartMonitoring()
     {
-        if (_bleService == null)
-        {
-            Log.Warning("BLE service not available - cannot start monitoring");
-            StatusMessage = "BLE service not available";
-            return;
-        }
-
-        Log.Information("Starting BLE monitoring");
-        _bleService.StartScanning();
-        IsScanning = _bleService.IsScanning;
+        _connection.StartMonitoring();
     }
 
     /// <summary>
@@ -480,18 +466,13 @@ public partial class MainViewModel : ObservableObject
         // Save settings before stopping
         SaveSettings();
 
-        if (_bleService == null) return;
-
-        Log.Information("Stopping BLE monitoring");
-
         // Disable power if enabled
         if (IsPowerEnabled)
         {
             DisablePower();
         }
 
-        _bleService.StopScanning();
-        IsScanning = false;
+        _connection.StopMonitoring();
     }
 
     #endregion
@@ -700,7 +681,7 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private void StartTestMode()
     {
-        if (_bleService == null || !IsConnected)
+        if (!IsConnected)
         {
             Log.Warning("Cannot start test mode - not connected");
             return;
@@ -798,36 +779,16 @@ public partial class MainViewModel : ObservableObject
     #region Event Handlers
 
     /// <summary>
-    /// Handles BLE connection state changes.
+    /// Handles GATT connection established.
     /// </summary>
-    private void OnConnectionStateChanged(object? sender, BleConnectionStateEventArgs e)
+    private void OnGattConnected(object? sender, EventArgs e)
     {
-        // Marshal to UI thread using SynchronizationContext
-        PostToUIThread(() =>
+        // If power should be on, enable it now that we're connected
+        if (IsPowerEnabled)
         {
-            var wasConnected = IsGattConnected;
-
-            IsDeviceDetected = e.IsDeviceDetected;
-            IsGattConnected = e.IsGattConnected;
-
-            // If we just connected and power should be on, send the power command
-            if (!wasConnected && IsGattConnected && IsPowerEnabled)
-            {
-                Log.Information("Connection established, enabling power from saved settings");
-                EnablePower();
-            }
-        });
-    }
-
-    /// <summary>
-    /// Handles BLE status message changes.
-    /// </summary>
-    private void OnStatusMessageChanged(object? sender, string message)
-    {
-        PostToUIThread(() =>
-        {
-            StatusMessage = message;
-        });
+            Log.Information("Connection established, enabling power from saved settings");
+            EnablePower();
+        }
     }
 
     /// <summary>
@@ -892,50 +853,6 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Sends the current power settings to the powerbase.
-    /// Called when power is enabled or when settings change while power is on.
-    /// </summary>
-    private async void SendPowerCommand()
-    {
-        await SendPowerCommandAsync();
-    }
-
-    /// <summary>
-    /// Sends the current power settings to the powerbase.
-    /// </summary>
-    /// <returns>True if the command was sent successfully.</returns>
-    private async Task<bool> SendPowerCommandAsync()
-    {
-        if (_bleService == null) return false;
-
-        // Build power-on command using ScalextricBle library
-        var builder = new ScalextricProtocol.CommandBuilder
-        {
-            Type = ScalextricProtocol.CommandType.PowerOnRacing
-        };
-
-        if (IsPerSlotPowerMode)
-        {
-            // Set individual power levels per slot
-            for (int i = 0; i < Controllers.Count; i++)
-            {
-                builder.SetSlotPower(i + 1, (byte)Controllers[i].PowerLevel);
-            }
-        }
-        else
-        {
-            // Set global power level for all slots
-            builder.SetAllPower((byte)PowerLevel);
-        }
-
-        byte[] command = builder.Build();
-
-        return await _bleService.WriteCharacteristicAsync(
-            ScalextricProtocol.Characteristics.Command,
-            command);
-    }
-
-    /// <summary>
     /// Builds the power command based on current settings.
     /// Used as the delegate for the power heartbeat service.
     /// </summary>
@@ -952,7 +869,7 @@ public partial class MainViewModel : ObservableObject
     {
         Log.Error("Power heartbeat error: {ErrorMessage}", errorMessage);
 
-        PostToUIThread(() =>
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             StatusMessage = errorMessage;
             IsPowerEnabled = false;
@@ -977,23 +894,6 @@ public partial class MainViewModel : ObservableObject
 
         Log.Information("Power disabled successfully");
         StatusMessage = "Power disabled";
-    }
-
-    /// <summary>
-    /// Posts an action to the UI thread using SynchronizationContext.
-    /// Falls back to direct execution if no context is available.
-    /// </summary>
-    private void PostToUIThread(Action action)
-    {
-        if (_syncContext != null)
-        {
-            _syncContext.Post(_ => action(), null);
-        }
-        else
-        {
-            // No sync context - execute directly (may be on wrong thread)
-            action();
-        }
     }
 
     #endregion
