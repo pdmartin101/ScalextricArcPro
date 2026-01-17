@@ -1,8 +1,6 @@
-using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ScalextricRace.Models;
-using Serilog;
 
 namespace ScalextricRace.ViewModels;
 
@@ -14,8 +12,6 @@ public partial class DriverViewModel : ObservableObject
 {
     private readonly Driver _driver;
     private readonly SkillLevelConfig _skillLevels;
-    private Bitmap? _cachedBitmap;
-    private string? _cachedImagePath;
 
     /// <summary>
     /// Event raised when deletion is requested for this driver.
@@ -55,51 +51,16 @@ public partial class DriverViewModel : ObservableObject
 
     /// <summary>
     /// Optional path to driver image/avatar for UI display.
+    /// Use ImagePathToBitmapConverter in XAML to convert to Bitmap.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasImage))]
-    [NotifyPropertyChangedFor(nameof(ImageBitmap))]
     private string? _imagePath;
 
     /// <summary>
     /// Gets whether this driver has an image set.
     /// </summary>
     public bool HasImage => !string.IsNullOrEmpty(ImagePath);
-
-    /// <summary>
-    /// Gets the driver image as a bitmap for display.
-    /// Cached for performance - invalidated when ImagePath changes.
-    /// </summary>
-    public Bitmap? ImageBitmap
-    {
-        get
-        {
-            if (string.IsNullOrEmpty(ImagePath) || !System.IO.File.Exists(ImagePath))
-            {
-                _cachedBitmap = null;
-                _cachedImagePath = null;
-                return null;
-            }
-
-            // Return cached bitmap if path hasn't changed
-            if (_cachedBitmap != null && _cachedImagePath == ImagePath)
-                return _cachedBitmap;
-
-            try
-            {
-                _cachedBitmap = new Bitmap(ImagePath);
-                _cachedImagePath = ImagePath;
-                return _cachedBitmap;
-            }
-            catch (Exception ex)
-            {
-                Log.Warning(ex, "Failed to load image for driver {DriverId} from {ImagePath}", Id, ImagePath);
-                _cachedBitmap = null;
-                _cachedImagePath = null;
-                return null;
-            }
-        }
-    }
 
     /// <summary>
     /// Maximum power level this driver can use (0-63).

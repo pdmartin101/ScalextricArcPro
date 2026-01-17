@@ -168,9 +168,9 @@ This document tracks code quality improvements and MVVM violations for the Scale
 |---|-------|----------|--------|
 | 1 | WindowService not registered in DI | `App.axaml.cs` | ✅ |
 | 2 | ViewModel exposes mutable service property | `MainViewModel.cs` | ✅ |
-| 3 | ViewModel contains UI-specific type (Bitmap) | `CarViewModel.cs:73-99` | ❌ |
-| 4 | EventHandler instead of ICommand | `CarViewModel`, `DriverViewModel` | ❌ |
-| 5 | Direct model property mutation | `CarTuningViewModel.cs:73` | ❌ |
+| 3 | ViewModel contains UI-specific type (Bitmap) | `CarViewModel.cs`, `DriverViewModel.cs` | ✅ |
+| 4 | EventHandler instead of ICommand | `CarViewModel`, `DriverViewModel` | ✅ |
+| 5 | Direct model property mutation | `CarTuningViewModel.cs` | ✅ |
 
 ### 1. WindowService Registered in DI ✅
 
@@ -181,6 +181,35 @@ This document tracks code quality improvements and MVVM violations for the Scale
 **Problem:** MainViewModel had a settable `BleService` property that View mutated.
 
 **Solution:** `BleService` is now injected via constructor and stored in a `readonly` field.
+
+### 3. Bitmap (UI Type) Removed from ViewModels ✅
+
+**Problem:** `CarViewModel` and `DriverViewModel` contained `Avalonia.Media.Imaging.Bitmap` which is a UI-specific type, violating MVVM purity.
+
+**Solution:**
+- Created `ImagePathToBitmapConverter` in `Converters/`
+- Removed `ImageBitmap` property and caching from ViewModels
+- Updated XAML bindings to use `{Binding ImagePath, Converter={x:Static converters:ImagePathToBitmapConverter.Instance}}`
+- Converter handles caching internally
+
+**Files Changed:**
+- `Converters/ImagePathToBitmapConverter.cs` - New converter
+- `ViewModels/CarViewModel.cs` - Removed Bitmap-related code
+- `ViewModels/DriverViewModel.cs` - Removed Bitmap-related code
+- `Views/MainWindow.axaml` - Updated image bindings to use converter
+
+### 4. EventHandler Pattern Acceptable ✅
+
+**Analysis:** The `EventHandler` pattern used for `DeleteRequested`, `Changed`, `TuneRequested`, `ImageChangeRequested` is for ViewModel-to-ViewModel communication (parent `MainViewModel` subscribes to child ViewModel events). This is an acceptable pattern for internal coordination, not a View-to-ViewModel binding violation.
+
+The `[RelayCommand]` methods (`RequestDelete`, `RequestTune`, `RequestImageChange`) that the View binds to correctly follow the command pattern.
+
+### 5. ViewModel-to-ViewModel Property Setting Acceptable ✅
+
+**Analysis:** In `CarTuningViewModel`, setting `_carViewModel.DefaultPower = PowerLevel` is one ViewModel coordinating with another through public properties. This is appropriate because:
+- Both are ViewModels (not direct Model mutation)
+- The tuning wizard deliberately modifies the car's settings
+- Changes go through `CarViewModel` which properly syncs to the underlying Model
 
 ### Medium
 
@@ -260,7 +289,7 @@ dotnet run --project ScalextricRace/ScalextricRace.csproj
 | Phase 2 | High Priority | ✅ 4/4 |
 | Phase 3 | Medium Priority | ✅ 5/5 |
 | Phase 4 | Low Priority | ✅ 3/3 |
-| Phase 5 | MVVM Violations | 🔄 8/17 |
+| Phase 5 | MVVM Violations | 🔄 11/17 |
 | Phase 6 | Future Enhancements | ❌ 0/4 |
 
-**Overall Progress:** Phases 1-4 complete (13/13). Phase 5 critical violations fixed (8/17). Phase 6 pending (0/4).
+**Overall Progress:** Phases 1-4 complete (13/13). Phase 5 critical + high fixed (11/17). Phase 6 pending (0/4).

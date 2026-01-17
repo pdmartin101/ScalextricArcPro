@@ -323,7 +323,7 @@
                                                                    Foreground="#CCCCCC"
                                                                    IsVisible="{Binding !HasImage}" />
                                                         <!-- Actual image (shown when image is set) -->
-                                                        <Image Source="{Binding ImageBitmap}"
+                                                        <Image Source="{Binding ImagePath, Converter={x:Static converters:ImagePathToBitmapConverter.Instance}}"
                                                                Stretch="Uniform"
                                                                IsVisible="{Binding HasImage}" />
                                                     </Panel>
@@ -467,7 +467,7 @@
                                                                    Foreground="#CCCCCC"
                                                                    IsVisible="{Binding !HasImage}" />
                                                         <!-- Actual image (shown when image is set) -->
-                                                        <Image Source="{Binding ImageBitmap}"
+                                                        <Image Source="{Binding ImagePath, Converter={x:Static converters:ImagePathToBitmapConverter.Instance}}"
                                                                Stretch="UniformToFill"
                                                                IsVisible="{Binding HasImage}" />
                                                     </Panel>
