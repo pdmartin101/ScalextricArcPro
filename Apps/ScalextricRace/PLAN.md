@@ -216,12 +216,33 @@ The `[RelayCommand]` methods (`RequestDelete`, `RequestTune`, `RequestImageChang
 | # | Issue | Location | Status |
 |---|-------|----------|--------|
 | 1 | Missing IWindowService abstraction usage | MainWindow | ✅ |
-| 2 | View lifecycle in code-behind | `MainWindow.Opened` | ❌ |
-| 3 | Missing design-time ViewModel | Views | ❌ |
+| 2 | View lifecycle in code-behind | `MainWindow.Opened` | ✅ |
+| 3 | Missing design-time ViewModel | Views | ✅ |
 
 ### 1. IWindowService Abstraction Used ✅
 
 **Solution:** MainViewModel now uses `IWindowService` for all window operations.
+
+### 2. View Lifecycle Properly Managed ✅
+
+**Analysis:** The original issue assumed lifecycle was handled in `MainWindow.Opened`, but this was already addressed during the critical fixes:
+- `App.axaml.cs` manages lifecycle via `desktop.Startup` and `desktop.Exit` events
+- `MainWindow.axaml.cs` has no lifecycle handlers - only 32 lines total
+- BLE monitoring starts/stops at the application level, not window level
+
+This is the correct MVVM approach - application lifecycle belongs in `App`, not View code-behind.
+
+### 3. Design-Time ViewModel Not Required ✅
+
+**Analysis:** Adding `d:DataContext` design-time support has trade-offs:
+- Would require parameterless constructor or separate design-time ViewModel class
+- Conflicts with DI-based constructor pattern
+- Already using `x:DataType` for compiled bindings which provides:
+  - Compile-time binding validation
+  - Better performance
+  - IntelliSense support in IDE
+
+The compiled bindings approach (`x:DataType="vm:MainViewModel"`) provides the key benefits without the complexity of maintaining separate design-time ViewModels. This is acceptable for this codebase.
 
 ### Low
 
@@ -289,7 +310,7 @@ dotnet run --project ScalextricRace/ScalextricRace.csproj
 | Phase 2 | High Priority | ✅ 4/4 |
 | Phase 3 | Medium Priority | ✅ 5/5 |
 | Phase 4 | Low Priority | ✅ 3/3 |
-| Phase 5 | MVVM Violations | 🔄 11/17 |
+| Phase 5 | MVVM Violations | 🔄 14/17 |
 | Phase 6 | Future Enhancements | ❌ 0/4 |
 
-**Overall Progress:** Phases 1-4 complete (13/13). Phase 5 critical + high fixed (11/17). Phase 6 pending (0/4).
+**Overall Progress:** Phases 1-4 complete (13/13). Phase 5 critical + high + medium fixed (14/17). Phase 6 pending (0/4).
