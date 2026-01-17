@@ -28,6 +28,8 @@ public partial class MainViewModel : ObservableObject
     private readonly CarManagementViewModel _carManagement;
     private readonly DriverManagementViewModel _driverManagement;
     private readonly RaceManagementViewModel _raceManagement;
+    private readonly PowerControlViewModel _powerControl;
+    private readonly RaceConfigurationViewModel _raceConfig;
 
     #endregion
 
@@ -109,40 +111,51 @@ public partial class MainViewModel : ObservableObject
     public string PowerButtonText => IsPowerEnabled ? "POWER OFF" : "POWER ON";
 
     /// <summary>
+    /// Gets the power control child ViewModel.
+    /// </summary>
+    public PowerControlViewModel PowerControl => _powerControl;
+
+    /// <summary>
     /// The global power level (0-63) applied to all slots.
     /// </summary>
-    [ObservableProperty]
-    private int _powerLevel = 63;
+    public int PowerLevel
+    {
+        get => _powerControl.PowerLevel;
+        set => _powerControl.PowerLevel = value;
+    }
 
     /// <summary>
     /// The selected throttle profile type for all cars.
     /// </summary>
-    [ObservableProperty]
-    private ThrottleProfileType _selectedThrottleProfile = ThrottleProfileType.Linear;
+    public ThrottleProfileType SelectedThrottleProfile
+    {
+        get => _powerControl.SelectedThrottleProfile;
+        set => _powerControl.SelectedThrottleProfile = value;
+    }
 
     /// <summary>
     /// Available throttle profile types for selection.
     /// </summary>
-    public static ThrottleProfileType[] AvailableThrottleProfiles { get; } =
-        Enum.GetValues<ThrottleProfileType>();
+    public static ThrottleProfileType[] AvailableThrottleProfiles => PowerControlViewModel.AvailableThrottleProfiles;
 
     /// <summary>
     /// Whether per-slot power mode is enabled.
-    /// When true, each controller has individual power settings.
     /// </summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(PerSlotToggleText))]
-    private bool _isPerSlotPowerMode;
+    public bool IsPerSlotPowerMode
+    {
+        get => _powerControl.IsPerSlotPowerMode;
+        set => _powerControl.IsPerSlotPowerMode = value;
+    }
 
     /// <summary>
     /// Gets the text for the per-slot power mode toggle button.
     /// </summary>
-    public string PerSlotToggleText => IsPerSlotPowerMode ? "Global Mode" : "Per-Slot Mode";
+    public string PerSlotToggleText => _powerControl.PerSlotToggleText;
 
     /// <summary>
     /// Collection of controller view models for per-slot power settings.
     /// </summary>
-    public ObservableCollection<ControllerViewModel> Controllers { get; } = [];
+    public ObservableCollection<ControllerViewModel> Controllers => _powerControl.Controllers;
 
     #endregion
 
@@ -184,104 +197,65 @@ public partial class MainViewModel : ObservableObject
     private RaceViewModel? _activeRace;
 
     /// <summary>
+    /// Gets the race configuration child ViewModel.
+    /// </summary>
+    public RaceConfigurationViewModel RaceConfig => _raceConfig;
+
+    /// <summary>
     /// Collection of race entries (car/driver pairings) for the current race.
     /// </summary>
-    public ObservableCollection<RaceEntryViewModel> RaceEntries { get; } = [];
+    public ObservableCollection<RaceEntryViewModel> RaceEntries => _raceConfig.RaceEntries;
 
     /// <summary>
     /// Gets whether the race can be started (at least one configured entry).
     /// </summary>
-    [ObservableProperty]
-    private bool _canStartRace;
+    public bool CanStartRace => _raceConfig.CanStartRace;
 
-    // Runtime race settings (overrides from the race template)
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConfigFreePracticeDisplay))]
-    private bool _configFreePracticeEnabled;
+    // Race stage configuration - delegated to RaceConfigurationViewModel
+    public bool ConfigFreePracticeEnabled { get => _raceConfig.ConfigFreePracticeEnabled; set => _raceConfig.ConfigFreePracticeEnabled = value; }
+    public RaceStageMode ConfigFreePracticeMode { get => _raceConfig.ConfigFreePracticeMode; set => _raceConfig.ConfigFreePracticeMode = value; }
+    public int ConfigFreePracticeLapCount { get => _raceConfig.ConfigFreePracticeLapCount; set => _raceConfig.ConfigFreePracticeLapCount = value; }
+    public int ConfigFreePracticeTimeMinutes { get => _raceConfig.ConfigFreePracticeTimeMinutes; set => _raceConfig.ConfigFreePracticeTimeMinutes = value; }
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConfigFreePracticeDisplay))]
-    private RaceStageMode _configFreePracticeMode;
+    public bool ConfigQualifyingEnabled { get => _raceConfig.ConfigQualifyingEnabled; set => _raceConfig.ConfigQualifyingEnabled = value; }
+    public RaceStageMode ConfigQualifyingMode { get => _raceConfig.ConfigQualifyingMode; set => _raceConfig.ConfigQualifyingMode = value; }
+    public int ConfigQualifyingLapCount { get => _raceConfig.ConfigQualifyingLapCount; set => _raceConfig.ConfigQualifyingLapCount = value; }
+    public int ConfigQualifyingTimeMinutes { get => _raceConfig.ConfigQualifyingTimeMinutes; set => _raceConfig.ConfigQualifyingTimeMinutes = value; }
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConfigFreePracticeDisplay))]
-    private int _configFreePracticeLapCount;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConfigFreePracticeDisplay))]
-    private int _configFreePracticeTimeMinutes;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConfigQualifyingDisplay))]
-    private bool _configQualifyingEnabled;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConfigQualifyingDisplay))]
-    private RaceStageMode _configQualifyingMode;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConfigQualifyingDisplay))]
-    private int _configQualifyingLapCount;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConfigQualifyingDisplay))]
-    private int _configQualifyingTimeMinutes;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConfigRaceDisplay))]
-    private bool _configRaceEnabled;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConfigRaceDisplay))]
-    private RaceStageMode _configRaceMode;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConfigRaceDisplay))]
-    private int _configRaceLapCount;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ConfigRaceDisplay))]
-    private int _configRaceTimeMinutes;
+    public bool ConfigRaceEnabled { get => _raceConfig.ConfigRaceEnabled; set => _raceConfig.ConfigRaceEnabled = value; }
+    public RaceStageMode ConfigRaceMode { get => _raceConfig.ConfigRaceMode; set => _raceConfig.ConfigRaceMode = value; }
+    public int ConfigRaceLapCount { get => _raceConfig.ConfigRaceLapCount; set => _raceConfig.ConfigRaceLapCount = value; }
+    public int ConfigRaceTimeMinutes { get => _raceConfig.ConfigRaceTimeMinutes; set => _raceConfig.ConfigRaceTimeMinutes = value; }
 
     /// <summary>
     /// Default power level (0-63) for entries without a car/driver configured.
     /// </summary>
-    [ObservableProperty]
-    private int _configDefaultPower = 40;
+    public int ConfigDefaultPower { get => _raceConfig.ConfigDefaultPower; set => _raceConfig.ConfigDefaultPower = value; }
 
     /// <summary>
     /// Whether test mode is active (power on for testing controllers).
     /// </summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(TestButtonText))]
-    private bool _isTestModeActive;
+    public bool IsTestModeActive { get => _raceConfig.IsTestModeActive; set => _raceConfig.IsTestModeActive = value; }
 
     /// <summary>
     /// Gets the text for the test mode toggle button.
     /// </summary>
-    public string TestButtonText => IsTestModeActive ? "Stop Test" : "Test";
+    public string TestButtonText => _raceConfig.TestButtonText;
 
     /// <summary>
     /// Gets the display string for Free Practice configuration.
     /// </summary>
-    public string ConfigFreePracticeDisplay => GetStageDisplay(ConfigFreePracticeMode, ConfigFreePracticeLapCount, ConfigFreePracticeTimeMinutes);
+    public string ConfigFreePracticeDisplay => _raceConfig.ConfigFreePracticeDisplay;
 
     /// <summary>
     /// Gets the display string for Qualifying configuration.
     /// </summary>
-    public string ConfigQualifyingDisplay => GetStageDisplay(ConfigQualifyingMode, ConfigQualifyingLapCount, ConfigQualifyingTimeMinutes);
+    public string ConfigQualifyingDisplay => _raceConfig.ConfigQualifyingDisplay;
 
     /// <summary>
     /// Gets the display string for Race configuration.
     /// </summary>
-    public string ConfigRaceDisplay => GetStageDisplay(ConfigRaceMode, ConfigRaceLapCount, ConfigRaceTimeMinutes);
-
-    private static string GetStageDisplay(RaceStageMode mode, int laps, int minutes)
-    {
-        return mode == RaceStageMode.Laps
-            ? $"{laps} lap{(laps == 1 ? "" : "s")}"
-            : $"{minutes} min";
-    }
+    public string ConfigRaceDisplay => _raceConfig.ConfigRaceDisplay;
 
     /// <summary>
     /// The current navigation mode/page (within Setup mode).
@@ -422,12 +396,15 @@ public partial class MainViewModel : ObservableObject
     /// <param name="carManagement">The car management view model.</param>
     /// <param name="driverManagement">The driver management view model.</param>
     /// <param name="raceManagement">The race management view model.</param>
+    /// <param name="powerControl">The power control view model.</param>
+    /// <param name="raceConfig">The race configuration view model.</param>
     /// <param name="bleService">The BLE service for device communication.</param>
     /// <param name="powerHeartbeatService">The power heartbeat service for maintaining track power.</param>
     /// <param name="carStorage">The car storage service.</param>
     public MainViewModel(AppSettings settings, IWindowService windowService,
         CarManagementViewModel carManagement, DriverManagementViewModel driverManagement,
-        RaceManagementViewModel raceManagement,
+        RaceManagementViewModel raceManagement, PowerControlViewModel powerControl,
+        RaceConfigurationViewModel raceConfig,
         Services.IBleService? bleService = null, IPowerHeartbeatService? powerHeartbeatService = null,
         ICarStorage? carStorage = null)
     {
@@ -436,41 +413,16 @@ public partial class MainViewModel : ObservableObject
         _carManagement = carManagement;
         _driverManagement = driverManagement;
         _raceManagement = raceManagement;
+        _powerControl = powerControl;
+        _raceConfig = raceConfig;
         _bleService = bleService;
         _powerHeartbeatService = powerHeartbeatService;
         _carStorage = carStorage ?? new CarStorage();
         _syncContext = SynchronizationContext.Current;
 
-        // Load startup global settings (ultra-safe values)
-        PowerLevel = _settings.Startup.PowerLevel;
-        SelectedThrottleProfile = Enum.TryParse<ThrottleProfileType>(_settings.Startup.ThrottleProfile, out var profile)
-            ? profile
-            : ThrottleProfileType.Linear;
-
-        // Load per-slot power mode setting
-        IsPerSlotPowerMode = _settings.Startup.IsPerSlotPowerMode;
-
         // Load startup power state - will be applied when connected
+        // (Power settings are loaded by PowerControlViewModel)
         IsPowerEnabled = _settings.StartWithPowerEnabled;
-
-        // Initialize controllers for all 6 slots
-        for (int i = 1; i <= 6; i++)
-        {
-            var controller = new ControllerViewModel(i);
-
-            // Load startup per-slot settings
-            var slotStartup = _settings.Startup.SlotSettings[i - 1];
-            controller.PowerLevel = slotStartup.PowerLevel;
-            controller.ThrottleProfile = Enum.TryParse<ThrottleProfileType>(slotStartup.ThrottleProfile, out var slotProfile)
-                ? slotProfile
-                : ThrottleProfileType.Linear;
-
-            // Subscribe to changes for auto-save
-            controller.PowerLevelChanged += OnControllerPowerLevelChanged;
-            controller.ThrottleProfileChanged += OnControllerThrottleProfileChanged;
-
-            Controllers.Add(controller);
-        }
 
         // Set up race management callback for start requests
         // (Cars/Drivers/Races are loaded by their respective ViewModels)
@@ -610,23 +562,8 @@ public partial class MainViewModel : ObservableObject
 
         ActiveRace = race;
 
-        // Copy race settings to config properties
-        ConfigFreePracticeEnabled = race.FreePracticeEnabled;
-        ConfigFreePracticeMode = race.FreePracticeMode;
-        ConfigFreePracticeLapCount = race.FreePracticeLapCount;
-        ConfigFreePracticeTimeMinutes = race.FreePracticeTimeMinutes;
-
-        ConfigQualifyingEnabled = race.QualifyingEnabled;
-        ConfigQualifyingMode = race.QualifyingMode;
-        ConfigQualifyingLapCount = race.QualifyingLapCount;
-        ConfigQualifyingTimeMinutes = race.QualifyingTimeMinutes;
-
-        ConfigRaceEnabled = race.RaceStageEnabled;
-        ConfigRaceMode = race.RaceStageMode;
-        ConfigRaceLapCount = race.RaceStageLapCount;
-        ConfigRaceTimeMinutes = race.RaceStageTimeMinutes;
-
-        ConfigDefaultPower = race.DefaultPower;
+        // Load race settings via RaceConfigurationViewModel
+        _raceConfig.LoadFromRace(race);
 
         // Initialize all 6 race entries (reset to default state)
         InitializeRaceEntries();
@@ -641,26 +578,8 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private void InitializeRaceEntries()
     {
-        if (RaceEntries.Count == 0)
-        {
-            // Create all 6 entries
-            for (int i = 1; i <= 6; i++)
-            {
-                var entry = new RaceEntryViewModel(i, Cars, Drivers);
-                entry.PropertyChanged += OnRaceEntryPropertyChanged;
-                entry.RaceDefaultPower = ConfigDefaultPower;
-                RaceEntries.Add(entry);
-            }
-        }
-        else
-        {
-            // Reset existing entries first
-            foreach (var entry in RaceEntries)
-            {
-                entry.Reset();
-                entry.RaceDefaultPower = ConfigDefaultPower;
-            }
-        }
+        // Initialize or reset entries via RaceConfigurationViewModel
+        _raceConfig.InitializeRaceEntries(Cars, Drivers);
 
         // Load saved entries from the active race
         if (ActiveRace != null)
@@ -684,7 +603,7 @@ public partial class MainViewModel : ObservableObject
             }
         }
 
-        UpdateCanStartRace();
+        _raceConfig.UpdateCanStartRace();
     }
 
     /// <summary>
@@ -694,36 +613,8 @@ public partial class MainViewModel : ObservableObject
     {
         if (ActiveRace == null) return;
 
-        var race = ActiveRace.GetModel();
-        race.Entries.Clear();
-
-        foreach (var entry in RaceEntries)
-        {
-            race.Entries.Add(new Models.RaceEntry
-            {
-                SlotNumber = entry.SlotNumber,
-                IsEnabled = entry.IsEnabled,
-                CarId = entry.SelectedCar?.Id,
-                DriverId = entry.SelectedDriver?.Id
-            });
-        }
-
-        // Trigger save
+        _raceConfig.SaveRaceEntries(ActiveRace);
         _raceManagement.SaveRaces();
-        Log.Information("Saved race entries for {RaceName}", ActiveRace.Name);
-    }
-
-    private void OnRaceEntryPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(RaceEntryViewModel.IsConfigured))
-        {
-            UpdateCanStartRace();
-        }
-    }
-
-    private void UpdateCanStartRace()
-    {
-        CanStartRace = RaceEntries.Any(e => e.IsConfigured);
     }
 
     private void ClearRaceEntries()
@@ -733,7 +624,7 @@ public partial class MainViewModel : ObservableObject
         {
             entry.Reset();
         }
-        CanStartRace = false;
+        _raceConfig.UpdateCanStartRace();
     }
 
     /// <summary>
@@ -899,47 +790,8 @@ public partial class MainViewModel : ObservableObject
 
     #region Partial Methods (Property Change Handlers)
 
-    /// <summary>
-    /// Called when PowerLevel changes. Saves settings and sends command if power is on.
-    /// </summary>
-    partial void OnPowerLevelChanged(int value)
-    {
-        SaveSettings();
-        if (IsPowerEnabled && !IsPerSlotPowerMode)
-        {
-            SendPowerCommand();
-        }
-    }
-
-    /// <summary>
-    /// Called when SelectedThrottleProfile changes. Saves settings.
-    /// </summary>
-    partial void OnSelectedThrottleProfileChanged(ThrottleProfileType value)
-    {
-        SaveSettings();
-    }
-
-    /// <summary>
-    /// Called when IsPerSlotPowerMode changes. Sends power command if power is on.
-    /// </summary>
-    partial void OnIsPerSlotPowerModeChanged(bool value)
-    {
-        if (IsPowerEnabled)
-        {
-            SendPowerCommand();
-        }
-    }
-
-    /// <summary>
-    /// Called when ConfigDefaultPower changes. Updates all race entries with the new default power.
-    /// </summary>
-    partial void OnConfigDefaultPowerChanged(int value)
-    {
-        foreach (var entry in RaceEntries)
-        {
-            entry.RaceDefaultPower = value;
-        }
-    }
+    // Power control partial methods removed - handled by PowerControlViewModel
+    // ConfigDefaultPower partial method removed - handled by RaceConfigurationViewModel
 
     #endregion
 
@@ -987,25 +839,7 @@ public partial class MainViewModel : ObservableObject
         // TODO: Implement notification handling
     }
 
-    /// <summary>
-    /// Handles power level changes from individual controllers.
-    /// </summary>
-    private void OnControllerPowerLevelChanged(object? sender, int value)
-    {
-        SaveSettings();
-        if (IsPowerEnabled && IsPerSlotPowerMode)
-        {
-            SendPowerCommand();
-        }
-    }
-
-    /// <summary>
-    /// Handles throttle profile changes from individual controllers.
-    /// </summary>
-    private void OnControllerThrottleProfileChanged(object? sender, ThrottleProfileType value)
-    {
-        SaveSettings();
-    }
+    // Controller event handlers removed - handled by PowerControlViewModel
 
     #endregion
 
@@ -1108,26 +942,7 @@ public partial class MainViewModel : ObservableObject
     /// <returns>The 20-byte power command to send to the powerbase.</returns>
     private byte[] BuildPowerCommand()
     {
-        var builder = new ScalextricProtocol.CommandBuilder
-        {
-            Type = ScalextricProtocol.CommandType.PowerOnRacing
-        };
-
-        if (IsPerSlotPowerMode)
-        {
-            // Set individual power levels per slot
-            for (int i = 0; i < Controllers.Count; i++)
-            {
-                builder.SetSlotPower(i + 1, (byte)Controllers[i].PowerLevel);
-            }
-        }
-        else
-        {
-            // Set global power level for all slots
-            builder.SetAllPower((byte)PowerLevel);
-        }
-
-        return builder.Build();
+        return _powerControl.BuildPowerCommand(ScalextricProtocol.CommandType.PowerOnRacing, RaceEntries);
     }
 
     /// <summary>

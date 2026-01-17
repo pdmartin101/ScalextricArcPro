@@ -102,6 +102,8 @@ public partial class App : Application
         services.AddSingleton<CarManagementViewModel>();
         services.AddSingleton<DriverManagementViewModel>();
         services.AddSingleton<RaceManagementViewModel>();
+        services.AddSingleton<PowerControlViewModel>();
+        services.AddSingleton<RaceConfigurationViewModel>();
         services.AddSingleton<MainViewModel>();
 
         return services.BuildServiceProvider();
