@@ -7,7 +7,7 @@ namespace ScalextricBleMonitor.Services;
 /// <summary>
 /// Application settings that persist between sessions.
 /// </summary>
-public class AppSettings
+public class AppSettings : IAppSettings
 {
     /// <summary>
     /// Global power level for track power (0-63). Legacy, kept for backwards compatibility.

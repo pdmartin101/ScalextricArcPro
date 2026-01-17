@@ -21,10 +21,10 @@ This document tracks identified issues and their fix status across the codebase.
 
 | # | Issue | Status | Location | Description |
 |---|-------|--------|----------|-------------|
-| 1 | SelectedSkillLevel Not Observable | ❌ | `ScalextricRace/ViewModels/DriverViewModel.cs:114-126` | Manual property with `OnPropertyChanged()` instead of `[ObservableProperty]`. Two-way binding may not work correctly. |
-| 2 | No IAppSettings Interface | ❌ | Both `Services/AppSettings.cs` | Cannot mock for unit tests. Direct JSON serialization mixed with settings logic. |
+| 1 | SelectedSkillLevel Not Observable | ✅ | `ScalextricRace/ViewModels/DriverViewModel.cs:112-127` | Cleaned up computed property backed by PowerLimit. Notification handled via `[NotifyPropertyChangedFor]`. |
+| 2 | No IAppSettings Interface | ✅ | Both `Services/IAppSettings.cs` | Added `IAppSettings` interface to both apps. Enables unit test mocking. |
 | 3 | Race Condition in BLE Service | ✅ | `Libs/ScalextricBle/BleService.cs` | Fixed by unified BLE service implementation with proper synchronization. |
-| 4 | Async Window Closing Not Awaited | ❌ | `ScalextricRace/Views/CarTuningWindow.axaml.cs:33-39` | Window may close before `OnClosing()` completes. Power may not turn off properly. |
+| 4 | Async Window Closing Not Awaited | ✅ | `ScalextricRace/Views/CarTuningWindow.axaml.cs` | Fixed by cancelling close, awaiting cleanup, then re-closing. Power now turns off properly. |
 
 ---
 
@@ -66,11 +66,11 @@ This document tracks identified issues and their fix status across the codebase.
 | Phase | Total | ✅ Fixed | ❌ Not Started | 🔄 In Progress |
 |-------|-------|----------|----------------|----------------|
 | Phase 1: Critical | 2 | 2 | 0 | 0 |
-| Phase 2: High | 4 | 1 | 3 | 0 |
+| Phase 2: High | 4 | 4 | 0 | 0 |
 | Phase 3: Medium | 5 | 1 | 4 | 0 |
 | Phase 4: Low | 4 | 1 | 3 | 0 |
 | Phase 5: Future | 3 | 0 | 3 | 0 |
-| **Total** | **18** | **5** | **13** | **0** |
+| **Total** | **18** | **8** | **10** | **0** |
 
 ---
 

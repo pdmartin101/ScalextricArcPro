@@ -72,7 +72,7 @@ public class StartupSettings
 /// Application settings that persist between sessions.
 /// Stored in %LocalAppData%/ScalextricPdm/ScalextricRace/settings.json
 /// </summary>
-public class AppSettings
+public class AppSettings : IAppSettings
 {
     /// <summary>
     /// Whether track power should be enabled automatically on startup after connection.

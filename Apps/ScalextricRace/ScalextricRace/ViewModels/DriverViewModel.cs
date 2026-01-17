@@ -111,16 +111,17 @@ public partial class DriverViewModel : ObservableObject
 
     /// <summary>
     /// Gets or sets the selected skill level for the dropdown.
+    /// Two-way binding computed property backed by PowerLimit.
     /// </summary>
     public SkillLevel? SelectedSkillLevel
     {
         get => GetCurrentSkillLevel();
         set
         {
-            if (value != null)
+            if (value != null && value != GetCurrentSkillLevel())
             {
                 SetSkillLevel(value);
-                OnPropertyChanged();
+                // Note: PowerLimit change already notifies SelectedSkillLevel via [NotifyPropertyChangedFor]
             }
         }
     }
