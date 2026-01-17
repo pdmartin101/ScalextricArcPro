@@ -1,4 +1,4 @@
-namespace ScalextricRace.Services;
+namespace ScalextricBle;
 
 /// <summary>
 /// Delegate for building power commands based on current controller states.

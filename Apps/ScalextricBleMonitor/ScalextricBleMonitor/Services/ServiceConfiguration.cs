@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using ScalextricBle;
 using ScalextricBleMonitor.ViewModels;
 
 namespace ScalextricBleMonitor.Services;
