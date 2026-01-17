@@ -11,8 +11,9 @@
 
     <Grid RowDefinitions="Auto,*,Auto" Margin="20">
 
-        <!-- Header: Hamburger Menu, Title, and Settings -->
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,20">
+        <!-- Header: Hamburger Menu, Title, and Settings (hidden in Racing mode) -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,20"
+              IsVisible="{Binding IsSetupMode}">
 
             <!-- Hamburger Menu Button -->
             <Button Grid.Column="0"
@@ -36,6 +37,10 @@
                            FontSize="28"
                            Foreground="Gray"
                            IsVisible="{Binding !IsRaceMode}" />
+                <TextBlock Text="Race Config"
+                           FontSize="28"
+                           Foreground="Gray"
+                           IsVisible="{Binding IsRaceConfigMode}" />
                 <TextBlock Text="Cars"
                            FontSize="28"
                            Foreground="Gray"
@@ -220,6 +225,16 @@
                             Padding="20,15"
                             FontSize="16" />
 
+                    <Button Content="Race Config"
+                            Command="{Binding NavigateToCommand}"
+                            CommandParameter="{x:Static models:NavigationMode.RaceConfig}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="20,15"
+                            FontSize="16" />
+
                     <Separator Margin="10,5" />
 
                     <Button Content="Settings"
@@ -245,23 +260,82 @@
         <!-- Main Content Area -->
         <Grid Grid.Row="1">
 
-            <!-- Race Mode Content -->
+            <!-- Race Mode Content - List of configured races -->
             <Border Background="#FAFAFA"
                     CornerRadius="8"
                     Padding="20"
                     IsVisible="{Binding IsRaceMode}">
-                <StackPanel VerticalAlignment="Center"
-                            HorizontalAlignment="Center">
-                    <TextBlock Text="Race Status"
-                               FontSize="20"
+                <Grid RowDefinitions="Auto,*">
+                    <!-- Header -->
+                    <TextBlock Grid.Row="0"
+                               Text="Select a Race"
+                               FontSize="18"
                                FontWeight="SemiBold"
-                               HorizontalAlignment="Center"
-                               Margin="0,0,0,10" />
-                    <TextBlock Text="Connect to a Scalextric powerbase to begin"
-                               FontSize="14"
-                               Foreground="Gray"
-                               HorizontalAlignment="Center" />
-                </StackPanel>
+                               Margin="0,0,0,15" />
+
+                    <!-- Race List -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Races}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:RaceViewModel">
+                                    <Button Command="{Binding RequestStartCommand}"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Stretch"
+                                            Background="White"
+                                            Padding="0"
+                                            Margin="0,0,0,8"
+                                            Cursor="Hand">
+                                        <Border BorderBrush="#E0E0E0"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Padding="15,12">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <!-- Race Image -->
+                                                <Border Grid.Column="0"
+                                                        Background="#F5F5F5"
+                                                        CornerRadius="4"
+                                                        Width="60"
+                                                        Height="40"
+                                                        ClipToBounds="True"
+                                                        Margin="0,0,15,0">
+                                                    <Panel>
+                                                        <TextBlock Text="&#x1F3C1;"
+                                                                   FontSize="20"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="#CCCCCC"
+                                                                   IsVisible="{Binding !HasImage}" />
+                                                        <Image Source="{Binding ImagePath, Converter={x:Static converters:ImagePathToBitmapConverter.Instance}}"
+                                                               Stretch="UniformToFill"
+                                                               IsVisible="{Binding HasImage}" />
+                                                    </Panel>
+                                                </Border>
+
+                                                <!-- Race Info -->
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Name}"
+                                                               FontSize="14"
+                                                               FontWeight="SemiBold" />
+                                                    <TextBlock Text="{Binding StagesSummary}"
+                                                               FontSize="11"
+                                                               Foreground="Gray" />
+                                                </StackPanel>
+
+                                                <!-- Arrow -->
+                                                <TextBlock Grid.Column="2"
+                                                           Text=">"
+                                                           FontSize="18"
+                                                           Foreground="Gray"
+                                                           VerticalAlignment="Center"
+                                                           Margin="10,0,0,0" />
+                                            </Grid>
+                                        </Border>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
             </Border>
 
             <!-- Cars Mode Content -->
@@ -553,6 +627,126 @@
                 </Grid>
             </Border>
 
+            <!-- Race Config Mode Content -->
+            <Border Background="#FAFAFA"
+                    CornerRadius="8"
+                    Padding="20"
+                    IsVisible="{Binding IsRaceConfigMode}">
+                <Grid RowDefinitions="Auto,*">
+                    <!-- Race Config Header with Add Button -->
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,15">
+                        <TextBlock Text="My Race Configurations"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                        <Button Grid.Column="1"
+                                Content="+ Add Race"
+                                Command="{Binding AddRaceCommand}"
+                                Padding="15,8"
+                                FontSize="13" />
+                    </Grid>
+
+                    <!-- Races Grid -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Races}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:RaceViewModel">
+                                    <Border Background="White"
+                                            BorderBrush="#E0E0E0"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Width="220"
+                                            Margin="0,0,15,15"
+                                            Padding="15">
+                                        <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+                                            <!-- Race Image (clickable to change) -->
+                                            <Button Grid.Row="0"
+                                                    Command="{Binding RequestImageChangeCommand}"
+                                                    Background="Transparent"
+                                                    Padding="0"
+                                                    Margin="0,0,0,10"
+                                                    HorizontalAlignment="Stretch"
+                                                    Cursor="Hand">
+                                                <Border Background="#F5F5F5"
+                                                        CornerRadius="6"
+                                                        Height="100"
+                                                        ClipToBounds="True">
+                                                    <Panel>
+                                                        <!-- Placeholder icon (shown when no image) -->
+                                                        <TextBlock Text="&#x1F3C1;"
+                                                                   FontSize="48"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"
+                                                                   Foreground="#CCCCCC"
+                                                                   IsVisible="{Binding !HasImage}" />
+                                                        <!-- Actual image (shown when image is set) -->
+                                                        <Image Source="{Binding ImagePath, Converter={x:Static converters:ImagePathToBitmapConverter.Instance}}"
+                                                               Stretch="UniformToFill"
+                                                               IsVisible="{Binding HasImage}" />
+                                                    </Panel>
+                                                </Border>
+                                            </Button>
+
+                                            <!-- Race Name -->
+                                            <TextBlock Grid.Row="1"
+                                                       Text="{Binding Name}"
+                                                       FontSize="16"
+                                                       FontWeight="SemiBold"
+                                                       Margin="0,0,0,5" />
+
+                                            <!-- Stages Summary -->
+                                            <TextBlock Grid.Row="2"
+                                                       Text="{Binding StagesSummary}"
+                                                       FontSize="11"
+                                                       Foreground="Gray"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,0,0,10" />
+
+                                            <!-- Edit and Delete Buttons -->
+                                            <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto">
+                                                <!-- Default Race Badge -->
+                                                <Border Grid.Column="0"
+                                                        Background="#E3F2FD"
+                                                        CornerRadius="4"
+                                                        Padding="8,4"
+                                                        HorizontalAlignment="Left"
+                                                        IsVisible="{Binding IsDefault}"
+                                                        VerticalAlignment="Center">
+                                                    <TextBlock Text="Default"
+                                                               FontSize="10"
+                                                               Foreground="#1976D2" />
+                                                </Border>
+
+                                                <!-- Edit Button -->
+                                                <Button Grid.Column="1"
+                                                        Content="Edit"
+                                                        Command="{Binding RequestEditCommand}"
+                                                        Padding="10,5"
+                                                        FontSize="11"
+                                                        Margin="0,0,5,0" />
+
+                                                <!-- Delete Button -->
+                                                <Button Grid.Column="2"
+                                                        Content="Delete"
+                                                        Command="{Binding RequestDeleteCommand}"
+                                                        IsVisible="{Binding CanDelete}"
+                                                        Padding="8,5"
+                                                        FontSize="11" />
+                                            </Grid>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
             <!-- Settings Mode Content (placeholder) -->
             <Border Background="#FAFAFA"
                     CornerRadius="8"
@@ -571,10 +765,60 @@
                                HorizontalAlignment="Center" />
                 </StackPanel>
             </Border>
+
+            <!-- Racing Mode Content -->
+            <Border Background="#1a1a2e"
+                    CornerRadius="8"
+                    Padding="30"
+                    IsVisible="{Binding IsRacingMode}">
+                <Grid RowDefinitions="Auto,*,Auto">
+                    <!-- Racing Header -->
+                    <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,30">
+                        <TextBlock Text="Racing"
+                                   FontSize="36"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock Text="{Binding ActiveRace.Name}"
+                                   FontSize="18"
+                                   Foreground="#888888"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,5,0,0" />
+                    </StackPanel>
+
+                    <!-- Racing Content (placeholder for now) -->
+                    <StackPanel Grid.Row="1"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Center">
+                        <TextBlock Text="Racing functionality coming soon..."
+                                   FontSize="16"
+                                   Foreground="#666666"
+                                   HorizontalAlignment="Center" />
+                        <TextBlock Text="{Binding ActiveRace.StagesSummary}"
+                                   FontSize="14"
+                                   Foreground="#555555"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,10,0,0" />
+                    </StackPanel>
+
+                    <!-- Exit Instructions -->
+                    <StackPanel Grid.Row="2" HorizontalAlignment="Center" Spacing="10">
+                        <TextBlock Text="Press ESC to exit"
+                                   FontSize="12"
+                                   Foreground="#555555"
+                                   HorizontalAlignment="Center" />
+                        <Button Content="Exit Racing"
+                                Command="{Binding ExitRacingCommand}"
+                                Padding="20,10"
+                                FontSize="14" />
+                    </StackPanel>
+                </Grid>
+            </Border>
         </Grid>
 
-        <!-- Footer: Status Bar with Connection Indicator -->
-        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" Margin="0,10,0,0">
+        <!-- Footer: Status Bar with Connection Indicator (hidden in Racing mode) -->
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" Margin="0,10,0,0"
+              IsVisible="{Binding IsSetupMode}">
             <!-- Connection Status Indicator -->
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
                 <Ellipse Width="12" Height="12"

@@ -14,4 +14,9 @@ public static class ImageConstants
     /// Prefix for driver image filenames.
     /// </summary>
     public const string DriverImagePrefix = "driver_";
+
+    /// <summary>
+    /// Prefix for race image filenames.
+    /// </summary>
+    public const string RaceImagePrefix = "race_";
 }

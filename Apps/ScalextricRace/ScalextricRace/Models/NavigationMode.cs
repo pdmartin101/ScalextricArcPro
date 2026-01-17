@@ -12,6 +12,12 @@ public enum NavigationMode
     Race,
 
     /// <summary>
+    /// Race config mode - manage race configurations.
+    /// View, add, edit, and delete race configurations.
+    /// </summary>
+    RaceConfig,
+
+    /// <summary>
     /// Cars mode - manage car configurations.
     /// View, add, edit, and delete cars.
     /// </summary>

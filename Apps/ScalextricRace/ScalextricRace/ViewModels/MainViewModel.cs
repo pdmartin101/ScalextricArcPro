@@ -22,6 +22,7 @@ public partial class MainViewModel : ObservableObject
     private readonly AppSettings _settings;
     private readonly ICarStorage _carStorage;
     private readonly IDriverStorage _driverStorage;
+    private readonly IRaceStorage _raceStorage;
     private readonly SynchronizationContext? _syncContext;
     private bool _isInitializing = true;
 
@@ -145,10 +146,40 @@ public partial class MainViewModel : ObservableObject
     #region Navigation
 
     /// <summary>
-    /// The current navigation mode/page.
+    /// The current top-level application mode (Setup or Racing).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSetupMode))]
+    [NotifyPropertyChangedFor(nameof(IsRacingMode))]
+    [NotifyPropertyChangedFor(nameof(IsRaceMode))]
+    [NotifyPropertyChangedFor(nameof(IsRaceConfigMode))]
+    [NotifyPropertyChangedFor(nameof(IsCarsMode))]
+    [NotifyPropertyChangedFor(nameof(IsDriversMode))]
+    [NotifyPropertyChangedFor(nameof(IsSettingsMode))]
+    private AppMode _currentAppMode = AppMode.Setup;
+
+    /// <summary>
+    /// Gets whether the app is in Setup mode.
+    /// </summary>
+    public bool IsSetupMode => CurrentAppMode == AppMode.Setup;
+
+    /// <summary>
+    /// Gets whether the app is in Racing mode.
+    /// </summary>
+    public bool IsRacingMode => CurrentAppMode == AppMode.Racing;
+
+    /// <summary>
+    /// The race configuration currently being run.
+    /// </summary>
+    [ObservableProperty]
+    private RaceViewModel? _activeRace;
+
+    /// <summary>
+    /// The current navigation mode/page (within Setup mode).
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsRaceMode))]
+    [NotifyPropertyChangedFor(nameof(IsRaceConfigMode))]
     [NotifyPropertyChangedFor(nameof(IsCarsMode))]
     [NotifyPropertyChangedFor(nameof(IsDriversMode))]
     [NotifyPropertyChangedFor(nameof(IsSettingsMode))]
@@ -161,24 +192,29 @@ public partial class MainViewModel : ObservableObject
     private bool _isMenuOpen;
 
     /// <summary>
-    /// Gets whether Race mode is active.
+    /// Gets whether Race mode is active (within Setup mode).
     /// </summary>
-    public bool IsRaceMode => CurrentMode == NavigationMode.Race;
+    public bool IsRaceMode => CurrentAppMode == AppMode.Setup && CurrentMode == NavigationMode.Race;
 
     /// <summary>
-    /// Gets whether Cars mode is active.
+    /// Gets whether Race Config mode is active (within Setup mode).
     /// </summary>
-    public bool IsCarsMode => CurrentMode == NavigationMode.Cars;
+    public bool IsRaceConfigMode => CurrentAppMode == AppMode.Setup && CurrentMode == NavigationMode.RaceConfig;
 
     /// <summary>
-    /// Gets whether Drivers mode is active.
+    /// Gets whether Cars mode is active (within Setup mode).
     /// </summary>
-    public bool IsDriversMode => CurrentMode == NavigationMode.Drivers;
+    public bool IsCarsMode => CurrentAppMode == AppMode.Setup && CurrentMode == NavigationMode.Cars;
 
     /// <summary>
-    /// Gets whether Settings mode is active.
+    /// Gets whether Drivers mode is active (within Setup mode).
     /// </summary>
-    public bool IsSettingsMode => CurrentMode == NavigationMode.Settings;
+    public bool IsDriversMode => CurrentAppMode == AppMode.Setup && CurrentMode == NavigationMode.Drivers;
+
+    /// <summary>
+    /// Gets whether Settings mode is active (within Setup mode).
+    /// </summary>
+    public bool IsSettingsMode => CurrentAppMode == AppMode.Setup && CurrentMode == NavigationMode.Settings;
 
     #endregion
 
@@ -212,6 +248,21 @@ public partial class MainViewModel : ObservableObject
 
     #endregion
 
+    #region Race Management
+
+    /// <summary>
+    /// Collection of all race configurations.
+    /// </summary>
+    public ObservableCollection<RaceViewModel> Races { get; } = [];
+
+    /// <summary>
+    /// The currently selected race for editing.
+    /// </summary>
+    [ObservableProperty]
+    private RaceViewModel? _selectedRace;
+
+    #endregion
+
     #region Application Info
 
     /// <summary>
@@ -237,9 +288,10 @@ public partial class MainViewModel : ObservableObject
     /// <param name="powerHeartbeatService">The power heartbeat service for maintaining track power.</param>
     /// <param name="carStorage">The car storage service.</param>
     /// <param name="driverStorage">The driver storage service.</param>
+    /// <param name="raceStorage">The race storage service.</param>
     public MainViewModel(AppSettings settings, IWindowService windowService,
         Services.IBleService? bleService = null, IPowerHeartbeatService? powerHeartbeatService = null,
-        ICarStorage? carStorage = null, IDriverStorage? driverStorage = null)
+        ICarStorage? carStorage = null, IDriverStorage? driverStorage = null, IRaceStorage? raceStorage = null)
     {
         _settings = settings;
         _windowService = windowService;
@@ -247,6 +299,7 @@ public partial class MainViewModel : ObservableObject
         _powerHeartbeatService = powerHeartbeatService;
         _carStorage = carStorage ?? new CarStorage();
         _driverStorage = driverStorage ?? new DriverStorage();
+        _raceStorage = raceStorage ?? new RaceStorage();
         _syncContext = SynchronizationContext.Current;
 
         // Load startup global settings (ultra-safe values)
@@ -280,9 +333,10 @@ public partial class MainViewModel : ObservableObject
             Controllers.Add(controller);
         }
 
-        // Load cars and drivers from storage
+        // Load cars, drivers, and races from storage
         LoadCars();
         LoadDrivers();
+        LoadRaces();
 
         // Initialization complete - enable auto-save
         _isInitializing = false;
@@ -405,6 +459,31 @@ public partial class MainViewModel : ObservableObject
         CurrentMode = mode;
         IsMenuOpen = false;
         Log.Information("Navigated to {Mode} mode", mode);
+    }
+
+    /// <summary>
+    /// Starts racing with the specified race configuration.
+    /// </summary>
+    /// <param name="race">The race to start.</param>
+    [RelayCommand]
+    private void StartRacing(RaceViewModel? race)
+    {
+        if (race == null) return;
+
+        ActiveRace = race;
+        CurrentAppMode = AppMode.Racing;
+        Log.Information("Started racing: {RaceName}", race.Name);
+    }
+
+    /// <summary>
+    /// Exits racing mode and returns to setup.
+    /// </summary>
+    [RelayCommand]
+    private void ExitRacing()
+    {
+        Log.Information("Exiting racing mode");
+        CurrentAppMode = AppMode.Setup;
+        ActiveRace = null;
     }
 
     /// <summary>
@@ -676,6 +755,159 @@ public partial class MainViewModel : ObservableObject
 
         var drivers = Drivers.Select(vm => vm.GetModel());
         _driverStorage.Save(drivers);
+    }
+
+    /// <summary>
+    /// Adds a new race configuration.
+    /// </summary>
+    [RelayCommand]
+    private void AddRace()
+    {
+        var newRace = new Race { Name = $"Race {Races.Count + 1}" };
+        var viewModel = new RaceViewModel(newRace, isDefault: false);
+        viewModel.DeleteRequested += OnRaceDeleteRequested;
+        viewModel.Changed += OnRaceChanged;
+        viewModel.ImageChangeRequested += OnRaceImageChangeRequested;
+        viewModel.EditRequested += OnRaceEditRequested;
+        viewModel.StartRequested += OnRaceStartRequested;
+        Races.Add(viewModel);
+        SelectedRace = viewModel;
+        Log.Information("Added new race: {RaceName}", newRace.Name);
+        SaveRaces();
+    }
+
+    /// <summary>
+    /// Handles delete request from a race view model.
+    /// </summary>
+    private void OnRaceDeleteRequested(object? sender, EventArgs e)
+    {
+        if (sender is RaceViewModel race)
+        {
+            DeleteRace(race);
+        }
+    }
+
+    /// <summary>
+    /// Handles property change on a race view model.
+    /// </summary>
+    private void OnRaceChanged(object? sender, EventArgs e)
+    {
+        SaveRaces();
+    }
+
+    /// <summary>
+    /// Handles image change request from a race view model.
+    /// Opens a file picker and copies the image via the window service.
+    /// </summary>
+    private async void OnRaceImageChangeRequested(object? sender, EventArgs e)
+    {
+        if (sender is RaceViewModel race)
+        {
+            Log.Information("Image change requested for race: {RaceName}", race.Name);
+            var imagePath = await _windowService.PickAndCopyImageAsync("Select Race Image", race.Id, ImageConstants.RaceImagePrefix);
+            if (imagePath != null)
+            {
+                race.ImagePath = imagePath;
+                SaveRaces();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Handles edit request from a race view model.
+    /// Opens the race config editing window.
+    /// </summary>
+    private async void OnRaceEditRequested(object? sender, EventArgs e)
+    {
+        if (sender is RaceViewModel race)
+        {
+            Log.Information("Edit requested for race: {RaceName}", race.Name);
+            await _windowService.ShowRaceConfigDialogAsync(race);
+            SaveRaces();
+        }
+    }
+
+    /// <summary>
+    /// Handles start request from a race view model.
+    /// Switches to racing mode.
+    /// </summary>
+    private void OnRaceStartRequested(object? sender, EventArgs e)
+    {
+        if (sender is RaceViewModel race)
+        {
+            StartRacing(race);
+        }
+    }
+
+    /// <summary>
+    /// Deletes the specified race (cannot delete the default race).
+    /// </summary>
+    /// <param name="race">The race view model to delete.</param>
+    private void DeleteRace(RaceViewModel? race)
+    {
+        if (race == null || race.IsDefault)
+        {
+            Log.Warning("Cannot delete null or default race");
+            return;
+        }
+
+        race.DeleteRequested -= OnRaceDeleteRequested;
+        race.Changed -= OnRaceChanged;
+        race.ImageChangeRequested -= OnRaceImageChangeRequested;
+        race.EditRequested -= OnRaceEditRequested;
+        race.StartRequested -= OnRaceStartRequested;
+        Races.Remove(race);
+        if (SelectedRace == race)
+        {
+            SelectedRace = null;
+        }
+        Log.Information("Deleted race: {RaceName}", race.Name);
+        SaveRaces();
+    }
+
+    /// <summary>
+    /// Loads races from storage.
+    /// Ensures the default race is always present.
+    /// </summary>
+    private void LoadRaces()
+    {
+        var storedRaces = _raceStorage.Load();
+
+        // Check if default race exists in storage
+        var hasDefaultRace = storedRaces.Any(r => r.Id == Race.DefaultRaceId);
+
+        if (!hasDefaultRace)
+        {
+            // Create default race if not in storage
+            var defaultRace = Race.CreateDefault();
+            storedRaces.Insert(0, defaultRace);
+        }
+
+        // Create view models for all races
+        foreach (var race in storedRaces)
+        {
+            var isDefault = race.Id == Race.DefaultRaceId;
+            var viewModel = new RaceViewModel(race, isDefault);
+            viewModel.DeleteRequested += OnRaceDeleteRequested;
+            viewModel.Changed += OnRaceChanged;
+            viewModel.ImageChangeRequested += OnRaceImageChangeRequested;
+            viewModel.EditRequested += OnRaceEditRequested;
+            viewModel.StartRequested += OnRaceStartRequested;
+            Races.Add(viewModel);
+        }
+
+        Log.Information("Loaded {Count} races", Races.Count);
+    }
+
+    /// <summary>
+    /// Saves all races to storage.
+    /// </summary>
+    private void SaveRaces()
+    {
+        if (_isInitializing) return;
+
+        var races = Races.Select(vm => vm.GetModel());
+        _raceStorage.Save(races);
     }
 
     #endregion

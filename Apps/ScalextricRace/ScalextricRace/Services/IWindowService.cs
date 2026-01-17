@@ -32,4 +32,10 @@ public interface IWindowService
     /// <param name="prefix">Optional prefix for the filename (e.g., "driver_").</param>
     /// <returns>The destination image path, or null if cancelled or failed.</returns>
     Task<string?> PickAndCopyImageAsync(string title, Guid entityId, string prefix = "");
+
+    /// <summary>
+    /// Shows the race configuration editing window as a dialog.
+    /// </summary>
+    /// <param name="raceViewModel">The race to edit.</param>
+    Task ShowRaceConfigDialogAsync(RaceViewModel raceViewModel);
 }

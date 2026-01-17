@@ -37,6 +37,23 @@ public class WindowService : IWindowService
     }
 
     /// <inheritdoc />
+    public async Task ShowRaceConfigDialogAsync(RaceViewModel raceViewModel)
+    {
+        if (_owner == null)
+        {
+            Log.Warning("WindowService.ShowRaceConfigDialogAsync called before owner was set");
+            return;
+        }
+
+        var window = new RaceConfigWindow
+        {
+            DataContext = raceViewModel
+        };
+
+        await window.ShowDialog(_owner);
+    }
+
+    /// <inheritdoc />
     public async Task<string?> PickAndCopyImageAsync(string title, Guid entityId, string prefix = "")
     {
         if (_owner == null)

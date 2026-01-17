@@ -96,6 +96,7 @@ public partial class App : Application
         services.AddSingleton<IWindowService, WindowService>();
         services.AddSingleton<ICarStorage, CarStorage>();
         services.AddSingleton<IDriverStorage, DriverStorage>();
+        services.AddSingleton<IRaceStorage, RaceStorage>();
 
         // Register ViewModels
         services.AddSingleton<MainViewModel>();

@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using ScalextricRace.Models;
 using ScalextricRace.ViewModels;
 
 namespace ScalextricRace.Views;
@@ -17,6 +18,28 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        KeyDown += OnKeyDown;
+    }
+
+    /// <summary>
+    /// Handles key down events.
+    /// Escape key exits racing mode.
+    /// </summary>
+    private void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape && DataContext is MainViewModel viewModel)
+        {
+            if (viewModel.CurrentAppMode == AppMode.Racing)
+            {
+                viewModel.ExitRacingCommand.Execute(null);
+                e.Handled = true;
+            }
+            else if (viewModel.IsMenuOpen)
+            {
+                viewModel.IsMenuOpen = false;
+                e.Handled = true;
+            }
+        }
     }
 
     /// <summary>

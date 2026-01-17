@@ -1,0 +1,264 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ScalextricRace.ViewModels"
+        x:Class="ScalextricRace.Views.RaceConfigWindow"
+        x:DataType="vm:RaceViewModel"
+        Title="Edit Race Configuration"
+        Width="400" Height="520"
+        MinWidth="350" MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="20">
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,15">
+            <TextBlock Text="Edit Race Configuration"
+                       FontSize="20"
+                       FontWeight="Bold" />
+            <TextBlock Text="Configure the stages for this race"
+                       FontSize="12"
+                       Foreground="Gray"
+                       Margin="0,5,0,0" />
+        </StackPanel>
+
+        <!-- Main Content -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="15">
+
+                <!-- Race Name -->
+                <StackPanel Spacing="5">
+                    <TextBlock Text="Race Name"
+                               FontSize="12"
+                               Foreground="Gray" />
+                    <TextBox Text="{Binding Name}"
+                             FontSize="14" />
+                </StackPanel>
+
+                <!-- Free Practice Stage -->
+                <Border Background="#F5F5F5"
+                        CornerRadius="6"
+                        Padding="15">
+                    <StackPanel Spacing="10">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <CheckBox Grid.Column="0"
+                                      IsChecked="{Binding FreePracticeEnabled}"
+                                      VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1"
+                                       Text="Free Practice"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       Margin="8,0,0,0" />
+                        </Grid>
+
+                        <StackPanel IsVisible="{Binding FreePracticeEnabled}" Spacing="8">
+                            <!-- Mode Selection -->
+                            <Grid ColumnDefinitions="*,*">
+                                <RadioButton Grid.Column="0"
+                                             Content="Laps"
+                                             GroupName="FreePracticeMode"
+                                             IsChecked="{Binding FreePracticeMode, Converter={x:Static vm:RaceStageModeConverter.ToLaps}}" />
+                                <RadioButton Grid.Column="1"
+                                             Content="Time"
+                                             GroupName="FreePracticeMode"
+                                             IsChecked="{Binding FreePracticeMode, Converter={x:Static vm:RaceStageModeConverter.ToTime}}" />
+                            </Grid>
+
+                            <!-- Value Control -->
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                <Button Grid.Column="0"
+                                        Content="-"
+                                        Command="{Binding DecrementFreePracticeCommand}"
+                                        Width="32" Height="32"
+                                        Padding="0" FontSize="14" FontWeight="Bold"
+                                        HorizontalContentAlignment="Center"
+                                        VerticalContentAlignment="Center" />
+                                <Slider Grid.Column="1"
+                                        Minimum="1" Maximum="50"
+                                        Value="{Binding FreePracticeLapCount}"
+                                        IsVisible="{Binding FreePracticeMode, Converter={x:Static vm:RaceStageModeConverter.IsLaps}}"
+                                        Margin="10,0"
+                                        VerticalAlignment="Center" />
+                                <Slider Grid.Column="1"
+                                        Minimum="1" Maximum="60"
+                                        Value="{Binding FreePracticeTimeMinutes}"
+                                        IsVisible="{Binding FreePracticeMode, Converter={x:Static vm:RaceStageModeConverter.IsTime}}"
+                                        Margin="10,0"
+                                        VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding FreePracticeDisplay}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"
+                                           Width="55"
+                                           TextAlignment="Center" />
+                                <Button Grid.Column="3"
+                                        Content="+"
+                                        Command="{Binding IncrementFreePracticeCommand}"
+                                        Width="32" Height="32"
+                                        Padding="0" FontSize="14" FontWeight="Bold"
+                                        HorizontalContentAlignment="Center"
+                                        VerticalContentAlignment="Center" />
+                            </Grid>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Qualifying Stage -->
+                <Border Background="#F5F5F5"
+                        CornerRadius="6"
+                        Padding="15">
+                    <StackPanel Spacing="10">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <CheckBox Grid.Column="0"
+                                      IsChecked="{Binding QualifyingEnabled}"
+                                      VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1"
+                                       Text="Qualifying"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       Margin="8,0,0,0" />
+                        </Grid>
+
+                        <StackPanel IsVisible="{Binding QualifyingEnabled}" Spacing="8">
+                            <!-- Mode Selection -->
+                            <Grid ColumnDefinitions="*,*">
+                                <RadioButton Grid.Column="0"
+                                             Content="Laps"
+                                             GroupName="QualifyingMode"
+                                             IsChecked="{Binding QualifyingMode, Converter={x:Static vm:RaceStageModeConverter.ToLaps}}" />
+                                <RadioButton Grid.Column="1"
+                                             Content="Time"
+                                             GroupName="QualifyingMode"
+                                             IsChecked="{Binding QualifyingMode, Converter={x:Static vm:RaceStageModeConverter.ToTime}}" />
+                            </Grid>
+
+                            <!-- Value Control -->
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                <Button Grid.Column="0"
+                                        Content="-"
+                                        Command="{Binding DecrementQualifyingCommand}"
+                                        Width="32" Height="32"
+                                        Padding="0" FontSize="14" FontWeight="Bold"
+                                        HorizontalContentAlignment="Center"
+                                        VerticalContentAlignment="Center" />
+                                <Slider Grid.Column="1"
+                                        Minimum="1" Maximum="50"
+                                        Value="{Binding QualifyingLapCount}"
+                                        IsVisible="{Binding QualifyingMode, Converter={x:Static vm:RaceStageModeConverter.IsLaps}}"
+                                        Margin="10,0"
+                                        VerticalAlignment="Center" />
+                                <Slider Grid.Column="1"
+                                        Minimum="1" Maximum="60"
+                                        Value="{Binding QualifyingTimeMinutes}"
+                                        IsVisible="{Binding QualifyingMode, Converter={x:Static vm:RaceStageModeConverter.IsTime}}"
+                                        Margin="10,0"
+                                        VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding QualifyingDisplay}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"
+                                           Width="55"
+                                           TextAlignment="Center" />
+                                <Button Grid.Column="3"
+                                        Content="+"
+                                        Command="{Binding IncrementQualifyingCommand}"
+                                        Width="32" Height="32"
+                                        Padding="0" FontSize="14" FontWeight="Bold"
+                                        HorizontalContentAlignment="Center"
+                                        VerticalContentAlignment="Center" />
+                            </Grid>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Race Stage -->
+                <Border Background="#F5F5F5"
+                        CornerRadius="6"
+                        Padding="15">
+                    <StackPanel Spacing="10">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <CheckBox Grid.Column="0"
+                                      IsChecked="{Binding RaceStageEnabled}"
+                                      VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1"
+                                       Text="Race"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center"
+                                       Margin="8,0,0,0" />
+                        </Grid>
+
+                        <StackPanel IsVisible="{Binding RaceStageEnabled}" Spacing="8">
+                            <!-- Mode Selection -->
+                            <Grid ColumnDefinitions="*,*">
+                                <RadioButton Grid.Column="0"
+                                             Content="Laps"
+                                             GroupName="RaceStageMode"
+                                             IsChecked="{Binding RaceStageMode, Converter={x:Static vm:RaceStageModeConverter.ToLaps}}" />
+                                <RadioButton Grid.Column="1"
+                                             Content="Time"
+                                             GroupName="RaceStageMode"
+                                             IsChecked="{Binding RaceStageMode, Converter={x:Static vm:RaceStageModeConverter.ToTime}}" />
+                            </Grid>
+
+                            <!-- Value Control -->
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                <Button Grid.Column="0"
+                                        Content="-"
+                                        Command="{Binding DecrementRaceStageCommand}"
+                                        Width="32" Height="32"
+                                        Padding="0" FontSize="14" FontWeight="Bold"
+                                        HorizontalContentAlignment="Center"
+                                        VerticalContentAlignment="Center" />
+                                <Slider Grid.Column="1"
+                                        Minimum="1" Maximum="100"
+                                        Value="{Binding RaceStageLapCount}"
+                                        IsVisible="{Binding RaceStageMode, Converter={x:Static vm:RaceStageModeConverter.IsLaps}}"
+                                        Margin="10,0"
+                                        VerticalAlignment="Center" />
+                                <Slider Grid.Column="1"
+                                        Minimum="1" Maximum="120"
+                                        Value="{Binding RaceStageTimeMinutes}"
+                                        IsVisible="{Binding RaceStageMode, Converter={x:Static vm:RaceStageModeConverter.IsTime}}"
+                                        Margin="10,0"
+                                        VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding RaceStageDisplay}"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"
+                                           Width="55"
+                                           TextAlignment="Center" />
+                                <Button Grid.Column="3"
+                                        Content="+"
+                                        Command="{Binding IncrementRaceStageCommand}"
+                                        Width="32" Height="32"
+                                        Padding="0" FontSize="14" FontWeight="Bold"
+                                        HorizontalContentAlignment="Center"
+                                        VerticalContentAlignment="Center" />
+                            </Grid>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer -->
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="10"
+                    Margin="0,15,0,0">
+            <Button Content="Close"
+                    Click="OnCloseClick"
+                    Padding="20,10"
+                    FontSize="14" />
+        </StackPanel>
+
+    </Grid>
+</Window>
