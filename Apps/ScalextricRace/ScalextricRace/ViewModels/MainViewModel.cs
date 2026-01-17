@@ -594,7 +594,7 @@ public partial class MainViewModel : ObservableObject
         if (sender is DriverViewModel driver)
         {
             Log.Information("Image change requested for driver: {DriverName}", driver.Name);
-            var imagePath = await _windowService.PickAndCopyImageAsync("Select Driver Image", driver.Id, "driver_");
+            var imagePath = await _windowService.PickAndCopyImageAsync("Select Driver Image", driver.Id, ImageConstants.DriverImagePrefix);
             if (imagePath != null)
             {
                 driver.ImagePath = imagePath;
