@@ -61,10 +61,7 @@ public partial class DriverManagementViewModel : ObservableObject
             newDriver.PowerPercentage = defaultDriver.PowerPercentage;
         }
 
-        var viewModel = new DriverViewModel(newDriver, isDefault: false);
-        viewModel.DeleteRequested += OnDriverDeleteRequested;
-        viewModel.Changed += OnDriverChanged;
-        viewModel.ImageChangeRequested += OnDriverImageChangeRequested;
+        var viewModel = CreateDriverViewModel(newDriver, isDefault: false);
         Drivers.Add(viewModel);
         SelectedDriver = viewModel;
         Log.Information("Added new driver: {DriverName} (copied settings from default)", newDriver.Name);
@@ -72,39 +69,31 @@ public partial class DriverManagementViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Handles delete request from a driver view model.
+    /// Creates a DriverViewModel with callbacks configured.
     /// </summary>
-    private void OnDriverDeleteRequested(object? sender, EventArgs e)
+    private DriverViewModel CreateDriverViewModel(Driver driver, bool isDefault)
     {
-        if (sender is DriverViewModel driver)
+        var viewModel = new DriverViewModel(driver, isDefault)
         {
-            DeleteDriver(driver);
-        }
-    }
-
-    /// <summary>
-    /// Handles property change on a driver view model.
-    /// </summary>
-    private void OnDriverChanged(object? sender, EventArgs e)
-    {
-        SaveDrivers();
+            OnDeleteRequested = DeleteDriver,
+            OnChanged = _ => SaveDrivers(),
+            OnImageChangeRequested = OnDriverImageChangeRequested
+        };
+        return viewModel;
     }
 
     /// <summary>
     /// Handles image change request from a driver view model.
     /// Opens a file picker and copies the image via the window service.
     /// </summary>
-    private async void OnDriverImageChangeRequested(object? sender, EventArgs e)
+    private async void OnDriverImageChangeRequested(DriverViewModel driver)
     {
-        if (sender is DriverViewModel driver)
+        Log.Information("Image change requested for driver: {DriverName}", driver.Name);
+        var imagePath = await _windowService.PickAndCopyImageAsync("Select Driver Image", driver.Id);
+        if (imagePath != null)
         {
-            Log.Information("Image change requested for driver: {DriverName}", driver.Name);
-            var imagePath = await _windowService.PickAndCopyImageAsync("Select Driver Image", driver.Id);
-            if (imagePath != null)
-            {
-                driver.ImagePath = imagePath;
-                SaveDrivers();
-            }
+            driver.ImagePath = imagePath;
+            SaveDrivers();
         }
     }
 
@@ -120,9 +109,11 @@ public partial class DriverManagementViewModel : ObservableObject
             return;
         }
 
-        driver.DeleteRequested -= OnDriverDeleteRequested;
-        driver.Changed -= OnDriverChanged;
-        driver.ImageChangeRequested -= OnDriverImageChangeRequested;
+        // Clear callbacks to avoid any potential issues
+        driver.OnDeleteRequested = null;
+        driver.OnChanged = null;
+        driver.OnImageChangeRequested = null;
+
         Drivers.Remove(driver);
         if (SelectedDriver == driver)
         {
@@ -154,10 +145,7 @@ public partial class DriverManagementViewModel : ObservableObject
         foreach (var driver in storedDrivers)
         {
             var isDefault = driver.Id == Driver.DefaultDriverId;
-            var viewModel = new DriverViewModel(driver, isDefault);
-            viewModel.DeleteRequested += OnDriverDeleteRequested;
-            viewModel.Changed += OnDriverChanged;
-            viewModel.ImageChangeRequested += OnDriverImageChangeRequested;
+            var viewModel = CreateDriverViewModel(driver, isDefault);
             Drivers.Add(viewModel);
         }
 

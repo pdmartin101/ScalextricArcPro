@@ -13,29 +13,29 @@ public partial class RaceViewModel : ObservableObject
     private readonly Race _race;
 
     /// <summary>
-    /// Event raised when deletion is requested for this race.
+    /// Callback invoked when deletion is requested for this race.
     /// </summary>
-    public event EventHandler? DeleteRequested;
+    public Action<RaceViewModel>? OnDeleteRequested { get; set; }
 
     /// <summary>
-    /// Event raised when any race property changes (for auto-save).
+    /// Callback invoked when any race property changes (for auto-save).
     /// </summary>
-    public event EventHandler? Changed;
+    public Action<RaceViewModel>? OnChanged { get; set; }
 
     /// <summary>
-    /// Event raised when image selection is requested for this race.
+    /// Callback invoked when image selection is requested for this race.
     /// </summary>
-    public event EventHandler? ImageChangeRequested;
+    public Action<RaceViewModel>? OnImageChangeRequested { get; set; }
 
     /// <summary>
-    /// Event raised when edit is requested for this race.
+    /// Callback invoked when edit is requested for this race.
     /// </summary>
-    public event EventHandler? EditRequested;
+    public Action<RaceViewModel>? OnEditRequested { get; set; }
 
     /// <summary>
-    /// Event raised when start is requested for this race.
+    /// Callback invoked when start is requested for this race.
     /// </summary>
-    public event EventHandler? StartRequested;
+    public Action<RaceViewModel>? OnStartRequested { get; set; }
 
     /// <summary>
     /// Gets whether this is the default race (cannot be deleted).
@@ -220,98 +220,98 @@ public partial class RaceViewModel : ObservableObject
             : $"{minutes} min";
     }
 
-    // Sync changes back to model and raise Changed event
+    // Sync changes back to model and notify via callback
     partial void OnNameChanged(string value)
     {
         _race.Name = value;
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnImagePathChanged(string? value)
     {
         _race.ImagePath = value;
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnDefaultPowerChanged(int value)
     {
         _race.DefaultPower = Math.Clamp(value, 0, 63);
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     // Free Practice sync
     partial void OnFreePracticeEnabledChanged(bool value)
     {
         _race.FreePractice.Enabled = value;
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnFreePracticeModeChanged(RaceStageMode value)
     {
         _race.FreePractice.Mode = value;
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnFreePracticeLapCountChanged(int value)
     {
         _race.FreePractice.LapCount = Math.Max(1, value);
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnFreePracticeTimeMinutesChanged(int value)
     {
         _race.FreePractice.TimeMinutes = Math.Max(1, value);
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     // Qualifying sync
     partial void OnQualifyingEnabledChanged(bool value)
     {
         _race.Qualifying.Enabled = value;
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnQualifyingModeChanged(RaceStageMode value)
     {
         _race.Qualifying.Mode = value;
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnQualifyingLapCountChanged(int value)
     {
         _race.Qualifying.LapCount = Math.Max(1, value);
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnQualifyingTimeMinutesChanged(int value)
     {
         _race.Qualifying.TimeMinutes = Math.Max(1, value);
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     // Race stage sync
     partial void OnRaceStageEnabledChanged(bool value)
     {
         _race.RaceStage.Enabled = value;
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnRaceStageModeChanged(RaceStageMode value)
     {
         _race.RaceStage.Mode = value;
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnRaceStageLapCountChanged(int value)
     {
         _race.RaceStage.LapCount = Math.Max(1, value);
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnRaceStageTimeMinutesChanged(int value)
     {
         _race.RaceStage.TimeMinutes = Math.Max(1, value);
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     /// <summary>
@@ -322,7 +322,7 @@ public partial class RaceViewModel : ObservableObject
     {
         if (!IsDefault)
         {
-            DeleteRequested?.Invoke(this, EventArgs.Empty);
+            OnDeleteRequested?.Invoke(this);
         }
     }
 
@@ -332,7 +332,7 @@ public partial class RaceViewModel : ObservableObject
     [RelayCommand]
     private void RequestImageChange()
     {
-        ImageChangeRequested?.Invoke(this, EventArgs.Empty);
+        OnImageChangeRequested?.Invoke(this);
     }
 
     /// <summary>
@@ -341,7 +341,7 @@ public partial class RaceViewModel : ObservableObject
     [RelayCommand]
     private void RequestEdit()
     {
-        EditRequested?.Invoke(this, EventArgs.Empty);
+        OnEditRequested?.Invoke(this);
     }
 
     /// <summary>
@@ -350,7 +350,7 @@ public partial class RaceViewModel : ObservableObject
     [RelayCommand]
     private void RequestStart()
     {
-        StartRequested?.Invoke(this, EventArgs.Empty);
+        OnStartRequested?.Invoke(this);
     }
 
     // Free Practice commands

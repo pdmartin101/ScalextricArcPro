@@ -63,12 +63,7 @@ public partial class RaceManagementViewModel : ObservableObject
     private void AddRace()
     {
         var newRace = new Race { Name = $"Race {Races.Count + 1}" };
-        var viewModel = new RaceViewModel(newRace, isDefault: false);
-        viewModel.DeleteRequested += OnRaceDeleteRequested;
-        viewModel.Changed += OnRaceChanged;
-        viewModel.ImageChangeRequested += OnRaceImageChangeRequested;
-        viewModel.EditRequested += OnRaceEditRequested;
-        viewModel.StartRequested += OnRaceStartRequested;
+        var viewModel = CreateRaceViewModel(newRace, isDefault: false);
         Races.Add(viewModel);
         SelectedRace = viewModel;
         Log.Information("Added new race: {RaceName}", newRace.Name);
@@ -76,39 +71,33 @@ public partial class RaceManagementViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Handles delete request from a race view model.
+    /// Creates a RaceViewModel with callbacks configured.
     /// </summary>
-    private void OnRaceDeleteRequested(object? sender, EventArgs e)
+    private RaceViewModel CreateRaceViewModel(Race race, bool isDefault)
     {
-        if (sender is RaceViewModel race)
+        var viewModel = new RaceViewModel(race, isDefault)
         {
-            DeleteRace(race);
-        }
-    }
-
-    /// <summary>
-    /// Handles property change on a race view model.
-    /// </summary>
-    private void OnRaceChanged(object? sender, EventArgs e)
-    {
-        SaveRaces();
+            OnDeleteRequested = DeleteRace,
+            OnChanged = _ => SaveRaces(),
+            OnImageChangeRequested = OnRaceImageChangeRequested,
+            OnEditRequested = OnRaceEditRequested,
+            OnStartRequested = OnRaceStartRequested
+        };
+        return viewModel;
     }
 
     /// <summary>
     /// Handles image change request from a race view model.
     /// Opens a file picker and copies the image via the window service.
     /// </summary>
-    private async void OnRaceImageChangeRequested(object? sender, EventArgs e)
+    private async void OnRaceImageChangeRequested(RaceViewModel race)
     {
-        if (sender is RaceViewModel race)
+        Log.Information("Image change requested for race: {RaceName}", race.Name);
+        var imagePath = await _windowService.PickAndCopyImageAsync("Select Race Image", race.Id);
+        if (imagePath != null)
         {
-            Log.Information("Image change requested for race: {RaceName}", race.Name);
-            var imagePath = await _windowService.PickAndCopyImageAsync("Select Race Image", race.Id);
-            if (imagePath != null)
-            {
-                race.ImagePath = imagePath;
-                SaveRaces();
-            }
+            race.ImagePath = imagePath;
+            SaveRaces();
         }
     }
 
@@ -116,27 +105,21 @@ public partial class RaceManagementViewModel : ObservableObject
     /// Handles edit request from a race view model.
     /// Opens the race config editing window.
     /// </summary>
-    private async void OnRaceEditRequested(object? sender, EventArgs e)
+    private async void OnRaceEditRequested(RaceViewModel race)
     {
-        if (sender is RaceViewModel race)
-        {
-            Log.Information("Edit requested for race: {RaceName}", race.Name);
-            await _windowService.ShowRaceConfigDialogAsync(race);
-            SaveRaces();
-        }
+        Log.Information("Edit requested for race: {RaceName}", race.Name);
+        await _windowService.ShowRaceConfigDialogAsync(race);
+        SaveRaces();
     }
 
     /// <summary>
     /// Handles start request from a race view model.
     /// Delegates to MainViewModel via callback.
     /// </summary>
-    private void OnRaceStartRequested(object? sender, EventArgs e)
+    private void OnRaceStartRequested(RaceViewModel race)
     {
-        if (sender is RaceViewModel race)
-        {
-            Log.Information("Start requested for race: {RaceName}", race.Name);
-            _onStartRequested?.Invoke(race);
-        }
+        Log.Information("Start requested for race: {RaceName}", race.Name);
+        _onStartRequested?.Invoke(race);
     }
 
     /// <summary>
@@ -151,11 +134,13 @@ public partial class RaceManagementViewModel : ObservableObject
             return;
         }
 
-        race.DeleteRequested -= OnRaceDeleteRequested;
-        race.Changed -= OnRaceChanged;
-        race.ImageChangeRequested -= OnRaceImageChangeRequested;
-        race.EditRequested -= OnRaceEditRequested;
-        race.StartRequested -= OnRaceStartRequested;
+        // Clear callbacks to avoid any potential issues
+        race.OnDeleteRequested = null;
+        race.OnChanged = null;
+        race.OnImageChangeRequested = null;
+        race.OnEditRequested = null;
+        race.OnStartRequested = null;
+
         Races.Remove(race);
         if (SelectedRace == race)
         {
@@ -187,12 +172,7 @@ public partial class RaceManagementViewModel : ObservableObject
         foreach (var race in storedRaces)
         {
             var isDefault = race.Id == Race.DefaultRaceId;
-            var viewModel = new RaceViewModel(race, isDefault);
-            viewModel.DeleteRequested += OnRaceDeleteRequested;
-            viewModel.Changed += OnRaceChanged;
-            viewModel.ImageChangeRequested += OnRaceImageChangeRequested;
-            viewModel.EditRequested += OnRaceEditRequested;
-            viewModel.StartRequested += OnRaceStartRequested;
+            var viewModel = CreateRaceViewModel(race, isDefault);
             Races.Add(viewModel);
         }
 

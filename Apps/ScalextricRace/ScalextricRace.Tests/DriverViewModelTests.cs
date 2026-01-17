@@ -115,19 +115,19 @@ public class DriverViewModelTests
     }
 
     [Fact]
-    public void Changed_RaisedOnPropertyChange()
+    public void OnChanged_CalledOnPropertyChange()
     {
         // Arrange
         var driver = new Driver("Test Driver");
         var viewModel = new DriverViewModel(driver);
-        var eventRaised = false;
-        viewModel.Changed += (_, _) => eventRaised = true;
+        var callbackInvoked = false;
+        viewModel.OnChanged = _ => callbackInvoked = true;
 
         // Act
         viewModel.Name = "New Name";
 
         // Assert
-        Assert.True(eventRaised);
+        Assert.True(callbackInvoked);
     }
 
     [Fact]

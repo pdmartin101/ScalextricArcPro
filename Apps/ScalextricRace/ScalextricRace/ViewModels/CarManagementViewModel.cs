@@ -67,11 +67,7 @@ public partial class CarManagementViewModel : ObservableObject
             newCar.MinPower = defaultCar.MinPower;
         }
 
-        var viewModel = new CarViewModel(newCar, isDefault: false);
-        viewModel.DeleteRequested += OnCarDeleteRequested;
-        viewModel.Changed += OnCarChanged;
-        viewModel.TuneRequested += OnCarTuneRequested;
-        viewModel.ImageChangeRequested += OnCarImageChangeRequested;
+        var viewModel = CreateCarViewModel(newCar, isDefault: false);
         Cars.Add(viewModel);
         SelectedCar = viewModel;
         Log.Information("Added new car: {CarName} (copied settings from default)", newCar.Name);
@@ -79,53 +75,43 @@ public partial class CarManagementViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Handles delete request from a car view model.
+    /// Creates a CarViewModel with callbacks configured.
     /// </summary>
-    private void OnCarDeleteRequested(object? sender, EventArgs e)
+    private CarViewModel CreateCarViewModel(Car car, bool isDefault)
     {
-        if (sender is CarViewModel car)
+        var viewModel = new CarViewModel(car, isDefault)
         {
-            DeleteCar(car);
-        }
-    }
-
-    /// <summary>
-    /// Handles property change on a car view model.
-    /// </summary>
-    private void OnCarChanged(object? sender, EventArgs e)
-    {
-        SaveCars();
+            OnDeleteRequested = DeleteCar,
+            OnChanged = _ => SaveCars(),
+            OnTuneRequested = OnCarTuneRequested,
+            OnImageChangeRequested = OnCarImageChangeRequested
+        };
+        return viewModel;
     }
 
     /// <summary>
     /// Handles tune request from a car view model.
     /// Opens the tuning window via the window service.
     /// </summary>
-    private async void OnCarTuneRequested(object? sender, EventArgs e)
+    private async void OnCarTuneRequested(CarViewModel car)
     {
-        if (sender is CarViewModel car)
-        {
-            Log.Information("Opening tuning window for car: {CarName}", car.Name);
-            await _windowService.ShowCarTuningDialogAsync(car, _bleService);
-            SaveCars();
-        }
+        Log.Information("Opening tuning window for car: {CarName}", car.Name);
+        await _windowService.ShowCarTuningDialogAsync(car, _bleService);
+        SaveCars();
     }
 
     /// <summary>
     /// Handles image change request from a car view model.
     /// Opens a file picker and copies the image via the window service.
     /// </summary>
-    private async void OnCarImageChangeRequested(object? sender, EventArgs e)
+    private async void OnCarImageChangeRequested(CarViewModel car)
     {
-        if (sender is CarViewModel car)
+        Log.Information("Image change requested for car: {CarName}", car.Name);
+        var imagePath = await _windowService.PickAndCopyImageAsync("Select Car Image", car.Id);
+        if (imagePath != null)
         {
-            Log.Information("Image change requested for car: {CarName}", car.Name);
-            var imagePath = await _windowService.PickAndCopyImageAsync("Select Car Image", car.Id);
-            if (imagePath != null)
-            {
-                car.ImagePath = imagePath;
-                SaveCars();
-            }
+            car.ImagePath = imagePath;
+            SaveCars();
         }
     }
 
@@ -141,10 +127,12 @@ public partial class CarManagementViewModel : ObservableObject
             return;
         }
 
-        car.DeleteRequested -= OnCarDeleteRequested;
-        car.Changed -= OnCarChanged;
-        car.TuneRequested -= OnCarTuneRequested;
-        car.ImageChangeRequested -= OnCarImageChangeRequested;
+        // Clear callbacks to avoid any potential issues
+        car.OnDeleteRequested = null;
+        car.OnChanged = null;
+        car.OnTuneRequested = null;
+        car.OnImageChangeRequested = null;
+
         Cars.Remove(car);
         if (SelectedCar == car)
         {
@@ -176,11 +164,7 @@ public partial class CarManagementViewModel : ObservableObject
         foreach (var car in storedCars)
         {
             var isDefault = car.Id == Car.DefaultCarId;
-            var viewModel = new CarViewModel(car, isDefault);
-            viewModel.DeleteRequested += OnCarDeleteRequested;
-            viewModel.Changed += OnCarChanged;
-            viewModel.TuneRequested += OnCarTuneRequested;
-            viewModel.ImageChangeRequested += OnCarImageChangeRequested;
+            var viewModel = CreateCarViewModel(car, isDefault);
             Cars.Add(viewModel);
         }
 

@@ -85,19 +85,19 @@ public class CarViewModelTests
     }
 
     [Fact]
-    public void Changed_RaisedOnPropertyChange()
+    public void OnChanged_CalledOnPropertyChange()
     {
         // Arrange
         var car = new Car("Test Car");
         var viewModel = new CarViewModel(car);
-        var eventRaised = false;
-        viewModel.Changed += (_, _) => eventRaised = true;
+        var callbackInvoked = false;
+        viewModel.OnChanged = _ => callbackInvoked = true;
 
         // Act
         viewModel.Name = "New Name";
 
         // Assert
-        Assert.True(eventRaised);
+        Assert.True(callbackInvoked);
     }
 
     [Fact]

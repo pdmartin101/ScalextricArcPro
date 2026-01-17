@@ -13,19 +13,19 @@ public partial class DriverViewModel : ObservableObject
     private readonly Driver _driver;
 
     /// <summary>
-    /// Event raised when deletion is requested for this driver.
+    /// Callback invoked when deletion is requested for this driver.
     /// </summary>
-    public event EventHandler? DeleteRequested;
+    public Action<DriverViewModel>? OnDeleteRequested { get; set; }
 
     /// <summary>
-    /// Event raised when any driver property changes (for auto-save).
+    /// Callback invoked when any driver property changes (for auto-save).
     /// </summary>
-    public event EventHandler? Changed;
+    public Action<DriverViewModel>? OnChanged { get; set; }
 
     /// <summary>
-    /// Event raised when image selection is requested for this driver.
+    /// Callback invoked when image selection is requested for this driver.
     /// </summary>
-    public event EventHandler? ImageChangeRequested;
+    public Action<DriverViewModel>? OnImageChangeRequested { get; set; }
 
     /// <summary>
     /// Gets whether this is the default driver (cannot be deleted).
@@ -111,23 +111,23 @@ public partial class DriverViewModel : ObservableObject
     /// </summary>
     public Driver GetModel() => _driver;
 
-    // Sync changes back to model and raise Changed event
+    // Sync changes back to model and notify via callback
     partial void OnNameChanged(string value)
     {
         _driver.Name = value;
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnImagePathChanged(string? value)
     {
         _driver.ImagePath = value;
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnPowerPercentageChanged(int? value)
     {
         _driver.PowerPercentage = value.HasValue ? Math.Clamp(value.Value, 50, 100) : null;
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     /// <summary>
@@ -138,7 +138,7 @@ public partial class DriverViewModel : ObservableObject
     {
         if (!IsDefault)
         {
-            DeleteRequested?.Invoke(this, EventArgs.Empty);
+            OnDeleteRequested?.Invoke(this);
         }
     }
 
@@ -148,7 +148,7 @@ public partial class DriverViewModel : ObservableObject
     [RelayCommand]
     private void RequestImageChange()
     {
-        ImageChangeRequested?.Invoke(this, EventArgs.Empty);
+        OnImageChangeRequested?.Invoke(this);
     }
 
     /// <summary>

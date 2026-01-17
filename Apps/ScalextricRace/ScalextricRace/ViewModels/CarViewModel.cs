@@ -13,24 +13,24 @@ public partial class CarViewModel : ObservableObject
     private readonly Car _car;
 
     /// <summary>
-    /// Event raised when deletion is requested for this car.
+    /// Callback invoked when deletion is requested for this car.
     /// </summary>
-    public event EventHandler? DeleteRequested;
+    public Action<CarViewModel>? OnDeleteRequested { get; set; }
 
     /// <summary>
-    /// Event raised when any car property changes (for auto-save).
+    /// Callback invoked when any car property changes (for auto-save).
     /// </summary>
-    public event EventHandler? Changed;
+    public Action<CarViewModel>? OnChanged { get; set; }
 
     /// <summary>
-    /// Event raised when tuning is requested for this car.
+    /// Callback invoked when tuning is requested for this car.
     /// </summary>
-    public event EventHandler? TuneRequested;
+    public Action<CarViewModel>? OnTuneRequested { get; set; }
 
     /// <summary>
-    /// Event raised when image selection is requested for this car.
+    /// Callback invoked when image selection is requested for this car.
     /// </summary>
-    public event EventHandler? ImageChangeRequested;
+    public Action<CarViewModel>? OnImageChangeRequested { get; set; }
 
     /// <summary>
     /// Gets whether this is the default car (cannot be deleted).
@@ -107,35 +107,35 @@ public partial class CarViewModel : ObservableObject
     /// </summary>
     public Car GetModel() => _car;
 
-    // Sync changes back to model and raise Changed event
+    // Sync changes back to model and notify via callback
     partial void OnNameChanged(string value)
     {
         _car.Name = value;
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnImagePathChanged(string? value)
     {
         _car.ImagePath = value;
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnDefaultPowerChanged(int value)
     {
         _car.DefaultPower = Math.Clamp(value, 0, 63);
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnGhostMaxPowerChanged(int value)
     {
         _car.GhostMaxPower = Math.Clamp(value, 0, 63);
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     partial void OnMinPowerChanged(int value)
     {
         _car.MinPower = Math.Clamp(value, 0, 63);
-        Changed?.Invoke(this, EventArgs.Empty);
+        OnChanged?.Invoke(this);
     }
 
     /// <summary>
@@ -146,7 +146,7 @@ public partial class CarViewModel : ObservableObject
     {
         if (!IsDefault)
         {
-            DeleteRequested?.Invoke(this, EventArgs.Empty);
+            OnDeleteRequested?.Invoke(this);
         }
     }
 
@@ -156,7 +156,7 @@ public partial class CarViewModel : ObservableObject
     [RelayCommand]
     private void RequestTune()
     {
-        TuneRequested?.Invoke(this, EventArgs.Empty);
+        OnTuneRequested?.Invoke(this);
     }
 
     /// <summary>
@@ -165,6 +165,6 @@ public partial class CarViewModel : ObservableObject
     [RelayCommand]
     private void RequestImageChange()
     {
-        ImageChangeRequested?.Invoke(this, EventArgs.Empty);
+        OnImageChangeRequested?.Invoke(this);
     }
 }
