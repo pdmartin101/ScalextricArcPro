@@ -25,7 +25,8 @@
       "Bash(powershell -Command:*)",
       "Bash(move ScalextricBleMonitor \"Apps\\\\ScalextricBleMonitor\\\\ScalextricBleMonitor\")",
       "Bash(ls:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(find:*)"
     ]
   }
 }
