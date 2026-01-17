@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using ScalextricBle;
+using Scalextric;
 using ScalextricRace.Models;
 using ScalextricRace.Services;
 using Serilog;

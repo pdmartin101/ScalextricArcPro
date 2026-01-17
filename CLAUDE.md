@@ -33,11 +33,15 @@ ScalextricTest/
 ├── Libs/
 │   ├── Scalextric/                        # Core domain library (cross-platform)
 │   │   ├── LapTimingEngine.cs             # Lap detection & timing calculations
-│   │   └── ThrottleProfileType.cs         # Enum: Linear, Exponential, Stepped
+│   │   ├── ThrottleProfileType.cs         # Enum: Linear, Exponential, Stepped
+│   │   ├── ScalextricProtocol.cs          # UUIDs, CommandBuilder, ThrottleProfile
+│   │   ├── ScalextricProtocolDecoder.cs   # Notification data decoding
+│   │   ├── IBleService.cs                 # BLE service interface (portable)
+│   │   ├── IPowerHeartbeatService.cs      # Heartbeat interface (portable)
+│   │   └── PowerHeartbeatService.cs       # Heartbeat implementation (portable)
 │   │
-│   └── ScalextricBle/                     # BLE protocol library (cross-platform)
-│       ├── ScalextricProtocol.cs          # UUIDs, CommandBuilder, ThrottleProfile
-│       └── ScalextricProtocolDecoder.cs   # Notification data decoding
+│   └── ScalextricBle/                     # Windows-specific BLE implementation
+│       └── BleService.cs                  # Windows WinRT BLE implementation
 │
 ├── Docs/
 │   └── ArcPro-BLE-Protocol.md             # BLE protocol specification
@@ -140,21 +144,18 @@ Program.Main()
 
 ## Shared Libraries
 
-### Scalextric (Core Domain)
+### Scalextric (Core Domain + Protocol)
+
+The `Scalextric` library contains all cross-platform code including protocol definitions and interfaces.
 
 ```csharp
 using Scalextric;
 
+// Lap timing
 var engine = new LapTimingEngine();
 var result = engine.UpdateTimestamps(lane1Time, lane2Time);
 if (result.LapCompleted)
     Console.WriteLine($"Lap {result.CurrentLap}: {result.LapTimeSeconds:F2}s");
-```
-
-### ScalextricBle (BLE Protocol)
-
-```csharp
-using ScalextricBle;
 
 // Build power command
 var builder = new ScalextricProtocol.CommandBuilder
@@ -166,6 +167,26 @@ byte[] command = builder.Build();
 
 // Decode notifications
 string decoded = ScalextricProtocolDecoder.Decode(characteristicUuid, data);
+
+// Power heartbeat (keeps track power on)
+var heartbeat = new PowerHeartbeatService(bleService);
+heartbeat.Start(() => builder.Build());
+// ... later ...
+await heartbeat.SendPowerOffSequenceAsync();
+heartbeat.Stop();
+```
+
+### ScalextricBle (Windows BLE Implementation)
+
+The `ScalextricBle` library contains the Windows-specific BLE implementation using WinRT APIs.
+
+```csharp
+using ScalextricBle;
+
+// Windows BLE service (implements Scalextric.IBleService)
+var bleService = new BleService();
+bleService.ConnectionStateChanged += OnConnectionStateChanged;
+bleService.StartScanning();
 ```
 
 ### GATT Characteristics
@@ -192,11 +213,8 @@ See [PLAN.md](PLAN.md) for the complete improvement plan with issue tracking.
 
 ### Known Issues
 
-- **Critical**: 95% BLE code duplication between apps
-- **Critical**: BleMonitor MainViewModel too large (920+ lines)
-- **High**: Some missing interface abstractions (IAppSettings, ICarStorage)
-- **Medium**: Some thread safety and caching concerns
-- **Low**: ScalextricRace has no unit tests
+- **High**: BleMonitor MainViewModel large (920+ lines) - functional but could be split
+- **Low**: Some remaining code could be further abstracted
 
 ## Adding Libraries to a New App
 
@@ -211,7 +229,8 @@ Reference the libraries in your `.csproj`:
 
 ## Platform Notes
 
-- Libraries target `net9.0` (cross-platform capable)
+- `Scalextric` library targets `net9.0` (fully cross-platform)
+- `ScalextricBle` library targets `net9.0-windows10.0.19041.0` (Windows-specific)
 - Apps target `net9.0-windows10.0.19041.0` (Windows-only due to WinRT BLE APIs)
 - BLE code wrapped in `#if WINDOWS` for future cross-platform support
-- Future apps could use InTheHand.BluetoothLE for macOS/Linux
+- Future cross-platform support: Create alternative `IBleService` implementation using InTheHand.BluetoothLE for macOS/Linux

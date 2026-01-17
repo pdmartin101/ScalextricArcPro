@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace ScalextricBle;
+namespace Scalextric;
 
 /// <summary>
 /// Decodes Scalextric ARC Pro BLE notification data into human-readable strings.

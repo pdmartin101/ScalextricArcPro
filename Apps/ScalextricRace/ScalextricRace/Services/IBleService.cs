@@ -4,6 +4,6 @@ namespace ScalextricRace.Services;
 /// Interface for BLE operations with Scalextric powerbases.
 /// This is now an alias for the shared IBleService.
 /// </summary>
-public interface IBleService : ScalextricBle.IBleService
+public interface IBleService : Scalextric.IBleService
 {
 }

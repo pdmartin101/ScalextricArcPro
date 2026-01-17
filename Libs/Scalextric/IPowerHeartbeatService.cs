@@ -1,4 +1,4 @@
-namespace ScalextricBle;
+namespace Scalextric;
 
 /// <summary>
 /// Delegate for building power commands based on current controller states.

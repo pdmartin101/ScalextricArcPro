@@ -8,4 +8,8 @@
     <Description>Scalextric core library - lap timing, race management, and domain logic</Description>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="4.3.0" />
+  </ItemGroup>
+
 </Project>

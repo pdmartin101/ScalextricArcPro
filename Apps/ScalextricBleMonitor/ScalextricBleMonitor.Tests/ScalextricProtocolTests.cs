@@ -1,7 +1,6 @@
 using Scalextric;
-using ScalextricBle;
 using ScalextricBleMonitor.Services;
-using static ScalextricBle.ScalextricProtocol;
+using static Scalextric.ScalextricProtocol;
 
 namespace ScalextricBleMonitor.Tests;
 

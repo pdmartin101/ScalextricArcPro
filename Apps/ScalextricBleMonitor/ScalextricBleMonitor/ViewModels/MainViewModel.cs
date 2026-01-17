@@ -11,7 +11,6 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Scalextric;
-using ScalextricBle;
 using ScalextricBleMonitor.Models;
 using ScalextricBleMonitor.Services;
 using Serilog;

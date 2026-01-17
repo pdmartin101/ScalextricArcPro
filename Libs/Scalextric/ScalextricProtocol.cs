@@ -1,6 +1,6 @@
 using System;
 
-namespace ScalextricBle;
+namespace Scalextric;
 
 /// <summary>
 /// Scalextric ARC Pro BLE Protocol constants and command builders.

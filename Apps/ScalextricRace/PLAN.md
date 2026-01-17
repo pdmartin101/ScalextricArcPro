@@ -301,14 +301,34 @@ The size is appropriate for a main orchestrator ViewModel. Further decomposition
 
 | # | Issue | Status |
 |---|-------|--------|
-| 1 | Cross-Platform BLE Support | ❌ |
+| 1 | Cross-Platform BLE Support | 🔄 |
 | 2 | Reactive Patterns | ❌ |
 | 3 | Integration Tests | ❌ |
 | 4 | Heartbeat Loop Implementation | ✅ |
+| 5 | Library Restructuring | ✅ |
 
-### 1. Cross-Platform BLE Support ❌
+### 1. Cross-Platform BLE Support 🔄
 
-Abstract Windows-specific BLE behind platform interface, add macOS/Linux support via InTheHand.BluetoothLE.
+**Progress:** Library structure now supports cross-platform BLE.
+
+The codebase has been restructured to separate portable code from Windows-specific code:
+
+**Scalextric Library (net9.0 - fully portable):**
+- `ScalextricProtocol.cs` - Protocol constants, command builders
+- `ScalextricProtocolDecoder.cs` - Notification data decoding
+- `IBleService.cs` - BLE service interface
+- `IPowerHeartbeatService.cs` - Heartbeat interface
+- `PowerHeartbeatService.cs` - Heartbeat implementation (uses IBleService)
+- `LapTimingEngine.cs` - Lap timing calculations
+- `ThrottleProfileType.cs` - Throttle profile enum
+
+**ScalextricBle Library (Windows-specific):**
+- `BleService.cs` - Windows WinRT implementation of `Scalextric.IBleService`
+
+**Next Steps for Full Cross-Platform:**
+- Create new library (e.g., `ScalextricBleCrossPlatform`) with InTheHand.BluetoothLE
+- Implement `Scalextric.IBleService` interface
+- Apps can switch implementations via DI registration
 
 ### 2. Reactive Patterns ❌
 
@@ -318,21 +338,40 @@ Consider replacing event subscriptions with Reactive Extensions.
 
 Add integration tests for BLE connection scenarios.
 
+### 5. Library Restructuring ✅
+
+**Problem:** Protocol code and BLE interfaces were in `ScalextricBle` library, mixing portable and Windows-specific code.
+
+**Solution:** Moved all portable code to `Scalextric` library:
+
+**Moved from ScalextricBle to Scalextric:**
+- `ScalextricProtocol.cs` - Protocol constants, command builders
+- `ScalextricProtocolDecoder.cs` - Notification data decoding
+- `IBleService.cs` - BLE service interface + event args
+- `IPowerHeartbeatService.cs` - Heartbeat interface + delegate
+- `PowerHeartbeatService.cs` - Heartbeat implementation
+
+**Remaining in ScalextricBle:**
+- `BleService.cs` - Windows WinRT implementation only
+
+**Benefits:**
+- Clear separation: `Scalextric` (portable) vs `ScalextricBle` (Windows)
+- Easy to add cross-platform BLE: just implement `Scalextric.IBleService`
+- Apps reference both libraries but only `ScalextricBle` needs Windows
+
 ### 4. Heartbeat Loop Implementation ✅
 
 **Problem:** The ARC Pro powerbase requires continuous "keep-alive" commands every ~200ms to maintain track power. Without the heartbeat, power automatically shuts off as a safety feature.
 
 **Solution:** Created `IPowerHeartbeatService` and `PowerHeartbeatService` in both apps:
 
-**ScalextricRace:**
-- `Services/IPowerHeartbeatService.cs` - Interface for heartbeat management
-- `Services/PowerHeartbeatService.cs` - Implementation with 200ms heartbeat loop
-- `ViewModels/MainViewModel.cs` - Updated to use heartbeat service
-- `App.axaml.cs` - Registered service in DI container
+**Shared Library (Scalextric):**
+- `IPowerHeartbeatService.cs` - Interface for heartbeat management
+- `PowerHeartbeatService.cs` - Implementation with 200ms heartbeat loop
 
-**ScalextricBleMonitor:**
-- Updated `PowerHeartbeatService` to use shared `ScalextricBle.IBleService` interface
-- Updated `ServiceConfiguration.cs` to properly wire up dependencies
+**Both Apps:**
+- Updated to use `Scalextric.IPowerHeartbeatService` and `Scalextric.PowerHeartbeatService`
+- DI registration points to shared library implementation
 
 **Key Features:**
 - Sends power commands every 200ms using `CancellationTokenSource` for lifecycle management
@@ -366,6 +405,6 @@ dotnet run --project ScalextricRace/ScalextricRace.csproj
 | Phase 3 | Medium Priority | ✅ 5/5 |
 | Phase 4 | Low Priority | ✅ 3/3 |
 | Phase 5 | MVVM Violations | ✅ 17/17 |
-| Phase 6 | Future Enhancements | 🔄 1/4 |
+| Phase 6 | Future Enhancements | 🔄 2/5 |
 
-**Overall Progress:** Phases 1-5 complete (30/30). Phase 6 heartbeat implemented (1/4).
+**Overall Progress:** Phases 1-5 complete (30/30). Phase 6: 2/5 complete, 1 in progress.

@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using ScalextricBle;
+using Scalextric;
 using ScalextricBleMonitor.ViewModels;
 
 namespace ScalextricBleMonitor.Services;
@@ -19,11 +19,11 @@ public static class ServiceConfiguration
         // Register services
         services.AddSingleton<IBleMonitorService, BleMonitorService>();
         // Register IBleService pointing to the same instance for services that only need base interface
-        services.AddSingleton<ScalextricBle.IBleService>(sp => sp.GetRequiredService<IBleMonitorService>());
+        services.AddSingleton<Scalextric.IBleService>(sp => sp.GetRequiredService<IBleMonitorService>());
         services.AddSingleton<IGhostRecordingService, GhostRecordingService>();
         services.AddSingleton<IGhostPlaybackService, GhostPlaybackService>();
         services.AddSingleton<IPowerHeartbeatService>(sp =>
-            new PowerHeartbeatService(sp.GetRequiredService<ScalextricBle.IBleService>()));
+            new PowerHeartbeatService(sp.GetRequiredService<Scalextric.IBleService>()));
         services.AddSingleton<ITimingCalibrationService, TimingCalibrationService>();
         services.AddSingleton<AppSettings>(_ => AppSettings.Load());
 

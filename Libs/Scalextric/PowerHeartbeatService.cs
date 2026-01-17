@@ -1,6 +1,6 @@
 using Serilog;
 
-namespace ScalextricBle;
+namespace Scalextric;
 
 /// <summary>
 /// Service responsible for managing the power heartbeat loop that keeps track power enabled.

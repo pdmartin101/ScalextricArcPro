@@ -7,7 +7,7 @@ namespace ScalextricBleMonitor.Services;
 /// Interface for BLE monitoring service.
 /// Extends the shared IBleService with additional methods for the monitor app.
 /// </summary>
-public interface IBleMonitorService : ScalextricBle.IBleService
+public interface IBleMonitorService : Scalextric.IBleService
 {
     /// <summary>
     /// Writes a value to a characteristic asynchronously and waits for completion.

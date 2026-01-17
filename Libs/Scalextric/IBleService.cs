@@ -1,4 +1,4 @@
-namespace ScalextricBle;
+namespace Scalextric;
 
 /// <summary>
 /// Represents a discovered GATT service.

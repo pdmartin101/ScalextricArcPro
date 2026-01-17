@@ -1,6 +1,6 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
-using ScalextricBle;
+using Scalextric;
 using ScalextricBleMonitor.Models;
 using ScalextricBleMonitor.Services;
 
