@@ -352,7 +352,7 @@
                                    VerticalAlignment="Center" />
                         <Button Grid.Column="1"
                                 Content="+ Add Car"
-                                Command="{Binding AddCarCommand}"
+                                Command="{Binding CarManagement.AddCarCommand}"
                                 Padding="15,8"
                                 FontSize="13" />
                     </Grid>
@@ -496,7 +496,7 @@
                                    VerticalAlignment="Center" />
                         <Button Grid.Column="1"
                                 Content="+ Add Driver"
-                                Command="{Binding AddDriverCommand}"
+                                Command="{Binding DriverManagement.AddDriverCommand}"
                                 Padding="15,8"
                                 FontSize="13" />
                     </Grid>
@@ -641,7 +641,7 @@
                                    VerticalAlignment="Center" />
                         <Button Grid.Column="1"
                                 Content="+ Add Race"
-                                Command="{Binding AddRaceCommand}"
+                                Command="{Binding RaceManagement.AddRaceCommand}"
                                 Padding="15,8"
                                 FontSize="13" />
                     </Grid>

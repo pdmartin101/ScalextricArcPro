@@ -21,10 +21,13 @@ public partial class MainViewModel : ObservableObject
     private readonly IWindowService _windowService;
     private readonly AppSettings _settings;
     private readonly ICarStorage _carStorage;
-    private readonly IDriverStorage _driverStorage;
-    private readonly IRaceStorage _raceStorage;
     private readonly SynchronizationContext? _syncContext;
     private bool _isInitializing = true;
+
+    // Child ViewModels
+    private readonly CarManagementViewModel _carManagement;
+    private readonly DriverManagementViewModel _driverManagement;
+    private readonly RaceManagementViewModel _raceManagement;
 
     #endregion
 
@@ -327,45 +330,71 @@ public partial class MainViewModel : ObservableObject
     #region Car Management
 
     /// <summary>
-    /// Collection of all cars available for racing.
+    /// Gets the car management view model.
     /// </summary>
-    public ObservableCollection<CarViewModel> Cars { get; } = [];
+    public CarManagementViewModel CarManagement => _carManagement;
+
+    /// <summary>
+    /// Collection of all cars available for racing.
+    /// Delegates to CarManagementViewModel.
+    /// </summary>
+    public ObservableCollection<CarViewModel> Cars => _carManagement.Cars;
 
     /// <summary>
     /// The currently selected car for editing.
+    /// Delegates to CarManagementViewModel.
     /// </summary>
-    [ObservableProperty]
-    private CarViewModel? _selectedCar;
+    public CarViewModel? SelectedCar
+    {
+        get => _carManagement.SelectedCar;
+        set => _carManagement.SelectedCar = value;
+    }
 
     #endregion
 
     #region Driver Management
 
     /// <summary>
+    /// Gets the driver management child ViewModel.
+    /// </summary>
+    public DriverManagementViewModel DriverManagement => _driverManagement;
+
+    /// <summary>
     /// Collection of all drivers available for racing.
     /// </summary>
-    public ObservableCollection<DriverViewModel> Drivers { get; } = [];
+    public ObservableCollection<DriverViewModel> Drivers => _driverManagement.Drivers;
 
     /// <summary>
     /// The currently selected driver for editing.
     /// </summary>
-    [ObservableProperty]
-    private DriverViewModel? _selectedDriver;
+    public DriverViewModel? SelectedDriver
+    {
+        get => _driverManagement.SelectedDriver;
+        set => _driverManagement.SelectedDriver = value;
+    }
 
     #endregion
 
     #region Race Management
 
     /// <summary>
+    /// Gets the race management child ViewModel.
+    /// </summary>
+    public RaceManagementViewModel RaceManagement => _raceManagement;
+
+    /// <summary>
     /// Collection of all race configurations.
     /// </summary>
-    public ObservableCollection<RaceViewModel> Races { get; } = [];
+    public ObservableCollection<RaceViewModel> Races => _raceManagement.Races;
 
     /// <summary>
     /// The currently selected race for editing.
     /// </summary>
-    [ObservableProperty]
-    private RaceViewModel? _selectedRace;
+    public RaceViewModel? SelectedRace
+    {
+        get => _raceManagement.SelectedRace;
+        set => _raceManagement.SelectedRace = value;
+    }
 
     #endregion
 
@@ -390,22 +419,26 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     /// <param name="settings">The application settings.</param>
     /// <param name="windowService">The window service for dialogs.</param>
+    /// <param name="carManagement">The car management view model.</param>
+    /// <param name="driverManagement">The driver management view model.</param>
+    /// <param name="raceManagement">The race management view model.</param>
     /// <param name="bleService">The BLE service for device communication.</param>
     /// <param name="powerHeartbeatService">The power heartbeat service for maintaining track power.</param>
     /// <param name="carStorage">The car storage service.</param>
-    /// <param name="driverStorage">The driver storage service.</param>
-    /// <param name="raceStorage">The race storage service.</param>
     public MainViewModel(AppSettings settings, IWindowService windowService,
+        CarManagementViewModel carManagement, DriverManagementViewModel driverManagement,
+        RaceManagementViewModel raceManagement,
         Services.IBleService? bleService = null, IPowerHeartbeatService? powerHeartbeatService = null,
-        ICarStorage? carStorage = null, IDriverStorage? driverStorage = null, IRaceStorage? raceStorage = null)
+        ICarStorage? carStorage = null)
     {
         _settings = settings;
         _windowService = windowService;
+        _carManagement = carManagement;
+        _driverManagement = driverManagement;
+        _raceManagement = raceManagement;
         _bleService = bleService;
         _powerHeartbeatService = powerHeartbeatService;
         _carStorage = carStorage ?? new CarStorage();
-        _driverStorage = driverStorage ?? new DriverStorage();
-        _raceStorage = raceStorage ?? new RaceStorage();
         _syncContext = SynchronizationContext.Current;
 
         // Load startup global settings (ultra-safe values)
@@ -439,10 +472,9 @@ public partial class MainViewModel : ObservableObject
             Controllers.Add(controller);
         }
 
-        // Load cars, drivers, and races from storage
-        LoadCars();
-        LoadDrivers();
-        LoadRaces();
+        // Set up race management callback for start requests
+        // (Cars/Drivers/Races are loaded by their respective ViewModels)
+        _raceManagement.SetStartRequestedCallback(OnRaceStartRequested);
 
         // Initialization complete - enable auto-save
         _isInitializing = false;
@@ -677,7 +709,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         // Trigger save
-        _raceStorage.Save(Races.Select(r => r.GetModel()).ToList());
+        _raceManagement.SaveRaces();
         Log.Information("Saved race entries for {RaceName}", ActiveRace.Name);
     }
 
@@ -825,155 +857,7 @@ public partial class MainViewModel : ObservableObject
         return builder.Build();
     }
 
-    /// <summary>
-    /// Adds a new car based on the default car template.
-    /// </summary>
-    [RelayCommand]
-    private void AddCar()
-    {
-        // Find the default car to copy settings from
-        var defaultCar = Cars.FirstOrDefault(c => c.IsDefault);
-
-        var newCar = new Car($"Car {Cars.Count + 1}");
-
-        // Copy power settings from default car if available
-        if (defaultCar != null)
-        {
-            newCar.DefaultPower = defaultCar.DefaultPower;
-            newCar.GhostMaxPower = defaultCar.GhostMaxPower;
-            newCar.MinPower = defaultCar.MinPower;
-        }
-
-        var viewModel = new CarViewModel(newCar, isDefault: false);
-        viewModel.DeleteRequested += OnCarDeleteRequested;
-        viewModel.Changed += OnCarChanged;
-        viewModel.TuneRequested += OnCarTuneRequested;
-        viewModel.ImageChangeRequested += OnCarImageChangeRequested;
-        Cars.Add(viewModel);
-        SelectedCar = viewModel;
-        Log.Information("Added new car: {CarName} (copied settings from default)", newCar.Name);
-        SaveCars();
-    }
-
-    /// <summary>
-    /// Handles delete request from a car view model.
-    /// </summary>
-    private void OnCarDeleteRequested(object? sender, EventArgs e)
-    {
-        if (sender is CarViewModel car)
-        {
-            DeleteCar(car);
-        }
-    }
-
-    /// <summary>
-    /// Handles property change on a car view model.
-    /// </summary>
-    private void OnCarChanged(object? sender, EventArgs e)
-    {
-        SaveCars();
-    }
-
-    /// <summary>
-    /// Handles tune request from a car view model.
-    /// Opens the tuning window via the window service.
-    /// </summary>
-    private async void OnCarTuneRequested(object? sender, EventArgs e)
-    {
-        if (sender is CarViewModel car)
-        {
-            Log.Information("Opening tuning window for car: {CarName}", car.Name);
-            await _windowService.ShowCarTuningDialogAsync(car, _bleService);
-            SaveCars();
-        }
-    }
-
-    /// <summary>
-    /// Handles image change request from a car view model.
-    /// Opens a file picker and copies the image via the window service.
-    /// </summary>
-    private async void OnCarImageChangeRequested(object? sender, EventArgs e)
-    {
-        if (sender is CarViewModel car)
-        {
-            Log.Information("Image change requested for car: {CarName}", car.Name);
-            var imagePath = await _windowService.PickAndCopyImageAsync("Select Car Image", car.Id);
-            if (imagePath != null)
-            {
-                car.ImagePath = imagePath;
-                SaveCars();
-            }
-        }
-    }
-
-    /// <summary>
-    /// Deletes the specified car (cannot delete the default car).
-    /// </summary>
-    /// <param name="car">The car view model to delete.</param>
-    private void DeleteCar(CarViewModel? car)
-    {
-        if (car == null || car.IsDefault)
-        {
-            Log.Warning("Cannot delete null or default car");
-            return;
-        }
-
-        car.DeleteRequested -= OnCarDeleteRequested;
-        car.Changed -= OnCarChanged;
-        car.TuneRequested -= OnCarTuneRequested;
-        car.ImageChangeRequested -= OnCarImageChangeRequested;
-        Cars.Remove(car);
-        if (SelectedCar == car)
-        {
-            SelectedCar = null;
-        }
-        Log.Information("Deleted car: {CarName}", car.Name);
-        SaveCars();
-    }
-
-    /// <summary>
-    /// Loads cars from storage.
-    /// Ensures the default car is always present.
-    /// </summary>
-    private void LoadCars()
-    {
-        var storedCars = _carStorage.Load();
-
-        // Check if default car exists in storage
-        var hasDefaultCar = storedCars.Any(c => c.Id == Car.DefaultCarId);
-
-        if (!hasDefaultCar)
-        {
-            // Create default car if not in storage
-            var defaultCar = Car.CreateDefault();
-            storedCars.Insert(0, defaultCar);
-        }
-
-        // Create view models for all cars
-        foreach (var car in storedCars)
-        {
-            var isDefault = car.Id == Car.DefaultCarId;
-            var viewModel = new CarViewModel(car, isDefault);
-            viewModel.DeleteRequested += OnCarDeleteRequested;
-            viewModel.Changed += OnCarChanged;
-            viewModel.TuneRequested += OnCarTuneRequested;
-            viewModel.ImageChangeRequested += OnCarImageChangeRequested;
-            Cars.Add(viewModel);
-        }
-
-        Log.Information("Loaded {Count} cars", Cars.Count);
-    }
-
-    /// <summary>
-    /// Saves all cars to storage.
-    /// </summary>
-    private void SaveCars()
-    {
-        if (_isInitializing) return;
-
-        var cars = Cars.Select(vm => vm.GetModel());
-        _carStorage.Save(cars);
-    }
+    // Car management methods moved to CarManagementViewModel
 
     /// <summary>
     /// Saves all data on application shutdown.
@@ -984,14 +868,9 @@ public partial class MainViewModel : ObservableObject
         Log.Information("Saving all data on shutdown");
 
         // Force save all collections
-        var cars = Cars.Select(vm => vm.GetModel());
-        _carStorage.Save(cars);
-
-        var drivers = Drivers.Select(vm => vm.GetModel());
-        _driverStorage.Save(drivers);
-
-        var races = Races.Select(vm => vm.GetModel());
-        _raceStorage.Save(races);
+        _carManagement.SaveCars();
+        _driverManagement.SaveDrivers();
+        _raceManagement.SaveRaces();
 
         // Save current race entries if in configure mode
         if (CurrentAppMode == AppMode.Configure)
@@ -1004,278 +883,16 @@ public partial class MainViewModel : ObservableObject
         Log.Information("All data saved on shutdown");
     }
 
-    /// <summary>
-    /// Adds a new driver.
-    /// </summary>
-    [RelayCommand]
-    private void AddDriver()
-    {
-        var newDriver = new Driver($"Driver {Drivers.Count + 1}");
-        var viewModel = new DriverViewModel(newDriver, isDefault: false);
-        viewModel.DeleteRequested += OnDriverDeleteRequested;
-        viewModel.Changed += OnDriverChanged;
-        viewModel.ImageChangeRequested += OnDriverImageChangeRequested;
-        Drivers.Add(viewModel);
-        SelectedDriver = viewModel;
-        Log.Information("Added new driver: {DriverName}", newDriver.Name);
-        SaveDrivers();
-    }
-
-    /// <summary>
-    /// Handles delete request from a driver view model.
-    /// </summary>
-    private void OnDriverDeleteRequested(object? sender, EventArgs e)
-    {
-        if (sender is DriverViewModel driver)
-        {
-            DeleteDriver(driver);
-        }
-    }
-
-    /// <summary>
-    /// Handles property change on a driver view model.
-    /// </summary>
-    private void OnDriverChanged(object? sender, EventArgs e)
-    {
-        SaveDrivers();
-    }
-
-    /// <summary>
-    /// Handles image change request from a driver view model.
-    /// Opens a file picker and copies the image via the window service.
-    /// </summary>
-    private async void OnDriverImageChangeRequested(object? sender, EventArgs e)
-    {
-        if (sender is DriverViewModel driver)
-        {
-            Log.Information("Image change requested for driver: {DriverName}", driver.Name);
-            var imagePath = await _windowService.PickAndCopyImageAsync("Select Driver Image", driver.Id, ImageConstants.DriverImagePrefix);
-            if (imagePath != null)
-            {
-                driver.ImagePath = imagePath;
-                SaveDrivers();
-            }
-        }
-    }
-
-    /// <summary>
-    /// Deletes the specified driver (cannot delete the default driver).
-    /// </summary>
-    /// <param name="driver">The driver view model to delete.</param>
-    private void DeleteDriver(DriverViewModel? driver)
-    {
-        if (driver == null || driver.IsDefault)
-        {
-            Log.Warning("Cannot delete null or default driver");
-            return;
-        }
-
-        driver.DeleteRequested -= OnDriverDeleteRequested;
-        driver.Changed -= OnDriverChanged;
-        driver.ImageChangeRequested -= OnDriverImageChangeRequested;
-        Drivers.Remove(driver);
-        if (SelectedDriver == driver)
-        {
-            SelectedDriver = null;
-        }
-        Log.Information("Deleted driver: {DriverName}", driver.Name);
-        SaveDrivers();
-    }
-
-    /// <summary>
-    /// Loads drivers from storage.
-    /// Ensures the default driver is always present.
-    /// </summary>
-    private void LoadDrivers()
-    {
-        var storedDrivers = _driverStorage.Load();
-
-        // Check if default driver exists in storage
-        var hasDefaultDriver = storedDrivers.Any(d => d.Id == Driver.DefaultDriverId);
-
-        if (!hasDefaultDriver)
-        {
-            // Create default driver if not in storage
-            var defaultDriver = Driver.CreateDefault();
-            storedDrivers.Insert(0, defaultDriver);
-        }
-
-        // Create view models for all drivers
-        foreach (var driver in storedDrivers)
-        {
-            var isDefault = driver.Id == Driver.DefaultDriverId;
-            var viewModel = new DriverViewModel(driver, isDefault);
-            viewModel.DeleteRequested += OnDriverDeleteRequested;
-            viewModel.Changed += OnDriverChanged;
-            viewModel.ImageChangeRequested += OnDriverImageChangeRequested;
-            Drivers.Add(viewModel);
-        }
-
-        Log.Information("Loaded {Count} drivers", Drivers.Count);
-    }
-
-    /// <summary>
-    /// Saves all drivers to storage.
-    /// </summary>
-    private void SaveDrivers()
-    {
-        if (_isInitializing) return;
-
-        var drivers = Drivers.Select(vm => vm.GetModel());
-        _driverStorage.Save(drivers);
-    }
-
-    /// <summary>
-    /// Adds a new race configuration.
-    /// </summary>
-    [RelayCommand]
-    private void AddRace()
-    {
-        var newRace = new Race { Name = $"Race {Races.Count + 1}" };
-        var viewModel = new RaceViewModel(newRace, isDefault: false);
-        viewModel.DeleteRequested += OnRaceDeleteRequested;
-        viewModel.Changed += OnRaceChanged;
-        viewModel.ImageChangeRequested += OnRaceImageChangeRequested;
-        viewModel.EditRequested += OnRaceEditRequested;
-        viewModel.StartRequested += OnRaceStartRequested;
-        Races.Add(viewModel);
-        SelectedRace = viewModel;
-        Log.Information("Added new race: {RaceName}", newRace.Name);
-        SaveRaces();
-    }
-
-    /// <summary>
-    /// Handles delete request from a race view model.
-    /// </summary>
-    private void OnRaceDeleteRequested(object? sender, EventArgs e)
-    {
-        if (sender is RaceViewModel race)
-        {
-            DeleteRace(race);
-        }
-    }
-
-    /// <summary>
-    /// Handles property change on a race view model.
-    /// </summary>
-    private void OnRaceChanged(object? sender, EventArgs e)
-    {
-        SaveRaces();
-    }
-
-    /// <summary>
-    /// Handles image change request from a race view model.
-    /// Opens a file picker and copies the image via the window service.
-    /// </summary>
-    private async void OnRaceImageChangeRequested(object? sender, EventArgs e)
-    {
-        if (sender is RaceViewModel race)
-        {
-            Log.Information("Image change requested for race: {RaceName}", race.Name);
-            var imagePath = await _windowService.PickAndCopyImageAsync("Select Race Image", race.Id, ImageConstants.RaceImagePrefix);
-            if (imagePath != null)
-            {
-                race.ImagePath = imagePath;
-                SaveRaces();
-            }
-        }
-    }
-
-    /// <summary>
-    /// Handles edit request from a race view model.
-    /// Opens the race config editing window.
-    /// </summary>
-    private async void OnRaceEditRequested(object? sender, EventArgs e)
-    {
-        if (sender is RaceViewModel race)
-        {
-            Log.Information("Edit requested for race: {RaceName}", race.Name);
-            await _windowService.ShowRaceConfigDialogAsync(race);
-            SaveRaces();
-        }
-    }
+    // Driver management methods moved to DriverManagementViewModel
+    // Most race management methods moved to RaceManagementViewModel
 
     /// <summary>
     /// Handles start request from a race view model.
-    /// Switches to racing mode.
+    /// Switches to racing mode. This remains in MainViewModel because it affects AppMode.
     /// </summary>
-    private void OnRaceStartRequested(object? sender, EventArgs e)
+    private void OnRaceStartRequested(RaceViewModel race)
     {
-        if (sender is RaceViewModel race)
-        {
-            StartRacing(race);
-        }
-    }
-
-    /// <summary>
-    /// Deletes the specified race (cannot delete the default race).
-    /// </summary>
-    /// <param name="race">The race view model to delete.</param>
-    private void DeleteRace(RaceViewModel? race)
-    {
-        if (race == null || race.IsDefault)
-        {
-            Log.Warning("Cannot delete null or default race");
-            return;
-        }
-
-        race.DeleteRequested -= OnRaceDeleteRequested;
-        race.Changed -= OnRaceChanged;
-        race.ImageChangeRequested -= OnRaceImageChangeRequested;
-        race.EditRequested -= OnRaceEditRequested;
-        race.StartRequested -= OnRaceStartRequested;
-        Races.Remove(race);
-        if (SelectedRace == race)
-        {
-            SelectedRace = null;
-        }
-        Log.Information("Deleted race: {RaceName}", race.Name);
-        SaveRaces();
-    }
-
-    /// <summary>
-    /// Loads races from storage.
-    /// Ensures the default race is always present.
-    /// </summary>
-    private void LoadRaces()
-    {
-        var storedRaces = _raceStorage.Load();
-
-        // Check if default race exists in storage
-        var hasDefaultRace = storedRaces.Any(r => r.Id == Race.DefaultRaceId);
-
-        if (!hasDefaultRace)
-        {
-            // Create default race if not in storage
-            var defaultRace = Race.CreateDefault();
-            storedRaces.Insert(0, defaultRace);
-        }
-
-        // Create view models for all races
-        foreach (var race in storedRaces)
-        {
-            var isDefault = race.Id == Race.DefaultRaceId;
-            var viewModel = new RaceViewModel(race, isDefault);
-            viewModel.DeleteRequested += OnRaceDeleteRequested;
-            viewModel.Changed += OnRaceChanged;
-            viewModel.ImageChangeRequested += OnRaceImageChangeRequested;
-            viewModel.EditRequested += OnRaceEditRequested;
-            viewModel.StartRequested += OnRaceStartRequested;
-            Races.Add(viewModel);
-        }
-
-        Log.Information("Loaded {Count} races", Races.Count);
-    }
-
-    /// <summary>
-    /// Saves all races to storage.
-    /// </summary>
-    private void SaveRaces()
-    {
-        if (_isInitializing) return;
-
-        var races = Races.Select(vm => vm.GetModel());
-        _raceStorage.Save(races);
+        StartRacing(race);
     }
 
     #endregion
