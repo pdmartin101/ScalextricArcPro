@@ -1,5 +1,12 @@
 # CLAUDE.md
 
+Write strict MVVM code for Avalonia using CommunityToolkit.Mvvm.
+- Use [RelayCommand] for every command
+- Never use EventHandler or event subscriptions in ViewModels
+- No code-behind logic except bare-minimum interaction plumbing
+- Follow official Avalonia MVVM docs and CommunityToolkit patterns
+
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this project.
 
 ## Build Commands
@@ -37,10 +44,9 @@ Apps/ScalextricRace/
 │   ├── Program.cs                        # Application entry point
 │   ├── App.axaml(.cs)                    # Avalonia app bootstrap + DI container
 │   ├── app.manifest                      # Windows application manifest
-│   ├── Models/                           # Domain models (5 files)
+│   ├── Models/                           # Domain models (4 files)
 │   │   ├── Car.cs                        # Car entity with power settings
-│   │   ├── Driver.cs                     # Driver entity with power limit
-│   │   ├── SkillLevel.cs                 # Skill level configuration
+│   │   ├── Driver.cs                     # Driver entity with power limit (50-100%)
 │   │   ├── ConnectionState.cs            # BLE connection state enum
 │   │   └── NavigationMode.cs             # UI navigation mode enum
 │   ├── ViewModels/                       # MVVM ViewModels (5 files)
@@ -52,7 +58,7 @@ Apps/ScalextricRace/
 │   ├── Views/                            # Avalonia UI windows (2 files)
 │   │   ├── MainWindow.axaml(.cs)         # Main UI with navigation
 │   │   └── CarTuningWindow.axaml(.cs)    # Car tuning wizard dialog
-│   ├── Services/                         # Application services (10 files)
+│   ├── Services/                         # Application services (8 files)
 │   │   ├── IBleService.cs                # BLE service interface
 │   │   ├── BleService.cs                 # Windows BLE implementation
 │   │   ├── IAppSettings.cs               # Settings interface
@@ -61,15 +67,13 @@ Apps/ScalextricRace/
 │   │   ├── CarStorage.cs                 # JSON car persistence
 │   │   ├── IDriverStorage.cs             # Driver storage interface
 │   │   ├── DriverStorage.cs              # JSON driver persistence
-│   │   ├── ISkillLevelConfigService.cs   # Skill level config interface
-│   │   ├── SkillLevelConfigService.cs    # Skill level persistence
 │   │   ├── IWindowService.cs             # Window management interface
 │   │   ├── WindowService.cs              # Window lifecycle management
 │   │   └── LoggingConfiguration.cs       # Serilog setup
 │   └── Converters/                       # XAML value converters (2 files)
 │       ├── ConnectionStateToColorConverter.cs
 │       └── BoolToColorConverter.cs
-└── ScalextricRace.Tests/                 # Unit test project (26 tests)
+└── ScalextricRace.Tests/                 # Unit test project (27 tests)
     ├── ScalextricRace.Tests.csproj       # xUnit test project
     ├── CarModelTests.cs                  # Car model tests
     ├── DriverModelTests.cs               # Driver model tests
@@ -93,7 +97,7 @@ The application references two shared libraries in `Libs/`:
 │                         App.axaml.cs                                 │
 │  - Builds DI Container (ServiceCollection)                          │
 │  - Registers: IAppSettings, IBleService, ICarStorage, IDriverStorage│
-│  - Registers: ISkillLevelConfigService, IWindowService, MainViewModel│
+│  - Registers: IWindowService, MainViewModel                         │
 │  - Exposes App.Services for resolution                              │
 └─────────────────────────────────┬───────────────────────────────────┘
                                   │
@@ -114,7 +118,7 @@ The application references two shared libraries in `Libs/`:
 │    • Settings persistence                                           │
 │    • Car/Driver management (CRUD, tuning)                           │
 │  CarViewModel - Car wrapper with tune/delete/image commands         │
-│  DriverViewModel - Driver wrapper with skill level management       │
+│  DriverViewModel - Driver wrapper with power limit slider           │
 │  ControllerViewModel - Per-slot controller state                    │
 │  CarTuningViewModel - 3-stage tuning wizard state                   │
 └─────────────────────────────────┬───────────────────────────────────┘
@@ -124,7 +128,6 @@ The application references two shared libraries in `Libs/`:
 │  IBleService - BLE abstraction (shared library)                     │
 │  IAppSettings - Settings abstraction                                │
 │  ICarStorage, IDriverStorage - Data persistence                     │
-│  ISkillLevelConfigService - Skill level configuration               │
 │  IWindowService - Window management abstraction                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -195,8 +198,7 @@ Settings and data are stored in `%LocalAppData%/ScalextricPdm/ScalextricRace/`:
 ```
 ├── settings.json    # App settings (power level, throttle profile)
 ├── cars.json        # Car configurations
-├── drivers.json     # Driver profiles
-├── skilllevels.json # Skill level definitions
+├── drivers.json     # Driver profiles (with power limit 50-100%)
 └── Images/          # Car/driver images (copied from originals)
 ```
 
@@ -233,17 +235,15 @@ The car tuning wizard is a 3-stage dialog for calibrating car power settings:
 | Layer | Entity | Purpose |
 |-------|--------|---------|
 | Model | `Car` | Car entity with DefaultPower, GhostMaxPower, MinPower, ImagePath |
-| Model | `Driver` | Driver entity with PowerLimit and SkillLevel reference |
-| Model | `SkillLevel` | Skill name + power limit value |
+| Model | `Driver` | Driver entity with PowerLimit (50-100% multiplier for car power) |
 | Service | `IBleService` | BLE abstraction interface (shared library) |
 | Service | `IAppSettings` | Settings abstraction |
 | Service | `ICarStorage` | Car persistence abstraction |
 | Service | `IDriverStorage` | Driver persistence abstraction |
-| Service | `ISkillLevelConfigService` | Skill level persistence |
 | Service | `IWindowService` | Window management abstraction |
 | ViewModel | `MainViewModel` | Central state manager, commands, car/driver management |
 | ViewModel | `CarViewModel` | Car wrapper with tune/delete/image commands |
-| ViewModel | `DriverViewModel` | Driver wrapper with skill level management |
+| ViewModel | `DriverViewModel` | Driver wrapper with power limit slider (50-100%) |
 | ViewModel | `ControllerViewModel` | Per-slot controller state |
 | ViewModel | `CarTuningViewModel` | 3-stage tuning wizard state |
 | Library | `ScalextricProtocol` | BLE protocol constants and command builders |
@@ -268,11 +268,11 @@ Currently Windows-only (`net9.0-windows10.0.19041.0`). BLE code is wrapped in `#
 
 ### Unit Tests
 
-26 tests covering:
+27 tests covering:
 - `CarModelTests` - Car model defaults and creation
 - `DriverModelTests` - Driver model defaults and power limit
 - `CarViewModelTests` - CarViewModel property sync, clamping, events
-- `DriverViewModelTests` - DriverViewModel property sync, skill levels, events
+- `DriverViewModelTests` - DriverViewModel property sync, power limit clamping, events
 
 Run tests with: `dotnet test ScalextricRace.Tests/ScalextricRace.Tests.csproj`
 

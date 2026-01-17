@@ -11,7 +11,6 @@ namespace ScalextricRace.ViewModels;
 public partial class DriverViewModel : ObservableObject
 {
     private readonly Driver _driver;
-    private readonly SkillLevelConfig _skillLevels;
 
     /// <summary>
     /// Event raised when deletion is requested for this driver.
@@ -63,82 +62,42 @@ public partial class DriverViewModel : ObservableObject
     public bool HasImage => !string.IsNullOrEmpty(ImagePath);
 
     /// <summary>
-    /// Maximum power level this driver can use (0-63).
-    /// Null means no limit - driver can use full car power.
+    /// Maximum power level this driver can use as a percentage (50-100).
+    /// Null means no limit - driver can use full car power (100%).
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPowerLimit))]
-    [NotifyPropertyChangedFor(nameof(PowerLimitDisplay))]
-    [NotifyPropertyChangedFor(nameof(SelectedSkillLevel))]
+    [NotifyPropertyChangedFor(nameof(PowerLimitPercentDisplay))]
+    [NotifyPropertyChangedFor(nameof(PowerLimitSliderValue))]
     private int? _powerLimit;
 
     /// <summary>
-    /// Gets whether this driver has a power limit set (less than 63).
+    /// Gets or sets the power limit for slider binding (never null, treats null as 100).
     /// </summary>
-    public bool HasPowerLimit => PowerLimit.HasValue && PowerLimit.Value < 63;
-
-    /// <summary>
-    /// Gets the power limit display string using skill level names.
-    /// </summary>
-    public string PowerLimitDisplay => _skillLevels.GetLevelName(PowerLimit);
-
-    /// <summary>
-    /// Gets the available skill levels for the UI.
-    /// </summary>
-    public List<SkillLevel> AvailableSkillLevels => _skillLevels.Levels;
-
-    /// <summary>
-    /// Gets or sets the selected skill level for the dropdown.
-    /// Two-way binding computed property backed by PowerLimit.
-    /// </summary>
-    public SkillLevel? SelectedSkillLevel
+    public int PowerLimitSliderValue
     {
-        get => GetCurrentSkillLevel();
-        set
-        {
-            if (value != null && value != GetCurrentSkillLevel())
-            {
-                SetSkillLevel(value);
-                // Note: PowerLimit change already notifies SelectedSkillLevel via [NotifyPropertyChangedFor]
-            }
-        }
+        get => PowerLimit ?? 100;
+        set => PowerLimit = value >= 100 ? null : value;
     }
 
     /// <summary>
-    /// Gets the current skill level based on power limit.
+    /// Gets whether this driver has a power limit set (less than 100%).
     /// </summary>
-    private SkillLevel? GetCurrentSkillLevel()
-    {
-        // Find matching skill level by power limit
-        if (!PowerLimit.HasValue || PowerLimit.Value >= 63)
-        {
-            return _skillLevels.Levels.FirstOrDefault(l => l.IsNoLimit);
-        }
+    public bool HasPowerLimit => PowerLimit.HasValue && PowerLimit.Value < 100;
 
-        // Try exact match first
-        var exactMatch = _skillLevels.Levels.FirstOrDefault(l => l.PowerLimit == PowerLimit.Value);
-        if (exactMatch != null)
-        {
-            return exactMatch;
-        }
-
-        // No exact match - return closest lower level
-        return _skillLevels.Levels
-            .Where(l => l.PowerLimit <= PowerLimit.Value)
-            .OrderByDescending(l => l.PowerLimit)
-            .FirstOrDefault();
-    }
+    /// <summary>
+    /// Gets the power limit as a percentage display string (e.g., "75%").
+    /// </summary>
+    public string PowerLimitPercentDisplay => $"{PowerLimitSliderValue}%";
 
     /// <summary>
     /// Creates a new DriverViewModel wrapping the specified driver.
     /// </summary>
     /// <param name="driver">The driver model to wrap.</param>
     /// <param name="isDefault">Whether this is the default driver (non-deletable).</param>
-    /// <param name="skillLevels">The skill level configuration (optional, loads default if null).</param>
-    public DriverViewModel(Driver driver, bool isDefault = false, SkillLevelConfig? skillLevels = null)
+    public DriverViewModel(Driver driver, bool isDefault = false)
     {
         _driver = driver;
-        _skillLevels = skillLevels ?? SkillLevelConfig.Load();
         IsDefault = isDefault;
 
         // Initialize from model
@@ -167,7 +126,7 @@ public partial class DriverViewModel : ObservableObject
 
     partial void OnPowerLimitChanged(int? value)
     {
-        _driver.PowerLimit = value.HasValue ? Math.Clamp(value.Value, 0, 63) : null;
+        _driver.PowerLimit = value.HasValue ? Math.Clamp(value.Value, 50, 100) : null;
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -193,18 +152,30 @@ public partial class DriverViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Sets the power limit to the specified skill level.
+    /// Increments the power limit by 1, up to maximum of 100.
+    /// If currently null (no limit), stays at 100.
     /// </summary>
-    /// <param name="skillLevel">The skill level to apply.</param>
-    private void SetSkillLevel(SkillLevel skillLevel)
+    [RelayCommand]
+    private void IncrementPowerLimit()
     {
-        if (skillLevel.IsNoLimit)
+        var current = PowerLimit ?? 100;
+        if (current < 100)
         {
-            PowerLimit = null;
+            PowerLimit = current + 1;
         }
-        else
+    }
+
+    /// <summary>
+    /// Decrements the power limit by 1, down to minimum of 50.
+    /// If currently null (no limit), sets to 99.
+    /// </summary>
+    [RelayCommand]
+    private void DecrementPowerLimit()
+    {
+        var current = PowerLimit ?? 100;
+        if (current > 50)
         {
-            PowerLimit = skillLevel.PowerLimit;
+            PowerLimit = current - 1;
         }
     }
 }

@@ -485,24 +485,41 @@
                                                      Padding="0"
                                                      HorizontalAlignment="Center" />
 
-                                            <!-- Skill Level Dropdown -->
-                                            <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,0,0,8">
-                                                <TextBlock Text="Skill Level"
+                                            <!-- Power Limit Slider with +/- buttons -->
+                                            <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,8">
+                                                <Button Grid.Column="0"
+                                                        Content="-"
+                                                        Command="{Binding DecrementPowerLimitCommand}"
+                                                        Width="28"
+                                                        Height="28"
+                                                        Padding="0"
+                                                        FontSize="14"
+                                                        FontWeight="Bold"
+                                                        HorizontalContentAlignment="Center"
+                                                        VerticalContentAlignment="Center" />
+                                                <Slider Grid.Column="1"
+                                                        Minimum="50"
+                                                        Maximum="100"
+                                                        Value="{Binding PowerLimitSliderValue}"
+                                                        Margin="6,0"
+                                                        VerticalAlignment="Center" />
+                                                <Button Grid.Column="2"
+                                                        Content="+"
+                                                        Command="{Binding IncrementPowerLimitCommand}"
+                                                        Width="28"
+                                                        Height="28"
+                                                        Padding="0"
+                                                        FontSize="14"
+                                                        FontWeight="Bold"
+                                                        HorizontalContentAlignment="Center"
+                                                        VerticalContentAlignment="Center" />
+                                                <TextBlock Grid.Column="3"
+                                                           Text="{Binding PowerLimitPercentDisplay}"
                                                            FontSize="11"
-                                                           Foreground="Gray"
-                                                           VerticalAlignment="Center" />
-                                                <ComboBox Grid.Column="1"
-                                                          ItemsSource="{Binding AvailableSkillLevels}"
-                                                          SelectedItem="{Binding SelectedSkillLevel}"
-                                                          MinWidth="110"
-                                                          FontSize="11"
-                                                          Padding="8,4">
-                                                    <ComboBox.ItemTemplate>
-                                                        <DataTemplate x:DataType="models:SkillLevel">
-                                                            <TextBlock Text="{Binding DisplayText}" />
-                                                        </DataTemplate>
-                                                    </ComboBox.ItemTemplate>
-                                                </ComboBox>
+                                                           Width="35"
+                                                           TextAlignment="Right"
+                                                           VerticalAlignment="Center"
+                                                           Margin="4,0,0,0" />
                                             </Grid>
 
                                             <!-- Delete Button -->

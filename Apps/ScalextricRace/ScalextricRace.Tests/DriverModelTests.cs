@@ -47,17 +47,17 @@ public class DriverModelTests
         var driver = new Driver("Test Driver");
 
         // Act
-        driver.PowerLimit = 40;
+        driver.PowerLimit = 75;
 
         // Assert
-        Assert.Equal(40, driver.PowerLimit);
+        Assert.Equal(75, driver.PowerLimit);
     }
 
     [Fact]
     public void PowerLimit_CanBeSetToNull()
     {
         // Arrange
-        var driver = new Driver("Test Driver") { PowerLimit = 40 };
+        var driver = new Driver("Test Driver") { PowerLimit = 75 };
 
         // Act
         driver.PowerLimit = null;

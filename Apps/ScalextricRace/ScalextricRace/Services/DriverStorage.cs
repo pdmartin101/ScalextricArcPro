@@ -35,7 +35,7 @@ public class DriverStorage : IDriverStorage
                     {
                         if (driver.PowerLimit.HasValue)
                         {
-                            driver.PowerLimit = Math.Clamp(driver.PowerLimit.Value, 0, 63);
+                            driver.PowerLimit = Math.Clamp(driver.PowerLimit.Value, 50, 100);
                         }
                     }
 

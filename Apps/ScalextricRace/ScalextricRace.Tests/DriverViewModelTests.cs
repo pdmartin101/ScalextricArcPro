@@ -14,7 +14,7 @@ public class DriverViewModelTests
         // Arrange
         var driver = new Driver("Test Driver")
         {
-            PowerLimit = 40
+            PowerLimit = 75
         };
 
         // Act
@@ -22,7 +22,7 @@ public class DriverViewModelTests
 
         // Assert
         Assert.Equal("Test Driver", viewModel.Name);
-        Assert.Equal(40, viewModel.PowerLimit);
+        Assert.Equal(75, viewModel.PowerLimit);
         Assert.Equal(driver.Id, viewModel.Id);
     }
 
@@ -41,17 +41,31 @@ public class DriverViewModelTests
     }
 
     [Fact]
-    public void PowerLimit_ClampsToValidRange()
+    public void PowerLimit_ClampsToMaximum()
     {
         // Arrange
         var driver = new Driver("Test Driver");
         var viewModel = new DriverViewModel(driver);
 
         // Act
-        viewModel.PowerLimit = 100; // Above max
+        viewModel.PowerLimit = 150; // Above max (100%)
 
         // Assert
-        Assert.Equal(63, driver.PowerLimit);
+        Assert.Equal(100, driver.PowerLimit);
+    }
+
+    [Fact]
+    public void PowerLimit_ClampsToMinimum()
+    {
+        // Arrange
+        var driver = new Driver("Test Driver");
+        var viewModel = new DriverViewModel(driver);
+
+        // Act
+        viewModel.PowerLimit = 25; // Below min (50%)
+
+        // Assert
+        Assert.Equal(50, driver.PowerLimit);
     }
 
     [Fact]
@@ -67,10 +81,10 @@ public class DriverViewModelTests
     }
 
     [Fact]
-    public void HasPowerLimit_TrueWhenLessThan63()
+    public void HasPowerLimit_TrueWhenLessThan100()
     {
         // Arrange
-        var driver = new Driver("Test Driver") { PowerLimit = 40 };
+        var driver = new Driver("Test Driver") { PowerLimit = 75 };
         var viewModel = new DriverViewModel(driver);
 
         // Assert
@@ -78,10 +92,10 @@ public class DriverViewModelTests
     }
 
     [Fact]
-    public void HasPowerLimit_FalseWhen63()
+    public void HasPowerLimit_FalseWhen100()
     {
         // Arrange
-        var driver = new Driver("Test Driver") { PowerLimit = 63 };
+        var driver = new Driver("Test Driver") { PowerLimit = 100 };
         var viewModel = new DriverViewModel(driver);
 
         // Assert

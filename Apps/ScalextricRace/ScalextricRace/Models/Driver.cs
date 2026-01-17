@@ -24,10 +24,9 @@ public class Driver
     public string? ImagePath { get; set; }
 
     /// <summary>
-    /// Maximum power level this driver can use (0-63).
-    /// Null means no limit - driver can use full car power.
+    /// Maximum power level this driver can use as a percentage (50-100).
+    /// Null means no limit - driver can use full car power (100%).
     /// Lower values = safer for beginners.
-    /// This effectively defines the driver's experience level.
     /// </summary>
     public int? PowerLimit { get; set; }
 
@@ -55,7 +54,7 @@ public class Driver
     public Driver(string name, int? powerLimit)
     {
         Name = name;
-        PowerLimit = powerLimit.HasValue ? Math.Clamp(powerLimit.Value, 0, 63) : null;
+        PowerLimit = powerLimit.HasValue ? Math.Clamp(powerLimit.Value, 50, 100) : null;
     }
 
     /// <summary>
