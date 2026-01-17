@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using Serilog;
 
 namespace ScalextricBleMonitor.Services;
 
@@ -149,13 +150,14 @@ public class AppSettings : IAppSettings
                         }
                     }
 
+                    Log.Information("Settings loaded from {FilePath}", filePath);
                     return settings;
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // If loading fails, return defaults
+            Log.Warning(ex, "Failed to load settings, using defaults");
         }
 
         return new AppSettings();
@@ -179,10 +181,12 @@ public class AppSettings : IAppSettings
             var options = new JsonSerializerOptions { WriteIndented = true };
             var json = JsonSerializer.Serialize(this, options);
             File.WriteAllText(filePath, json);
+
+            Log.Debug("Settings saved to {FilePath}", filePath);
         }
-        catch
+        catch (Exception ex)
         {
-            // Silently fail if we can't save settings
+            Log.Warning(ex, "Failed to save settings");
         }
     }
 }

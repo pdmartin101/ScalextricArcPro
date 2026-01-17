@@ -880,20 +880,41 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// Disables track power and stops the heartbeat loop.
     /// </summary>
-    private async void DisablePower()
+    private void DisablePower()
     {
         if (_powerHeartbeatService == null) return;
 
-        Log.Information("Disabling track power");
+        RunFireAndForget(async () =>
+        {
+            Log.Information("Disabling track power");
 
-        // Stop the heartbeat loop first
-        _powerHeartbeatService.Stop();
+            // Stop the heartbeat loop first
+            _powerHeartbeatService.Stop();
 
-        // Send power-off sequence (clear ghost + power off)
-        await _powerHeartbeatService.SendPowerOffSequenceAsync();
+            // Send power-off sequence (clear ghost + power off)
+            await _powerHeartbeatService.SendPowerOffSequenceAsync();
 
-        Log.Information("Power disabled successfully");
-        StatusMessage = "Power disabled";
+            Log.Information("Power disabled successfully");
+            StatusMessage = "Power disabled";
+        }, "DisablePower");
+    }
+
+    /// <summary>
+    /// Safely runs an async task without awaiting, handling any exceptions.
+    /// </summary>
+    private static void RunFireAndForget(Func<Task> asyncAction, string operationName)
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                await asyncAction();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error in {OperationName}", operationName);
+            }
+        });
     }
 
     #endregion

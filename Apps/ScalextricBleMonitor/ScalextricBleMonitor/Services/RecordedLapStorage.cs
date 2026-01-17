@@ -1,89 +1,45 @@
-using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text.Json;
 using ScalextricBleMonitor.Models;
-using Serilog;
 
 namespace ScalextricBleMonitor.Services;
 
 /// <summary>
 /// Handles persistence of recorded laps to JSON files.
 /// Stores all recorded laps in a single file in the user's local app data folder.
+/// Uses internal instance for base class functionality while maintaining static API.
 /// </summary>
-public static class RecordedLapStorage
+public class RecordedLapStorage : JsonStorageBase<RecordedLap>
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true
-    };
-
     /// <summary>
-    /// Gets the path to the recorded laps file.
+    /// Singleton instance for static access pattern.
     /// </summary>
-    private static string RecordedLapsFilePath
-    {
-        get
-        {
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var appFolder = Path.Combine(appDataPath, "ScalextricPdm", "ScalextricBleMonitor");
-            return Path.Combine(appFolder, "recorded_laps.json");
-        }
-    }
+    private static readonly RecordedLapStorage Instance = new();
+
+    /// <inheritdoc />
+    protected override string FileName => "recorded_laps.json";
+
+    /// <inheritdoc />
+    protected override string EntityName => "recorded laps";
 
     /// <summary>
     /// Loads all recorded laps from disk.
     /// </summary>
     /// <returns>List of recorded laps, or empty list if file doesn't exist or is invalid.</returns>
-    public static List<RecordedLap> Load()
-    {
-        try
-        {
-            var filePath = RecordedLapsFilePath;
-            if (File.Exists(filePath))
-            {
-                var json = File.ReadAllText(filePath);
-                var laps = JsonSerializer.Deserialize<List<RecordedLap>>(json, JsonOptions);
-                if (laps != null)
-                {
-                    Log.Information("Loaded {Count} recorded laps from {Path}", laps.Count, filePath);
-                    return laps;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "Failed to load recorded laps from disk");
-        }
-
-        return [];
-    }
+    public new static List<RecordedLap> Load() => Instance.LoadInternal();
 
     /// <summary>
     /// Saves all recorded laps to disk.
     /// </summary>
     /// <param name="laps">The list of recorded laps to save.</param>
-    public static void Save(IEnumerable<RecordedLap> laps)
-    {
-        try
-        {
-            var filePath = RecordedLapsFilePath;
-            var directory = Path.GetDirectoryName(filePath);
+    public new static void Save(IEnumerable<RecordedLap> laps) => Instance.SaveInternal(laps);
 
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
+    /// <summary>
+    /// Internal load implementation using base class.
+    /// </summary>
+    private List<RecordedLap> LoadInternal() => base.Load();
 
-            var lapList = new List<RecordedLap>(laps);
-            var json = JsonSerializer.Serialize(lapList, JsonOptions);
-            File.WriteAllText(filePath, json);
-
-            Log.Debug("Saved {Count} recorded laps to {Path}", lapList.Count, filePath);
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "Failed to save recorded laps to disk");
-        }
-    }
+    /// <summary>
+    /// Internal save implementation using base class.
+    /// </summary>
+    private void SaveInternal(IEnumerable<RecordedLap> laps) => base.Save(laps);
 }

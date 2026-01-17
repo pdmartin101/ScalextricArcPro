@@ -90,26 +90,50 @@ public partial class RaceManagementViewModel : ObservableObject
     /// Handles image change request from a race view model.
     /// Opens a file picker and copies the image via the window service.
     /// </summary>
-    private async void OnRaceImageChangeRequested(RaceViewModel race)
+    private void OnRaceImageChangeRequested(RaceViewModel race)
     {
-        Log.Information("Image change requested for race: {RaceName}", race.Name);
-        var imagePath = await _windowService.PickAndCopyImageAsync("Select Race Image", race.Id);
-        if (imagePath != null)
+        RunFireAndForget(async () =>
         {
-            race.ImagePath = imagePath;
-            SaveRaces();
-        }
+            Log.Information("Image change requested for race: {RaceName}", race.Name);
+            var imagePath = await _windowService.PickAndCopyImageAsync("Select Race Image", race.Id);
+            if (imagePath != null)
+            {
+                race.ImagePath = imagePath;
+                SaveRaces();
+            }
+        }, "RaceImageChangeRequested");
     }
 
     /// <summary>
     /// Handles edit request from a race view model.
     /// Opens the race config editing window.
     /// </summary>
-    private async void OnRaceEditRequested(RaceViewModel race)
+    private void OnRaceEditRequested(RaceViewModel race)
     {
-        Log.Information("Edit requested for race: {RaceName}", race.Name);
-        await _windowService.ShowRaceConfigDialogAsync(race);
-        SaveRaces();
+        RunFireAndForget(async () =>
+        {
+            Log.Information("Edit requested for race: {RaceName}", race.Name);
+            await _windowService.ShowRaceConfigDialogAsync(race);
+            SaveRaces();
+        }, "RaceEditRequested");
+    }
+
+    /// <summary>
+    /// Safely runs an async task without awaiting, handling any exceptions.
+    /// </summary>
+    private static void RunFireAndForget(Func<Task> asyncAction, string operationName)
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                await asyncAction();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error in {OperationName}", operationName);
+            }
+        });
     }
 
     /// <summary>

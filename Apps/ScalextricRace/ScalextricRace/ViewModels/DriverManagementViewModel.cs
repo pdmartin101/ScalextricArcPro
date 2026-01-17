@@ -86,15 +86,36 @@ public partial class DriverManagementViewModel : ObservableObject
     /// Handles image change request from a driver view model.
     /// Opens a file picker and copies the image via the window service.
     /// </summary>
-    private async void OnDriverImageChangeRequested(DriverViewModel driver)
+    private void OnDriverImageChangeRequested(DriverViewModel driver)
     {
-        Log.Information("Image change requested for driver: {DriverName}", driver.Name);
-        var imagePath = await _windowService.PickAndCopyImageAsync("Select Driver Image", driver.Id);
-        if (imagePath != null)
+        RunFireAndForget(async () =>
         {
-            driver.ImagePath = imagePath;
-            SaveDrivers();
-        }
+            Log.Information("Image change requested for driver: {DriverName}", driver.Name);
+            var imagePath = await _windowService.PickAndCopyImageAsync("Select Driver Image", driver.Id);
+            if (imagePath != null)
+            {
+                driver.ImagePath = imagePath;
+                SaveDrivers();
+            }
+        }, "DriverImageChangeRequested");
+    }
+
+    /// <summary>
+    /// Safely runs an async task without awaiting, handling any exceptions.
+    /// </summary>
+    private static void RunFireAndForget(Func<Task> asyncAction, string operationName)
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                await asyncAction();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error in {OperationName}", operationName);
+            }
+        });
     }
 
     /// <summary>
