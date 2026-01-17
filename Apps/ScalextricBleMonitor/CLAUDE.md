@@ -1,5 +1,11 @@
 # CLAUDE.md
 
+Write strict MVVM code for Avalonia using CommunityToolkit.Mvvm.
+- Use [RelayCommand] for every command
+- Never use EventHandler or event subscriptions in ViewModels
+- No code-behind logic except bare-minimum interaction plumbing
+- Follow official Avalonia MVVM docs and CommunityToolkit patterns
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Build Commands
