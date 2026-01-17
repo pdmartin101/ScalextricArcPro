@@ -22,6 +22,18 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         KeyDown += OnKeyDown;
+        Closing += OnWindowClosing;
+    }
+
+    /// <summary>
+    /// Handles window closing - saves all data.
+    /// </summary>
+    private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.SaveAllOnShutdown();
+        }
     }
 
     /// <summary>

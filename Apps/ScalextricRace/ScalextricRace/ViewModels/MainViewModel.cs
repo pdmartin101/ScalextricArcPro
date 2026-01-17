@@ -976,6 +976,35 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Saves all data on application shutdown.
+    /// Called from MainWindow.Closing event.
+    /// </summary>
+    public void SaveAllOnShutdown()
+    {
+        Log.Information("Saving all data on shutdown");
+
+        // Force save all collections
+        var cars = Cars.Select(vm => vm.GetModel());
+        _carStorage.Save(cars);
+
+        var drivers = Drivers.Select(vm => vm.GetModel());
+        _driverStorage.Save(drivers);
+
+        var races = Races.Select(vm => vm.GetModel());
+        _raceStorage.Save(races);
+
+        // Save current race entries if in configure mode
+        if (CurrentAppMode == AppMode.Configure)
+        {
+            SaveRaceEntries();
+        }
+
+        SaveSettings();
+
+        Log.Information("All data saved on shutdown");
+    }
+
+    /// <summary>
     /// Adds a new driver.
     /// </summary>
     [RelayCommand]

@@ -829,15 +829,15 @@
                                                                 HorizontalContentAlignment="Left"
                                                                 Cursor="Hand">
                                                             <Grid ColumnDefinitions="Auto,*">
-                                                                <!-- Car Image -->
+                                                                <!-- Car Image (4:3 aspect ratio) -->
                                                                 <Border Grid.Column="0"
-                                                                        Width="36" Height="36"
+                                                                        Width="48" Height="36"
                                                                         CornerRadius="4"
                                                                         Background="#F0F0F0"
-                                                                        Margin="0,0,6,0"
-                                                                        IsVisible="{Binding HasCar}">
+                                                                        Margin="0,0,6,0">
                                                                     <Image Source="{Binding CarImagePath, Converter={x:Static converters:ImagePathToBitmapConverter.Instance}}"
-                                                                           Stretch="UniformToFill" />
+                                                                           Stretch="UniformToFill"
+                                                                           IsVisible="{Binding HasCar}" />
                                                                 </Border>
                                                                 <!-- Car Info -->
                                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
