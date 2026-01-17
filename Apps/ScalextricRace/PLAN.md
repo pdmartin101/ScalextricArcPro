@@ -304,7 +304,7 @@ The size is appropriate for a main orchestrator ViewModel. Further decomposition
 | 1 | Cross-Platform BLE Support | ❌ |
 | 2 | Reactive Patterns | ❌ |
 | 3 | Integration Tests | ❌ |
-| 4 | Heartbeat Loop Implementation | ❌ |
+| 4 | Heartbeat Loop Implementation | ✅ |
 
 ### 1. Cross-Platform BLE Support ❌
 
@@ -318,9 +318,27 @@ Consider replacing event subscriptions with Reactive Extensions.
 
 Add integration tests for BLE connection scenarios.
 
-### 4. Heartbeat Loop Implementation ❌
+### 4. Heartbeat Loop Implementation ✅
 
-Implement the 200ms power command heartbeat interval.
+**Problem:** The ARC Pro powerbase requires continuous "keep-alive" commands every ~200ms to maintain track power. Without the heartbeat, power automatically shuts off as a safety feature.
+
+**Solution:** Created `IPowerHeartbeatService` and `PowerHeartbeatService` in both apps:
+
+**ScalextricRace:**
+- `Services/IPowerHeartbeatService.cs` - Interface for heartbeat management
+- `Services/PowerHeartbeatService.cs` - Implementation with 200ms heartbeat loop
+- `ViewModels/MainViewModel.cs` - Updated to use heartbeat service
+- `App.axaml.cs` - Registered service in DI container
+
+**ScalextricBleMonitor:**
+- Updated `PowerHeartbeatService` to use shared `ScalextricBle.IBleService` interface
+- Updated `ServiceConfiguration.cs` to properly wire up dependencies
+
+**Key Features:**
+- Sends power commands every 200ms using `CancellationTokenSource` for lifecycle management
+- `HeartbeatError` event for error handling (connection lost detection)
+- `SendPowerOffSequenceAsync()` for graceful shutdown (3x clear-ghost + 3x power-off)
+- Supports both global and per-slot power modes
 
 ---
 
@@ -348,6 +366,6 @@ dotnet run --project ScalextricRace/ScalextricRace.csproj
 | Phase 3 | Medium Priority | ✅ 5/5 |
 | Phase 4 | Low Priority | ✅ 3/3 |
 | Phase 5 | MVVM Violations | ✅ 17/17 |
-| Phase 6 | Future Enhancements | ❌ 0/4 |
+| Phase 6 | Future Enhancements | 🔄 1/4 |
 
-**Overall Progress:** Phases 1-5 complete (30/30). Phase 6 future enhancements pending (0/4).
+**Overall Progress:** Phases 1-5 complete (30/30). Phase 6 heartbeat implemented (1/4).

@@ -17,9 +17,12 @@ public static class ServiceConfiguration
     {
         // Register services
         services.AddSingleton<IBleMonitorService, BleMonitorService>();
+        // Register IBleService pointing to the same instance for services that only need base interface
+        services.AddSingleton<ScalextricBle.IBleService>(sp => sp.GetRequiredService<IBleMonitorService>());
         services.AddSingleton<IGhostRecordingService, GhostRecordingService>();
         services.AddSingleton<IGhostPlaybackService, GhostPlaybackService>();
-        services.AddSingleton<IPowerHeartbeatService, PowerHeartbeatService>();
+        services.AddSingleton<IPowerHeartbeatService>(sp =>
+            new PowerHeartbeatService(sp.GetRequiredService<ScalextricBle.IBleService>()));
         services.AddSingleton<ITimingCalibrationService, TimingCalibrationService>();
         services.AddSingleton<AppSettings>(_ => AppSettings.Load());
 

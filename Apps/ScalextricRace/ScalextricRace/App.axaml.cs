@@ -90,6 +90,8 @@ public partial class App : Application
         // Register services
 #if WINDOWS
         services.AddSingleton<IBleService, BleService>();
+        services.AddSingleton<IPowerHeartbeatService>(sp =>
+            new PowerHeartbeatService(sp.GetRequiredService<IBleService>()));
 #endif
         services.AddSingleton<IWindowService, WindowService>();
         services.AddSingleton<ICarStorage, CarStorage>();

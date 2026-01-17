@@ -1,10 +1,7 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using ScalextricBle;
 using Serilog;
 
-namespace ScalextricBleMonitor.Services;
+namespace ScalextricRace.Services;
 
 /// <summary>
 /// Service responsible for managing the power heartbeat loop that keeps track power enabled.
@@ -16,10 +13,14 @@ public class PowerHeartbeatService : IPowerHeartbeatService
     private CancellationTokenSource? _heartbeatCts;
     private bool _disposed;
 
-    // Delay between BLE write operations to avoid flooding the connection
+    /// <summary>
+    /// Delay between BLE write operations to avoid flooding the connection.
+    /// </summary>
     private const int BleWriteDelayMs = 50;
 
-    // Interval for sending power heartbeat commands (ms)
+    /// <summary>
+    /// Interval for sending power heartbeat commands (ms).
+    /// </summary>
     private const int PowerHeartbeatIntervalMs = 200;
 
     /// <inheritdoc/>

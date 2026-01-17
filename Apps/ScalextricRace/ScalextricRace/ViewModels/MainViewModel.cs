@@ -18,6 +18,7 @@ public partial class MainViewModel : ObservableObject
     #region Fields
 
     private readonly Services.IBleService? _bleService;
+    private readonly IPowerHeartbeatService? _powerHeartbeatService;
     private readonly IWindowService _windowService;
     private readonly AppSettings _settings;
     private readonly ICarStorage _carStorage;
@@ -234,15 +235,17 @@ public partial class MainViewModel : ObservableObject
     /// <param name="settings">The application settings.</param>
     /// <param name="windowService">The window service for dialogs.</param>
     /// <param name="bleService">The BLE service for device communication.</param>
+    /// <param name="powerHeartbeatService">The power heartbeat service for maintaining track power.</param>
     /// <param name="carStorage">The car storage service.</param>
     /// <param name="driverStorage">The driver storage service.</param>
     public MainViewModel(AppSettings settings, IWindowService windowService,
-        Services.IBleService? bleService = null, ICarStorage? carStorage = null,
-        IDriverStorage? driverStorage = null)
+        Services.IBleService? bleService = null, IPowerHeartbeatService? powerHeartbeatService = null,
+        ICarStorage? carStorage = null, IDriverStorage? driverStorage = null)
     {
         _settings = settings;
         _windowService = windowService;
         _bleService = bleService;
+        _powerHeartbeatService = powerHeartbeatService;
         _carStorage = carStorage ?? new CarStorage();
         _driverStorage = driverStorage ?? new DriverStorage();
         _syncContext = SynchronizationContext.Current;
@@ -294,6 +297,12 @@ public partial class MainViewModel : ObservableObject
             _bleService.ConnectionStateChanged += OnConnectionStateChanged;
             _bleService.StatusMessageChanged += OnStatusMessageChanged;
             _bleService.NotificationReceived += OnNotificationReceived;
+        }
+
+        // Subscribe to heartbeat service events
+        if (_powerHeartbeatService != null)
+        {
+            _powerHeartbeatService.HeartbeatError += OnHeartbeatError;
         }
     }
 
@@ -805,23 +814,20 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// Enables track power and starts the heartbeat loop.
     /// </summary>
-    private async void EnablePower()
+    private void EnablePower()
     {
-        var success = await SendPowerCommandAsync();
-
-        if (success)
+        if (_powerHeartbeatService == null)
         {
-            Log.Information("Power enabled successfully");
-            StatusMessage = "Power enabled";
-            // TODO: Start heartbeat loop (200ms interval)
-        }
-        else
-        {
-            Log.Warning("Failed to enable power");
-            StatusMessage = "Failed to enable power";
+            Log.Warning("Power heartbeat service not available");
+            StatusMessage = "Power service not available";
             IsPowerEnabled = false;
             SaveSettings();
+            return;
         }
+
+        Log.Information("Enabling track power");
+        _powerHeartbeatService.Start(BuildPowerCommand);
+        StatusMessage = "Power enabled";
     }
 
     /// <summary>
@@ -869,32 +875,66 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Builds the power command based on current settings.
+    /// Used as the delegate for the power heartbeat service.
+    /// </summary>
+    /// <returns>The 20-byte power command to send to the powerbase.</returns>
+    private byte[] BuildPowerCommand()
+    {
+        var builder = new ScalextricProtocol.CommandBuilder
+        {
+            Type = ScalextricProtocol.CommandType.PowerOnRacing
+        };
+
+        if (IsPerSlotPowerMode)
+        {
+            // Set individual power levels per slot
+            for (int i = 0; i < Controllers.Count; i++)
+            {
+                builder.SetSlotPower(i + 1, (byte)Controllers[i].PowerLevel);
+            }
+        }
+        else
+        {
+            // Set global power level for all slots
+            builder.SetAllPower((byte)PowerLevel);
+        }
+
+        return builder.Build();
+    }
+
+    /// <summary>
+    /// Handles heartbeat errors from the power heartbeat service.
+    /// </summary>
+    private void OnHeartbeatError(object? sender, string errorMessage)
+    {
+        Log.Error("Power heartbeat error: {ErrorMessage}", errorMessage);
+
+        PostToUIThread(() =>
+        {
+            StatusMessage = errorMessage;
+            IsPowerEnabled = false;
+            SaveSettings();
+        });
+    }
+
+    /// <summary>
     /// Disables track power and stops the heartbeat loop.
     /// </summary>
     private async void DisablePower()
     {
-        if (_bleService == null) return;
+        if (_powerHeartbeatService == null) return;
 
         Log.Information("Disabling track power");
 
-        // Build and send power-off command
-        byte[] command = ScalextricProtocol.CommandBuilder.CreatePowerOffCommand();
+        // Stop the heartbeat loop first
+        _powerHeartbeatService.Stop();
 
-        var success = await _bleService.WriteCharacteristicAsync(
-            ScalextricProtocol.Characteristics.Command,
-            command);
+        // Send power-off sequence (clear ghost + power off)
+        await _powerHeartbeatService.SendPowerOffSequenceAsync();
 
-        if (success)
-        {
-            Log.Information("Power disabled successfully");
-            StatusMessage = "Power disabled";
-            // TODO: Stop heartbeat loop
-        }
-        else
-        {
-            Log.Warning("Failed to disable power");
-            StatusMessage = "Failed to disable power";
-        }
+        Log.Information("Power disabled successfully");
+        StatusMessage = "Power disabled";
     }
 
     /// <summary>
