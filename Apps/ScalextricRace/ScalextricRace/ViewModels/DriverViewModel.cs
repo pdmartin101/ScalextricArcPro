@@ -62,33 +62,33 @@ public partial class DriverViewModel : ObservableObject
     public bool HasImage => !string.IsNullOrEmpty(ImagePath);
 
     /// <summary>
-    /// Maximum power level this driver can use as a percentage (50-100).
-    /// Null means no limit - driver can use full car power (100%).
+    /// Power percentage for this driver (50-100).
+    /// Null means 100% - driver can use full car power.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasPowerLimit))]
-    [NotifyPropertyChangedFor(nameof(PowerLimitPercentDisplay))]
-    [NotifyPropertyChangedFor(nameof(PowerLimitSliderValue))]
-    private int? _powerLimit;
+    [NotifyPropertyChangedFor(nameof(HasPowerRestriction))]
+    [NotifyPropertyChangedFor(nameof(PowerPercentageDisplay))]
+    [NotifyPropertyChangedFor(nameof(PowerPercentageSliderValue))]
+    private int? _powerPercentage;
 
     /// <summary>
-    /// Gets or sets the power limit for slider binding (never null, treats null as 100).
+    /// Gets or sets the power percentage for slider binding (never null, treats null as 100).
     /// </summary>
-    public int PowerLimitSliderValue
+    public int PowerPercentageSliderValue
     {
-        get => PowerLimit ?? 100;
-        set => PowerLimit = value >= 100 ? null : value;
+        get => PowerPercentage ?? 100;
+        set => PowerPercentage = value >= 100 ? null : value;
     }
 
     /// <summary>
-    /// Gets whether this driver has a power limit set (less than 100%).
+    /// Gets whether this driver has a power restriction (less than 100%).
     /// </summary>
-    public bool HasPowerLimit => PowerLimit.HasValue && PowerLimit.Value < 100;
+    public bool HasPowerRestriction => PowerPercentage.HasValue && PowerPercentage.Value < 100;
 
     /// <summary>
-    /// Gets the power limit as a percentage display string (e.g., "75%").
+    /// Gets the power percentage as a display string (e.g., "75%").
     /// </summary>
-    public string PowerLimitPercentDisplay => $"{PowerLimitSliderValue}%";
+    public string PowerPercentageDisplay => $"{PowerPercentageSliderValue}%";
 
     /// <summary>
     /// Creates a new DriverViewModel wrapping the specified driver.
@@ -103,7 +103,7 @@ public partial class DriverViewModel : ObservableObject
         // Initialize from model
         _name = driver.Name;
         _imagePath = driver.ImagePath;
-        _powerLimit = driver.PowerLimit;
+        _powerPercentage = driver.PowerPercentage;
     }
 
     /// <summary>
@@ -124,9 +124,9 @@ public partial class DriverViewModel : ObservableObject
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    partial void OnPowerLimitChanged(int? value)
+    partial void OnPowerPercentageChanged(int? value)
     {
-        _driver.PowerLimit = value.HasValue ? Math.Clamp(value.Value, 50, 100) : null;
+        _driver.PowerPercentage = value.HasValue ? Math.Clamp(value.Value, 50, 100) : null;
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -152,30 +152,30 @@ public partial class DriverViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Increments the power limit by 1, up to maximum of 100.
-    /// If currently null (no limit), stays at 100.
+    /// Increments the power percentage by 1, up to maximum of 100.
+    /// If currently null (100%), stays at 100.
     /// </summary>
     [RelayCommand]
-    private void IncrementPowerLimit()
+    private void IncrementPowerPercentage()
     {
-        var current = PowerLimit ?? 100;
+        var current = PowerPercentage ?? 100;
         if (current < 100)
         {
-            PowerLimit = current + 1;
+            PowerPercentage = current + 1;
         }
     }
 
     /// <summary>
-    /// Decrements the power limit by 1, down to minimum of 50.
-    /// If currently null (no limit), sets to 99.
+    /// Decrements the power percentage by 1, down to minimum of 50.
+    /// If currently null (100%), sets to 99.
     /// </summary>
     [RelayCommand]
-    private void DecrementPowerLimit()
+    private void DecrementPowerPercentage()
     {
-        var current = PowerLimit ?? 100;
+        var current = PowerPercentage ?? 100;
         if (current > 50)
         {
-            PowerLimit = current - 1;
+            PowerPercentage = current - 1;
         }
     }
 }

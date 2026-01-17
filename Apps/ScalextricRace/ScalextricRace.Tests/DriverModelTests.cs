@@ -16,7 +16,7 @@ public class DriverModelTests
         // Assert
         Assert.Equal("Test Driver", driver.Name);
         Assert.NotEqual(Guid.Empty, driver.Id);
-        Assert.Null(driver.PowerLimit);
+        Assert.Null(driver.PowerPercentage);
     }
 
     [Fact]
@@ -41,28 +41,28 @@ public class DriverModelTests
     }
 
     [Fact]
-    public void PowerLimit_CanBeSetToValue()
+    public void PowerPercentage_CanBeSetToValue()
     {
         // Arrange
         var driver = new Driver("Test Driver");
 
         // Act
-        driver.PowerLimit = 75;
+        driver.PowerPercentage = 75;
 
         // Assert
-        Assert.Equal(75, driver.PowerLimit);
+        Assert.Equal(75, driver.PowerPercentage);
     }
 
     [Fact]
-    public void PowerLimit_CanBeSetToNull()
+    public void PowerPercentage_CanBeSetToNull()
     {
         // Arrange
-        var driver = new Driver("Test Driver") { PowerLimit = 75 };
+        var driver = new Driver("Test Driver") { PowerPercentage = 75 };
 
         // Act
-        driver.PowerLimit = null;
+        driver.PowerPercentage = null;
 
         // Assert
-        Assert.Null(driver.PowerLimit);
+        Assert.Null(driver.PowerPercentage);
     }
 }

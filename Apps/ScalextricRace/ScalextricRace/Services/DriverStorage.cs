@@ -33,9 +33,9 @@ public class DriverStorage : IDriverStorage
                     // Validate loaded values
                     foreach (var driver in drivers)
                     {
-                        if (driver.PowerLimit.HasValue)
+                        if (driver.PowerPercentage.HasValue)
                         {
-                            driver.PowerLimit = Math.Clamp(driver.PowerLimit.Value, 50, 100);
+                            driver.PowerPercentage = Math.Clamp(driver.PowerPercentage.Value, 50, 100);
                         }
                     }
 

@@ -485,11 +485,11 @@
                                                      Padding="0"
                                                      HorizontalAlignment="Center" />
 
-                                            <!-- Power Limit Slider with +/- buttons -->
+                                            <!-- Power Percentage Slider with +/- buttons -->
                                             <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,8">
                                                 <Button Grid.Column="0"
                                                         Content="-"
-                                                        Command="{Binding DecrementPowerLimitCommand}"
+                                                        Command="{Binding DecrementPowerPercentageCommand}"
                                                         Width="28"
                                                         Height="28"
                                                         Padding="0"
@@ -500,12 +500,12 @@
                                                 <Slider Grid.Column="1"
                                                         Minimum="50"
                                                         Maximum="100"
-                                                        Value="{Binding PowerLimitSliderValue}"
+                                                        Value="{Binding PowerPercentageSliderValue}"
                                                         Margin="6,0"
                                                         VerticalAlignment="Center" />
                                                 <Button Grid.Column="2"
                                                         Content="+"
-                                                        Command="{Binding IncrementPowerLimitCommand}"
+                                                        Command="{Binding IncrementPowerPercentageCommand}"
                                                         Width="28"
                                                         Height="28"
                                                         Padding="0"
@@ -514,7 +514,7 @@
                                                         HorizontalContentAlignment="Center"
                                                         VerticalContentAlignment="Center" />
                                                 <TextBlock Grid.Column="3"
-                                                           Text="{Binding PowerLimitPercentDisplay}"
+                                                           Text="{Binding PowerPercentageDisplay}"
                                                            FontSize="11"
                                                            Width="35"
                                                            TextAlignment="Right"

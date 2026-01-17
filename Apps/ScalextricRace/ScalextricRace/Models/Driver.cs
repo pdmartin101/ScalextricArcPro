@@ -1,9 +1,9 @@
 namespace ScalextricRace.Models;
 
 /// <summary>
-/// Represents a driver with their name and skill-based power limit.
-/// The PowerLimit effectively defines the driver's experience level -
-/// lower limits for beginners, higher or no limit for experienced drivers.
+/// Represents a driver with their name and power percentage.
+/// The PowerPercentage acts as a multiplier on the car's power level -
+/// lower percentages for beginners, 100% (or null) for experienced drivers.
 /// </summary>
 public class Driver
 {
@@ -24,11 +24,12 @@ public class Driver
     public string? ImagePath { get; set; }
 
     /// <summary>
-    /// Maximum power level this driver can use as a percentage (50-100).
-    /// Null means no limit - driver can use full car power (100%).
+    /// Power percentage for this driver (50-100).
+    /// Multiplied with car power to get effective power level.
+    /// Null means 100% - driver can use full car power.
     /// Lower values = safer for beginners.
     /// </summary>
-    public int? PowerLimit { get; set; }
+    public int? PowerPercentage { get; set; }
 
     /// <summary>
     /// Creates a new driver with default values.
@@ -47,34 +48,34 @@ public class Driver
     }
 
     /// <summary>
-    /// Creates a new driver with name and power limit.
+    /// Creates a new driver with name and power percentage.
     /// </summary>
     /// <param name="name">Display name for the driver.</param>
-    /// <param name="powerLimit">Maximum power level (null for no limit).</param>
-    public Driver(string name, int? powerLimit)
+    /// <param name="powerPercentage">Power percentage (null for 100%).</param>
+    public Driver(string name, int? powerPercentage)
     {
         Name = name;
-        PowerLimit = powerLimit.HasValue ? Math.Clamp(powerLimit.Value, 50, 100) : null;
+        PowerPercentage = powerPercentage.HasValue ? Math.Clamp(powerPercentage.Value, 50, 100) : null;
     }
 
     /// <summary>
     /// The well-known ID for the default driver.
-    /// This driver is always available and has no power limit.
+    /// This driver is always available and has no power restriction.
     /// </summary>
     public static readonly Guid DefaultDriverId = new("00000000-0000-0000-0000-000000000002");
 
     /// <summary>
-    /// Creates the default driver with no power limit.
+    /// Creates the default driver with 100% power.
     /// This driver is always available for quick racing.
     /// </summary>
-    /// <returns>A driver with no power restrictions.</returns>
+    /// <returns>A driver with full power available.</returns>
     public static Driver CreateDefault()
     {
         return new Driver
         {
             Id = DefaultDriverId,
             Name = "Default Driver",
-            PowerLimit = null  // No limit - full power available
+            PowerPercentage = null  // 100% - full power available
         };
     }
 }

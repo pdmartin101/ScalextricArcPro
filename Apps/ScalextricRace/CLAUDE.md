@@ -46,7 +46,7 @@ Apps/ScalextricRace/
 │   ├── app.manifest                      # Windows application manifest
 │   ├── Models/                           # Domain models (4 files)
 │   │   ├── Car.cs                        # Car entity with power settings
-│   │   ├── Driver.cs                     # Driver entity with power limit (50-100%)
+│   │   ├── Driver.cs                     # Driver entity with power percentage (50-100%)
 │   │   ├── ConnectionState.cs            # BLE connection state enum
 │   │   └── NavigationMode.cs             # UI navigation mode enum
 │   ├── ViewModels/                       # MVVM ViewModels (5 files)
@@ -118,7 +118,7 @@ The application references two shared libraries in `Libs/`:
 │    • Settings persistence                                           │
 │    • Car/Driver management (CRUD, tuning)                           │
 │  CarViewModel - Car wrapper with tune/delete/image commands         │
-│  DriverViewModel - Driver wrapper with power limit slider           │
+│  DriverViewModel - Driver wrapper with power percentage slider      │
 │  ControllerViewModel - Per-slot controller state                    │
 │  CarTuningViewModel - 3-stage tuning wizard state                   │
 └─────────────────────────────────┬───────────────────────────────────┘
@@ -198,7 +198,7 @@ Settings and data are stored in `%LocalAppData%/ScalextricPdm/ScalextricRace/`:
 ```
 ├── settings.json    # App settings (power level, throttle profile)
 ├── cars.json        # Car configurations
-├── drivers.json     # Driver profiles (with power limit 50-100%)
+├── drivers.json     # Driver profiles (with power percentage 50-100%)
 └── Images/          # Car/driver images (copied from originals)
 ```
 
@@ -235,7 +235,7 @@ The car tuning wizard is a 3-stage dialog for calibrating car power settings:
 | Layer | Entity | Purpose |
 |-------|--------|---------|
 | Model | `Car` | Car entity with DefaultPower, GhostMaxPower, MinPower, ImagePath |
-| Model | `Driver` | Driver entity with PowerLimit (50-100% multiplier for car power) |
+| Model | `Driver` | Driver entity with PowerPercentage (50-100% multiplier for car power) |
 | Service | `IBleService` | BLE abstraction interface (shared library) |
 | Service | `IAppSettings` | Settings abstraction |
 | Service | `ICarStorage` | Car persistence abstraction |
@@ -243,7 +243,7 @@ The car tuning wizard is a 3-stage dialog for calibrating car power settings:
 | Service | `IWindowService` | Window management abstraction |
 | ViewModel | `MainViewModel` | Central state manager, commands, car/driver management |
 | ViewModel | `CarViewModel` | Car wrapper with tune/delete/image commands |
-| ViewModel | `DriverViewModel` | Driver wrapper with power limit slider (50-100%) |
+| ViewModel | `DriverViewModel` | Driver wrapper with power percentage slider (50-100%) |
 | ViewModel | `ControllerViewModel` | Per-slot controller state |
 | ViewModel | `CarTuningViewModel` | 3-stage tuning wizard state |
 | Library | `ScalextricProtocol` | BLE protocol constants and command builders |
@@ -270,9 +270,9 @@ Currently Windows-only (`net9.0-windows10.0.19041.0`). BLE code is wrapped in `#
 
 27 tests covering:
 - `CarModelTests` - Car model defaults and creation
-- `DriverModelTests` - Driver model defaults and power limit
+- `DriverModelTests` - Driver model defaults and power percentage
 - `CarViewModelTests` - CarViewModel property sync, clamping, events
-- `DriverViewModelTests` - DriverViewModel property sync, power limit clamping, events
+- `DriverViewModelTests` - DriverViewModel property sync, power percentage clamping, events
 
 Run tests with: `dotnet test ScalextricRace.Tests/ScalextricRace.Tests.csproj`
 

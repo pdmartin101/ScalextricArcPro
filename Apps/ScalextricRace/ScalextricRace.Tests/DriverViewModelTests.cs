@@ -14,7 +14,7 @@ public class DriverViewModelTests
         // Arrange
         var driver = new Driver("Test Driver")
         {
-            PowerLimit = 75
+            PowerPercentage = 75
         };
 
         // Act
@@ -22,7 +22,7 @@ public class DriverViewModelTests
 
         // Assert
         Assert.Equal("Test Driver", viewModel.Name);
-        Assert.Equal(75, viewModel.PowerLimit);
+        Assert.Equal(75, viewModel.PowerPercentage);
         Assert.Equal(driver.Id, viewModel.Id);
     }
 
@@ -41,65 +41,65 @@ public class DriverViewModelTests
     }
 
     [Fact]
-    public void PowerLimit_ClampsToMaximum()
+    public void PowerPercentage_ClampsToMaximum()
     {
         // Arrange
         var driver = new Driver("Test Driver");
         var viewModel = new DriverViewModel(driver);
 
         // Act
-        viewModel.PowerLimit = 150; // Above max (100%)
+        viewModel.PowerPercentage = 150; // Above max (100%)
 
         // Assert
-        Assert.Equal(100, driver.PowerLimit);
+        Assert.Equal(100, driver.PowerPercentage);
     }
 
     [Fact]
-    public void PowerLimit_ClampsToMinimum()
+    public void PowerPercentage_ClampsToMinimum()
     {
         // Arrange
         var driver = new Driver("Test Driver");
         var viewModel = new DriverViewModel(driver);
 
         // Act
-        viewModel.PowerLimit = 25; // Below min (50%)
+        viewModel.PowerPercentage = 25; // Below min (50%)
 
         // Assert
-        Assert.Equal(50, driver.PowerLimit);
+        Assert.Equal(50, driver.PowerPercentage);
     }
 
     [Fact]
-    public void PowerLimit_NullMeansNoLimit()
+    public void PowerPercentage_NullMeans100Percent()
     {
         // Arrange
-        var driver = new Driver("Test Driver") { PowerLimit = null };
+        var driver = new Driver("Test Driver") { PowerPercentage = null };
         var viewModel = new DriverViewModel(driver);
 
         // Assert
-        Assert.Null(viewModel.PowerLimit);
-        Assert.False(viewModel.HasPowerLimit);
+        Assert.Null(viewModel.PowerPercentage);
+        Assert.False(viewModel.HasPowerRestriction);
     }
 
     [Fact]
-    public void HasPowerLimit_TrueWhenLessThan100()
+    public void HasPowerRestriction_TrueWhenLessThan100()
     {
         // Arrange
-        var driver = new Driver("Test Driver") { PowerLimit = 75 };
+        var driver = new Driver("Test Driver") { PowerPercentage = 75 };
         var viewModel = new DriverViewModel(driver);
 
         // Assert
-        Assert.True(viewModel.HasPowerLimit);
+        Assert.True(viewModel.HasPowerRestriction);
     }
 
     [Fact]
-    public void HasPowerLimit_FalseWhen100()
+    public void HasPowerRestriction_FalseWhen100()
     {
         // Arrange
-        var driver = new Driver("Test Driver") { PowerLimit = 100 };
+        var driver = new Driver("Test Driver") { PowerPercentage = 100 };
         var viewModel = new DriverViewModel(driver);
 
         // Assert
-        Assert.False(viewModel.HasPowerLimit);
+        Assert.False(viewModel.HasPowerRestriction);
     }
 
     [Fact]

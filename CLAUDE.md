@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+
+Write strict MVVM code for Avalonia using CommunityToolkit.Mvvm.
+- Use [RelayCommand] for every command
+- Never use EventHandler or event subscriptions in ViewModels
+- No code-behind logic except bare-minimum interaction plumbing
+- Follow official Avalonia MVVM docs and CommunityToolkit patterns
+
 ## Repository Overview
 
 This repository contains applications and libraries for Scalextric ARC Pro slot car racing systems. It includes two Avalonia UI applications and two shared libraries, all following strict MVVM architecture with dependency injection.
@@ -138,8 +145,7 @@ Program.Main()
 ### Car/Driver Management (ScalextricRace)
 
 - **Car**: DefaultPower, GhostMaxPower, MinPower settings
-- **Driver**: PowerLimit (skill level restriction)
-- **SkillLevel**: Configurable levels (Beginner 25, Intermediate 40, etc.)
+- **Driver**: PowerPercentage (50-100% power multiplier for car)
 - **Default entities**: Well-known IDs, always present, cannot be deleted
 
 ## Shared Libraries
