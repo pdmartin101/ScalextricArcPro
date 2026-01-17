@@ -43,10 +43,15 @@ public partial class App : Application
             _mainViewModel = Services.GetRequiredService<MainViewModel>();
 
             // Create and configure the main window
-            desktop.MainWindow = new MainWindow
+            var mainWindow = new MainWindow
             {
                 DataContext = _mainViewModel
             };
+            desktop.MainWindow = mainWindow;
+
+            // Configure window service with the main window as owner
+            var windowService = Services.GetRequiredService<IWindowService>();
+            windowService.SetOwner(mainWindow);
 
             // Handle application lifecycle events
             desktop.Startup += OnApplicationStartup;
@@ -86,6 +91,9 @@ public partial class App : Application
 #if WINDOWS
         services.AddSingleton<IBleService, BleService>();
 #endif
+        services.AddSingleton<IWindowService, WindowService>();
+        services.AddSingleton<ICarStorage, CarStorage>();
+        services.AddSingleton<IDriverStorage, DriverStorage>();
 
         // Register ViewModels
         services.AddSingleton<MainViewModel>();

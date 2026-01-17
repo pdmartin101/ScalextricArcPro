@@ -12,13 +12,10 @@ namespace ScalextricRace.Services;
 /// </summary>
 public class WindowService : IWindowService
 {
-    private readonly Window _owner;
+    private Window? _owner;
 
-    /// <summary>
-    /// Creates a new WindowService.
-    /// </summary>
-    /// <param name="owner">The owner window for dialogs.</param>
-    public WindowService(Window owner)
+    /// <inheritdoc />
+    public void SetOwner(Window owner)
     {
         _owner = owner;
     }
@@ -26,6 +23,12 @@ public class WindowService : IWindowService
     /// <inheritdoc />
     public async Task<bool> ShowCarTuningDialogAsync(CarViewModel carViewModel, IBleService? bleService)
     {
+        if (_owner == null)
+        {
+            Log.Warning("WindowService.ShowCarTuningDialogAsync called before owner was set");
+            return false;
+        }
+
         var tuningViewModel = new CarTuningViewModel(carViewModel, bleService);
         var window = new CarTuningWindow(tuningViewModel);
 
@@ -34,8 +37,14 @@ public class WindowService : IWindowService
     }
 
     /// <inheritdoc />
-    public async Task<string?> ShowImagePickerAsync(string title)
+    public async Task<string?> PickAndCopyImageAsync(string title, Guid entityId, string prefix = "")
     {
+        if (_owner == null)
+        {
+            Log.Warning("WindowService.PickAndCopyImageAsync called before owner was set");
+            return null;
+        }
+
         var options = new FilePickerOpenOptions
         {
             Title = title,
@@ -51,16 +60,19 @@ public class WindowService : IWindowService
 
         var result = await _owner.StorageProvider.OpenFilePickerAsync(options);
 
-        if (result.Count > 0)
+        if (result.Count == 0)
         {
-            return result[0].Path.LocalPath;
+            return null;
         }
 
-        return null;
+        var sourcePath = result[0].Path.LocalPath;
+        return CopyImageToAppFolder(sourcePath, entityId, prefix);
     }
 
-    /// <inheritdoc />
-    public string CopyImageToAppFolder(string sourcePath, Guid entityId, string prefix = "")
+    /// <summary>
+    /// Copies an image to the app's Images folder.
+    /// </summary>
+    private static string? CopyImageToAppFolder(string sourcePath, Guid entityId, string prefix)
     {
         try
         {
@@ -84,8 +96,7 @@ public class WindowService : IWindowService
         catch (Exception ex)
         {
             Log.Warning(ex, "Failed to copy image for entity {EntityId}", entityId);
-            // Fall back to using original path
-            return sourcePath;
+            return null;
         }
     }
 }

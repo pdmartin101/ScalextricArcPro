@@ -18,6 +18,7 @@ public partial class MainViewModel : ObservableObject
     #region Fields
 
     private readonly Services.IBleService? _bleService;
+    private readonly IWindowService _windowService;
     private readonly AppSettings _settings;
     private readonly ICarStorage _carStorage;
     private readonly IDriverStorage _driverStorage;
@@ -230,12 +231,17 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// Initializes a new instance of the MainViewModel with dependencies.
     /// </summary>
-    /// <param name="bleService">The BLE service for device communication.</param>
     /// <param name="settings">The application settings.</param>
-    public MainViewModel(AppSettings settings, Services.IBleService? bleService = null,
-        ICarStorage? carStorage = null, IDriverStorage? driverStorage = null)
+    /// <param name="windowService">The window service for dialogs.</param>
+    /// <param name="bleService">The BLE service for device communication.</param>
+    /// <param name="carStorage">The car storage service.</param>
+    /// <param name="driverStorage">The driver storage service.</param>
+    public MainViewModel(AppSettings settings, IWindowService windowService,
+        Services.IBleService? bleService = null, ICarStorage? carStorage = null,
+        IDriverStorage? driverStorage = null)
     {
         _settings = settings;
+        _windowService = windowService;
         _bleService = bleService;
         _carStorage = carStorage ?? new CarStorage();
         _driverStorage = driverStorage ?? new DriverStorage();
@@ -444,36 +450,33 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>
     /// Handles tune request from a car view model.
+    /// Opens the tuning window via the window service.
     /// </summary>
-    private void OnCarTuneRequested(object? sender, EventArgs e)
+    private async void OnCarTuneRequested(object? sender, EventArgs e)
     {
         if (sender is CarViewModel car)
         {
-            OpenTuningWindow(car);
+            Log.Information("Opening tuning window for car: {CarName}", car.Name);
+            await _windowService.ShowCarTuningDialogAsync(car, _bleService);
+            SaveCars();
         }
     }
 
     /// <summary>
-    /// Event raised when a tuning window should be opened.
-    /// The view subscribes to this event and opens the window.
-    /// </summary>
-    public event EventHandler<CarViewModel>? TuneWindowRequested;
-
-    /// <summary>
-    /// Event raised when image selection is requested for a car.
-    /// The view subscribes to this event and shows a file picker.
-    /// </summary>
-    public event EventHandler<CarViewModel>? ImageChangeRequested;
-
-    /// <summary>
     /// Handles image change request from a car view model.
+    /// Opens a file picker and copies the image via the window service.
     /// </summary>
-    private void OnCarImageChangeRequested(object? sender, EventArgs e)
+    private async void OnCarImageChangeRequested(object? sender, EventArgs e)
     {
         if (sender is CarViewModel car)
         {
             Log.Information("Image change requested for car: {CarName}", car.Name);
-            ImageChangeRequested?.Invoke(this, car);
+            var imagePath = await _windowService.PickAndCopyImageAsync("Select Car Image", car.Id);
+            if (imagePath != null)
+            {
+                car.ImagePath = imagePath;
+                SaveCars();
+            }
         }
     }
 
@@ -500,16 +503,6 @@ public partial class MainViewModel : ObservableObject
         }
         Log.Information("Deleted car: {CarName}", car.Name);
         SaveCars();
-    }
-
-    /// <summary>
-    /// Opens the tuning window for the specified car.
-    /// </summary>
-    /// <param name="car">The car to tune.</param>
-    private void OpenTuningWindow(CarViewModel car)
-    {
-        Log.Information("Opening tuning window for car: {CarName}", car.Name);
-        TuneWindowRequested?.Invoke(this, car);
     }
 
     /// <summary>
@@ -593,20 +586,20 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Event raised when image selection is requested for a driver.
-    /// The view subscribes to this event and shows a file picker.
-    /// </summary>
-    public event EventHandler<DriverViewModel>? DriverImageChangeRequested;
-
-    /// <summary>
     /// Handles image change request from a driver view model.
+    /// Opens a file picker and copies the image via the window service.
     /// </summary>
-    private void OnDriverImageChangeRequested(object? sender, EventArgs e)
+    private async void OnDriverImageChangeRequested(object? sender, EventArgs e)
     {
         if (sender is DriverViewModel driver)
         {
             Log.Information("Image change requested for driver: {DriverName}", driver.Name);
-            DriverImageChangeRequested?.Invoke(this, driver);
+            var imagePath = await _windowService.PickAndCopyImageAsync("Select Driver Image", driver.Id, "driver_");
+            if (imagePath != null)
+            {
+                driver.ImagePath = imagePath;
+                SaveDrivers();
+            }
         }
     }
 

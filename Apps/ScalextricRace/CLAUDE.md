@@ -14,6 +14,9 @@ dotnet build ScalextricRace.sln -c Release
 # Run the application
 dotnet run --project ScalextricRace/ScalextricRace.csproj
 
+# Run unit tests
+dotnet test ScalextricRace.Tests/ScalextricRace.Tests.csproj
+
 # Clean build artifacts
 dotnet clean ScalextricRace.sln
 ```
@@ -28,27 +31,50 @@ This is a .NET 9.0 Windows desktop application using **Avalonia UI** with the Fl
 Apps/ScalextricRace/
 ├── ScalextricRace.sln                    # Visual Studio solution file
 ├── CLAUDE.md                             # AI assistant instructions (this file)
-└── ScalextricRace/                       # Main application project
-    ├── ScalextricRace.csproj             # .NET 9.0 Windows project config
-    ├── Program.cs                        # Application entry point
-    ├── App.axaml(.cs)                    # Avalonia app bootstrap + DI container
-    ├── app.manifest                      # Windows application manifest
-    ├── Models/                           # Domain models
-    │   ├── Car.cs                        # Car entity with power settings
-    │   ├── Driver.cs                     # Driver entity (for future use)
-    │   └── CarStorage.cs                 # JSON persistence for cars
-    ├── ViewModels/                       # MVVM ViewModels
-    │   ├── MainViewModel.cs              # Main application ViewModel
-    │   ├── CarViewModel.cs               # Car wrapper with commands
-    │   └── CarTuningViewModel.cs         # 3-stage car tuning wizard
-    ├── Views/                            # Avalonia UI windows
-    │   ├── MainWindow.axaml(.cs)         # Main UI with navigation
-    │   └── CarTuningWindow.axaml(.cs)    # Car tuning wizard dialog
-    └── Services/                         # Application services
-        ├── IBleService.cs                # BLE service interface + event args
-        ├── BleService.cs                 # Windows BLE implementation (~700 lines)
-        ├── AppSettings.cs                # JSON settings persistence
-        └── LoggingConfiguration.cs       # Serilog setup
+├── PLAN.md                               # Code quality improvement plan
+├── ScalextricRace/                       # Main application project
+│   ├── ScalextricRace.csproj             # .NET 9.0 Windows project config
+│   ├── Program.cs                        # Application entry point
+│   ├── App.axaml(.cs)                    # Avalonia app bootstrap + DI container
+│   ├── app.manifest                      # Windows application manifest
+│   ├── Models/                           # Domain models (5 files)
+│   │   ├── Car.cs                        # Car entity with power settings
+│   │   ├── Driver.cs                     # Driver entity with power limit
+│   │   ├── SkillLevel.cs                 # Skill level configuration
+│   │   ├── ConnectionState.cs            # BLE connection state enum
+│   │   └── NavigationMode.cs             # UI navigation mode enum
+│   ├── ViewModels/                       # MVVM ViewModels (5 files)
+│   │   ├── MainViewModel.cs              # Main application ViewModel
+│   │   ├── CarViewModel.cs               # Car wrapper with commands
+│   │   ├── DriverViewModel.cs            # Driver wrapper with commands
+│   │   ├── ControllerViewModel.cs        # Slot controller state
+│   │   └── CarTuningViewModel.cs         # 3-stage car tuning wizard
+│   ├── Views/                            # Avalonia UI windows (2 files)
+│   │   ├── MainWindow.axaml(.cs)         # Main UI with navigation
+│   │   └── CarTuningWindow.axaml(.cs)    # Car tuning wizard dialog
+│   ├── Services/                         # Application services (10 files)
+│   │   ├── IBleService.cs                # BLE service interface
+│   │   ├── BleService.cs                 # Windows BLE implementation
+│   │   ├── IAppSettings.cs               # Settings interface
+│   │   ├── AppSettings.cs                # JSON settings persistence
+│   │   ├── ICarStorage.cs                # Car storage interface
+│   │   ├── CarStorage.cs                 # JSON car persistence
+│   │   ├── IDriverStorage.cs             # Driver storage interface
+│   │   ├── DriverStorage.cs              # JSON driver persistence
+│   │   ├── ISkillLevelConfigService.cs   # Skill level config interface
+│   │   ├── SkillLevelConfigService.cs    # Skill level persistence
+│   │   ├── IWindowService.cs             # Window management interface
+│   │   ├── WindowService.cs              # Window lifecycle management
+│   │   └── LoggingConfiguration.cs       # Serilog setup
+│   └── Converters/                       # XAML value converters (2 files)
+│       ├── ConnectionStateToColorConverter.cs
+│       └── BoolToColorConverter.cs
+└── ScalextricRace.Tests/                 # Unit test project (26 tests)
+    ├── ScalextricRace.Tests.csproj       # xUnit test project
+    ├── CarModelTests.cs                  # Car model tests
+    ├── DriverModelTests.cs               # Driver model tests
+    ├── CarViewModelTests.cs              # CarViewModel tests
+    └── DriverViewModelTests.cs           # DriverViewModel tests
 ```
 
 ### Shared Libraries
@@ -58,7 +84,7 @@ The application references two shared libraries in `Libs/`:
 | Library | Purpose |
 |---------|---------|
 | `Scalextric` | Core domain: `ThrottleProfileType` enum, `LapTimingEngine` |
-| `ScalextricBle` | BLE protocol: `ScalextricProtocol` (characteristics, commands), `ScalextricProtocolDecoder` |
+| `ScalextricBle` | BLE protocol: `ScalextricProtocol` (characteristics, commands), `ScalextricProtocolDecoder`, unified `IBleService` |
 
 ### MVVM Architecture
 
@@ -66,7 +92,8 @@ The application references two shared libraries in `Libs/`:
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         App.axaml.cs                                 │
 │  - Builds DI Container (ServiceCollection)                          │
-│  - Registers: AppSettings, IBleService, MainViewModel               │
+│  - Registers: IAppSettings, IBleService, ICarStorage, IDriverStorage│
+│  - Registers: ISkillLevelConfigService, IWindowService, MainViewModel│
 │  - Exposes App.Services for resolution                              │
 └─────────────────────────────────┬───────────────────────────────────┘
                                   │
@@ -75,7 +102,8 @@ The application references two shared libraries in `Libs/`:
 │  MainWindow.axaml.cs - Window lifecycle events only                 │
 │    • Opened → StartMonitoring()                                     │
 │    • Closing → StopMonitoring()                                     │
-│  (All business logic in ViewModel)                                  │
+│  CarTuningWindow.axaml.cs - Tuning wizard dialog                    │
+│  (Business logic delegated to ViewModels via IWindowService)        │
 └─────────────────────────────────┬───────────────────────────────────┘
                                   │ DataBinding + Commands
 ┌─────────────────────────────────▼───────────────────────────────────┐
@@ -84,16 +112,20 @@ The application references two shared libraries in `Libs/`:
 │    • Connection state management                                    │
 │    • Power control commands                                         │
 │    • Settings persistence                                           │
-│    • Car management (CRUD, tuning)                                  │
-│  CarViewModel - Car wrapper with tune/delete commands               │
+│    • Car/Driver management (CRUD, tuning)                           │
+│  CarViewModel - Car wrapper with tune/delete/image commands         │
+│  DriverViewModel - Driver wrapper with skill level management       │
+│  ControllerViewModel - Per-slot controller state                    │
 │  CarTuningViewModel - 3-stage tuning wizard state                   │
 └─────────────────────────────────┬───────────────────────────────────┘
                                   │
 ┌─────────────────────────────────▼───────────────────────────────────┐
 │                    Services Layer                                    │
-│  IBleService - BLE abstraction interface                            │
-│  BleService - Windows BLE implementation                            │
-│  AppSettings - JSON settings persistence                            │
+│  IBleService - BLE abstraction (shared library)                     │
+│  IAppSettings - Settings abstraction                                │
+│  ICarStorage, IDriverStorage - Data persistence                     │
+│  ISkillLevelConfigService - Skill level configuration               │
+│  IWindowService - Window management abstraction                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -102,10 +134,11 @@ The application references two shared libraries in `Libs/`:
 - **MVVM with CommunityToolkit.Mvvm** - Uses `[ObservableProperty]` and `[RelayCommand]` source generators
 - **Dependency Injection** - Microsoft.Extensions.DependencyInjection for service management
 - **Compiled Bindings** - `x:DataType` specified in XAML for compile-time binding validation
-- **Service Abstraction** - `IBleService` interface for testability
+- **Service Abstraction** - All services have interfaces for testability
 - **Event-Driven Architecture** - BLE service communicates via events (ConnectionStateChanged, NotificationReceived, StatusMessageChanged)
 - **Settings Persistence** - JSON file at `%LocalAppData%/ScalextricPdm/ScalextricRace/settings.json`
 - **Structured Logging** - Serilog with file and debug sinks
+- **Bitmap Caching** - CarViewModel and DriverViewModel cache loaded images
 
 ### Application Flow
 
@@ -151,7 +184,7 @@ StatusIndicatorColor property:
 
 ### Settings Flyout
 
-Power controls are accessed via a gear icon (⚙) flyout in the top-right corner:
+Power controls are accessed via a gear icon flyout in the top-right corner:
 - **Power Toggle** - Enable/disable track power
 - **Power Level** - Slider 0-63 (always editable, changes take effect on next heartbeat)
 - **Throttle Profile** - Linear, Exponential, or Stepped
@@ -162,7 +195,9 @@ Settings and data are stored in `%LocalAppData%/ScalextricPdm/ScalextricRace/`:
 ```
 ├── settings.json    # App settings (power level, throttle profile)
 ├── cars.json        # Car configurations
-└── Images/          # Car images (copied from originals)
+├── drivers.json     # Driver profiles
+├── skilllevels.json # Skill level definitions
+└── Images/          # Car/driver images (copied from originals)
 ```
 
 On startup:
@@ -198,13 +233,18 @@ The car tuning wizard is a 3-stage dialog for calibrating car power settings:
 | Layer | Entity | Purpose |
 |-------|--------|---------|
 | Model | `Car` | Car entity with DefaultPower, GhostMaxPower, MinPower, ImagePath |
-| Model | `Driver` | Driver entity (for future use) |
-| Model | `CarStorage` | JSON persistence for cars list |
-| Service | `IBleService` | BLE abstraction interface |
-| Service | `BleService` | Windows BLE implementation with retry logic |
-| Service | `AppSettings` | JSON settings persistence |
-| ViewModel | `MainViewModel` | Central state manager, commands, car management |
+| Model | `Driver` | Driver entity with PowerLimit and SkillLevel reference |
+| Model | `SkillLevel` | Skill name + power limit value |
+| Service | `IBleService` | BLE abstraction interface (shared library) |
+| Service | `IAppSettings` | Settings abstraction |
+| Service | `ICarStorage` | Car persistence abstraction |
+| Service | `IDriverStorage` | Driver persistence abstraction |
+| Service | `ISkillLevelConfigService` | Skill level persistence |
+| Service | `IWindowService` | Window management abstraction |
+| ViewModel | `MainViewModel` | Central state manager, commands, car/driver management |
 | ViewModel | `CarViewModel` | Car wrapper with tune/delete/image commands |
+| ViewModel | `DriverViewModel` | Driver wrapper with skill level management |
+| ViewModel | `ControllerViewModel` | Per-slot controller state |
 | ViewModel | `CarTuningViewModel` | 3-stage tuning wizard state |
 | Library | `ScalextricProtocol` | BLE protocol constants and command builders |
 | Library | `ThrottleProfileType` | Throttle curve types enum |
@@ -223,7 +263,18 @@ Currently Windows-only (`net9.0-windows10.0.19041.0`). BLE code is wrapped in `#
 | DI | Microsoft.Extensions.DependencyInjection | 9.0.0 |
 | Logging | Serilog | 4.3.0 |
 | BLE | Windows.Devices.Bluetooth (WinRT) | - |
+| Testing | xUnit | 2.9.3 |
 | Target Framework | .NET 9.0 | Windows 10.0.19041 |
+
+### Unit Tests
+
+26 tests covering:
+- `CarModelTests` - Car model defaults and creation
+- `DriverModelTests` - Driver model defaults and power limit
+- `CarViewModelTests` - CarViewModel property sync, clamping, events
+- `DriverViewModelTests` - DriverViewModel property sync, skill levels, events
+
+Run tests with: `dotnet test ScalextricRace.Tests/ScalextricRace.Tests.csproj`
 
 ### Logging
 
@@ -241,18 +292,14 @@ BLE operations include robust error handling:
 - Fire-and-forget pattern with exception logging
 - User-friendly Bluetooth error messages
 - Proper dispose pattern with finalizer
+- Image load failures logged via Serilog
 
-### Future Enhancements (TODO)
+### Code Quality
 
-- Implement heartbeat loop (200ms power command interval)
-- Process BLE notifications (throttle, lap timing)
-- Add lap counting and timing display
-- Driver management and assignment to cars
-- Race session management
-- Cross-platform support (macOS/Linux via InTheHand.BluetoothLE)
+See [PLAN.md](PLAN.md) for identified MVVM violations and improvement plan with status tracking.
 
 ### Related Documentation
 
 - [Repository CLAUDE.md](../../CLAUDE.md) - Main repository documentation
-- [ArcPro-BLE-Protocol.md](../../docs/ArcPro-BLE-Protocol.md) - BLE protocol specification
+- [ArcPro-BLE-Protocol.md](../../Docs/ArcPro-BLE-Protocol.md) - BLE protocol specification
 - [ScalextricArcBleProtocolExplorer](https://github.com/RazManager/ScalextricArcBleProtocolExplorer) - Protocol reference
