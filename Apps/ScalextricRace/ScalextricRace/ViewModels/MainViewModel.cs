@@ -21,6 +21,7 @@ public partial class MainViewModel : ObservableObject
     private readonly AppSettings _settings;
     private readonly ICarStorage _carStorage;
     private bool _isInitializing = true;
+    private readonly Scalextric.LapTimingEngine[] _lapTimingEngines;
 
     // Child ViewModels
     private readonly BleConnectionViewModel _connection;
@@ -395,6 +396,13 @@ public partial class MainViewModel : ObservableObject
         _powerHeartbeatService = powerHeartbeatService;
         _carStorage = carStorage ?? new CarStorage();
 
+        // Initialize lap timing engines (one per controller slot)
+        _lapTimingEngines = new Scalextric.LapTimingEngine[6];
+        for (int i = 0; i < 6; i++)
+        {
+            _lapTimingEngines[i] = new Scalextric.LapTimingEngine();
+        }
+
         // Load startup power state - will be applied when connected
         // (Power settings are loaded by PowerControlViewModel)
         IsPowerEnabled = _settings.StartWithPowerEnabled;
@@ -424,6 +432,51 @@ public partial class MainViewModel : ObservableObject
                 OnPropertyChanged(nameof(ConnectionStatusText));
             else if (e.PropertyName == nameof(BleConnectionViewModel.CurrentConnectionState))
                 OnPropertyChanged(nameof(CurrentConnectionState));
+        };
+
+        // Forward race configuration property changes
+        _raceConfig.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(RaceConfigurationViewModel.CanStartRace))
+                OnPropertyChanged(nameof(CanStartRace));
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.IsTestModeActive))
+                OnPropertyChanged(nameof(IsTestModeActive));
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.TestButtonText))
+                OnPropertyChanged(nameof(TestButtonText));
+            // Forward Config property changes for race stages
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigFreePracticeEnabled))
+                OnPropertyChanged(nameof(ConfigFreePracticeEnabled));
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigFreePracticeMode))
+                OnPropertyChanged(nameof(ConfigFreePracticeMode));
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigFreePracticeLapCount))
+                OnPropertyChanged(nameof(ConfigFreePracticeLapCount));
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigFreePracticeTimeMinutes))
+                OnPropertyChanged(nameof(ConfigFreePracticeTimeMinutes));
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigQualifyingEnabled))
+                OnPropertyChanged(nameof(ConfigQualifyingEnabled));
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigQualifyingMode))
+                OnPropertyChanged(nameof(ConfigQualifyingMode));
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigQualifyingLapCount))
+                OnPropertyChanged(nameof(ConfigQualifyingLapCount));
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigQualifyingTimeMinutes))
+                OnPropertyChanged(nameof(ConfigQualifyingTimeMinutes));
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigRaceEnabled))
+                OnPropertyChanged(nameof(ConfigRaceEnabled));
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigRaceMode))
+                OnPropertyChanged(nameof(ConfigRaceMode));
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigRaceLapCount))
+                OnPropertyChanged(nameof(ConfigRaceLapCount));
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigRaceTimeMinutes))
+                OnPropertyChanged(nameof(ConfigRaceTimeMinutes));
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigDefaultPower))
+                OnPropertyChanged(nameof(ConfigDefaultPower));
+            // Forward display property changes
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigFreePracticeDisplay))
+                OnPropertyChanged(nameof(ConfigFreePracticeDisplay));
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigQualifyingDisplay))
+                OnPropertyChanged(nameof(ConfigQualifyingDisplay));
+            else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigRaceDisplay))
+                OnPropertyChanged(nameof(ConfigRaceDisplay));
         };
 
         // Subscribe to heartbeat service events
@@ -604,14 +657,35 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Saves the current race entries to the active race.
+    /// Saves the current race entries and configuration to the active race.
     /// </summary>
     private void SaveRaceEntries()
     {
         if (ActiveRace == null) return;
 
+        // Save race entries (car/driver pairings)
         _raceConfig.SaveRaceEntries(ActiveRace);
+
+        // Save race stage configuration back to the race
+        ActiveRace.FreePracticeEnabled = ConfigFreePracticeEnabled;
+        ActiveRace.FreePracticeMode = ConfigFreePracticeMode;
+        ActiveRace.FreePracticeLapCount = ConfigFreePracticeLapCount;
+        ActiveRace.FreePracticeTimeMinutes = ConfigFreePracticeTimeMinutes;
+
+        ActiveRace.QualifyingEnabled = ConfigQualifyingEnabled;
+        ActiveRace.QualifyingMode = ConfigQualifyingMode;
+        ActiveRace.QualifyingLapCount = ConfigQualifyingLapCount;
+        ActiveRace.QualifyingTimeMinutes = ConfigQualifyingTimeMinutes;
+
+        ActiveRace.RaceStageEnabled = ConfigRaceEnabled;
+        ActiveRace.RaceStageMode = ConfigRaceMode;
+        ActiveRace.RaceStageLapCount = ConfigRaceLapCount;
+        ActiveRace.RaceStageTimeMinutes = ConfigRaceTimeMinutes;
+
+        ActiveRace.DefaultPower = ConfigDefaultPower;
+
         _raceManagement.SaveRaces();
+        Log.Information("Saved race configuration for {RaceName}", ActiveRace.Name);
     }
 
     private void ClearRaceEntries()
@@ -631,6 +705,17 @@ public partial class MainViewModel : ObservableObject
     private void ProceedToRacing()
     {
         if (!CanStartRace) return;
+
+        // Reset lap timing engines and race entry lap times
+        for (int i = 0; i < 6; i++)
+        {
+            _lapTimingEngines[i] = new Scalextric.LapTimingEngine(); // Reset engine
+            var entry = _raceConfig.RaceEntries[i];
+            entry.CurrentLap = 0;
+            entry.LastLapTime = null;
+            entry.BestLapTime = null;
+            entry.CurrentLane = 0;
+        }
 
         // Save entries before starting race
         SaveRaceEntries();
@@ -812,8 +897,50 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private void OnNotificationReceived(object? sender, BleNotificationEventArgs e)
     {
-        // Process notifications (throttle, lap timing, etc.)
-        // TODO: Implement notification handling
+        // Only process Slot characteristic (lap timing data)
+        if (e.CharacteristicUuid != Scalextric.ScalextricProtocol.Characteristics.Slot)
+            return;
+
+        // Process lap timing for each slot
+        if (e.Data.Length >= 10) // Slot data is 10 bytes
+        {
+            int slotNumber = e.Data[0]; // Slot 1-6
+            if (slotNumber >= 1 && slotNumber <= 6)
+            {
+                // Extract timestamps (bytes 2-5 = lane1, bytes 6-9 = lane2)
+                uint lane1Time = BitConverter.ToUInt32(e.Data, 2);
+                uint lane2Time = BitConverter.ToUInt32(e.Data, 6);
+
+                // Update lap timing engine
+                var result = _lapTimingEngines[slotNumber - 1].UpdateTimestamps(lane1Time, lane2Time);
+
+                // Update the corresponding race entry if lap completed
+                if (result.LapCompleted && CurrentAppMode == AppMode.Racing)
+                {
+                    var entry = _raceConfig.RaceEntries[slotNumber - 1];
+                    if (entry.IsEnabled)
+                    {
+                        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                        {
+                            entry.CurrentLap = result.CurrentLap;
+                            entry.LastLapTime = result.LapTimeSeconds;
+                            entry.CurrentLane = result.CrossedLane;
+
+                            // Update best lap if this lap is better
+                            if (!entry.BestLapTime.HasValue ||
+                                result.LapTimeSeconds < entry.BestLapTime.Value)
+                            {
+                                entry.BestLapTime = result.LapTimeSeconds;
+                            }
+
+                            Log.Information("Slot {Slot}: Lap {Lap} completed in {Time:F2}s (Best: {Best:F2}s)",
+                                slotNumber, result.CurrentLap, result.LapTimeSeconds,
+                                entry.BestLapTime ?? 0);
+                        });
+                    }
+                }
+            }
+        }
     }
 
     // Controller event handlers removed - handled by PowerControlViewModel

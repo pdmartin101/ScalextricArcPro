@@ -123,10 +123,11 @@ public partial class CarManagementViewModel : ObservableObject
 
     /// <summary>
     /// Safely runs an async task without awaiting, handling any exceptions.
+    /// Runs on the UI thread to avoid InvalidOperationException.
     /// </summary>
     private static void RunFireAndForget(Func<Task> asyncAction, string operationName)
     {
-        Task.Run(async () =>
+        Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
         {
             try
             {
@@ -140,14 +141,25 @@ public partial class CarManagementViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Deletes the specified car (cannot delete the default car).
+    /// Deletes the specified car after confirmation (cannot delete the default car).
     /// </summary>
     /// <param name="car">The car view model to delete.</param>
-    private void DeleteCar(CarViewModel? car)
+    private async void DeleteCar(CarViewModel? car)
     {
         if (car == null || car.IsDefault)
         {
             Log.Warning("Cannot delete null or default car");
+            return;
+        }
+
+        // Show confirmation dialog
+        var confirmed = await _windowService.ShowConfirmationDialogAsync(
+            "Delete Car",
+            $"Are you sure you want to delete '{car.Name}'?");
+
+        if (!confirmed)
+        {
+            Log.Debug("Car deletion cancelled by user");
             return;
         }
 

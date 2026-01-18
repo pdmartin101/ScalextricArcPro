@@ -42,11 +42,22 @@ public partial class App : Application
             // Resolve the main view model from DI
             _mainViewModel = Services.GetRequiredService<MainViewModel>();
 
+            // Load settings to restore window size
+            var settings = Services.GetRequiredService<AppSettings>();
+
             // Create and configure the main window
             var mainWindow = new MainWindow
             {
                 DataContext = _mainViewModel
             };
+
+            // Restore window size if previously saved
+            if (settings.WindowWidth > 0 && settings.WindowHeight > 0)
+            {
+                mainWindow.Width = settings.WindowWidth;
+                mainWindow.Height = settings.WindowHeight;
+            }
+
             desktop.MainWindow = mainWindow;
 
             // Configure window service with the main window as owner

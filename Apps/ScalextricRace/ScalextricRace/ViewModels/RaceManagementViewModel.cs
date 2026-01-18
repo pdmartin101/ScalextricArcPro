@@ -120,10 +120,11 @@ public partial class RaceManagementViewModel : ObservableObject
 
     /// <summary>
     /// Safely runs an async task without awaiting, handling any exceptions.
+    /// Runs on the UI thread to avoid InvalidOperationException.
     /// </summary>
     private static void RunFireAndForget(Func<Task> asyncAction, string operationName)
     {
-        Task.Run(async () =>
+        Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
         {
             try
             {
@@ -147,14 +148,25 @@ public partial class RaceManagementViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Deletes the specified race (cannot delete the default race).
+    /// Deletes the specified race after confirmation (cannot delete the default race).
     /// </summary>
     /// <param name="race">The race view model to delete.</param>
-    private void DeleteRace(RaceViewModel? race)
+    private async void DeleteRace(RaceViewModel? race)
     {
         if (race == null || race.IsDefault)
         {
             Log.Warning("Cannot delete null or default race");
+            return;
+        }
+
+        // Show confirmation dialog
+        var confirmed = await _windowService.ShowConfirmationDialogAsync(
+            "Delete Race",
+            $"Are you sure you want to delete '{race.Name}'?");
+
+        if (!confirmed)
+        {
+            Log.Debug("Race deletion cancelled by user");
             return;
         }
 

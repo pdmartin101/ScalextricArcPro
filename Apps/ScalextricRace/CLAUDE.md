@@ -57,21 +57,26 @@ Apps/ScalextricRace/
 │   │   └── CarTuningViewModel.cs         # 3-stage car tuning wizard
 │   ├── Views/                            # Avalonia UI windows (2 files)
 │   │   ├── MainWindow.axaml(.cs)         # Main UI with navigation
-│   │   └── CarTuningWindow.axaml(.cs)    # Car tuning wizard dialog
-│   ├── Services/                         # Application services (8 files)
+│   │   ├── CarTuningWindow.axaml(.cs)    # Car tuning wizard dialog
+│   │   ├── RaceConfigWindow.axaml(.cs)   # Race configuration editor dialog
+│   │   └── ConfirmationDialog.axaml(.cs) # Yes/No confirmation dialog
+│   ├── Services/                         # Application services (10 files)
 │   │   ├── IBleService.cs                # BLE service interface
 │   │   ├── BleService.cs                 # Windows BLE implementation
 │   │   ├── IAppSettings.cs               # Settings interface
-│   │   ├── AppSettings.cs                # JSON settings persistence
+│   │   ├── AppSettings.cs                # JSON settings persistence (includes window size)
 │   │   ├── ICarStorage.cs                # Car storage interface
 │   │   ├── CarStorage.cs                 # JSON car persistence
 │   │   ├── IDriverStorage.cs             # Driver storage interface
 │   │   ├── DriverStorage.cs              # JSON driver persistence
+│   │   ├── IRaceStorage.cs               # Race storage interface
+│   │   ├── RaceStorage.cs                # JSON race persistence
 │   │   ├── IWindowService.cs             # Window management interface
 │   │   └── WindowService.cs              # Window lifecycle management
-│   └── Converters/                       # XAML value converters (2 files)
+│   └── Converters/                       # XAML value converters (3 files)
 │       ├── ConnectionStateToColorConverter.cs
-│       └── BoolToColorConverter.cs
+│       ├── BoolToColorConverter.cs
+│       └── ImagePathToBitmapConverter.cs
 └── ScalextricRace.Tests/                 # Unit test project (27 tests)
     ├── ScalextricRace.Tests.csproj       # xUnit test project
     ├── CarModelTests.cs                  # Car model tests
@@ -195,15 +200,21 @@ Power controls are accessed via a gear icon flyout in the top-right corner:
 
 Settings and data are stored in `%LocalAppData%/ScalextricPdm/ScalextricRace/`:
 ```
-├── settings.json    # App settings (power level, throttle profile)
+├── settings.json    # App settings (power level, throttle profile, window size)
 ├── cars.json        # Car configurations
 ├── drivers.json     # Driver profiles (with power percentage 50-100%)
+├── races.json       # Race templates with stage configurations
 └── Images/          # Car/driver images (copied from originals)
 ```
 
 On startup:
 - Settings are loaded and applied to ViewModel
+- Window size is restored from last session
 - If `PowerEnabled` was true, power is automatically enabled after BLE connection established
+
+On shutdown:
+- Window size is saved to settings.json
+- All data (cars, drivers, races) is persisted to JSON files
 
 ### Power Control
 

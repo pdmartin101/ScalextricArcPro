@@ -102,10 +102,11 @@ public partial class DriverManagementViewModel : ObservableObject
 
     /// <summary>
     /// Safely runs an async task without awaiting, handling any exceptions.
+    /// Runs on the UI thread to avoid InvalidOperationException.
     /// </summary>
     private static void RunFireAndForget(Func<Task> asyncAction, string operationName)
     {
-        Task.Run(async () =>
+        Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
         {
             try
             {
@@ -119,14 +120,25 @@ public partial class DriverManagementViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Deletes the specified driver (cannot delete the default driver).
+    /// Deletes the specified driver after confirmation (cannot delete the default driver).
     /// </summary>
     /// <param name="driver">The driver view model to delete.</param>
-    private void DeleteDriver(DriverViewModel? driver)
+    private async void DeleteDriver(DriverViewModel? driver)
     {
         if (driver == null || driver.IsDefault)
         {
             Log.Warning("Cannot delete null or default driver");
+            return;
+        }
+
+        // Show confirmation dialog
+        var confirmed = await _windowService.ShowConfirmationDialogAsync(
+            "Delete Driver",
+            $"Are you sure you want to delete '{driver.Name}'?");
+
+        if (!confirmed)
+        {
+            Log.Debug("Driver deletion cancelled by user");
             return;
         }
 

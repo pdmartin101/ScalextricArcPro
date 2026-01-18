@@ -28,14 +28,14 @@ ScalextricTest/
 │   │   │   └── Converters/                # 6 converters
 │   │   └── ScalextricBleMonitor.Tests/    # xUnit tests for lap timing, protocol, settings
 │   │
-│   └── ScalextricRace/                    # Simplified racing app with car/driver management
-│       ├── ScalextricRace.sln             # Solution: app + shared libs
+│   └── ScalextricRace/                    # Full-featured racing app with car/driver/race management
+│       ├── ScalextricRace.sln             # Solution: app + shared libs + 81 unit tests
 │       └── ScalextricRace/
-│           ├── Models/                    # 5 models: Car, Driver, SkillLevel, ConnectionState, NavigationMode
-│           ├── ViewModels/                # 5 VMs: Main, Car, Driver, Controller, CarTuning
-│           ├── Views/                     # 2 windows: Main, CarTuning
-│           ├── Services/                  # 6 services: BLE, CarStorage, DriverStorage, AppSettings
-│           └── Converters/                # 2 converters
+│           ├── Models/                    # 6 models: Car, Driver, Race, RaceEntry, RaceStageMode, etc.
+│           ├── ViewModels/                # 13 VMs: Main, Car, Driver, Race, RaceEntry, RaceConfig, Management VMs
+│           ├── Views/                     # 4 windows: Main, CarTuning, RaceConfig, ConfirmationDialog
+│           ├── Services/                  # 10 services: BLE, Storage (Car/Driver/Race), Window, Settings
+│           └── Converters/                # 3 converters: ConnectionState, Bool, ImagePath
 │
 ├── Libs/
 │   ├── Scalextric/                        # Core domain library (cross-platform)

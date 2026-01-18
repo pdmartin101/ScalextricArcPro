@@ -1041,11 +1041,11 @@
                                                     IsVisible="{Binding ConfigFreePracticeEnabled}">
                                             <RadioButton Content="Laps"
                                                          FontSize="11"
-                                                         IsChecked="{Binding ConfigFreePracticeMode, Converter={x:Static vm:RaceStageModeConverter.ToLaps}}"
+                                                         IsChecked="{Binding ConfigFreePracticeMode, Mode=TwoWay, Converter={x:Static vm:RaceStageModeConverter.ToLaps}}"
                                                          GroupName="FPMode" />
                                             <RadioButton Content="Time"
                                                          FontSize="11"
-                                                         IsChecked="{Binding ConfigFreePracticeMode, Converter={x:Static vm:RaceStageModeConverter.ToTime}}"
+                                                         IsChecked="{Binding ConfigFreePracticeMode, Mode=TwoWay, Converter={x:Static vm:RaceStageModeConverter.ToTime}}"
                                                          GroupName="FPMode" />
                                             <NumericUpDown Value="{Binding ConfigFreePracticeLapCount}"
                                                            Minimum="1"
@@ -1087,11 +1087,11 @@
                                                     IsVisible="{Binding ConfigQualifyingEnabled}">
                                             <RadioButton Content="Laps"
                                                          FontSize="11"
-                                                         IsChecked="{Binding ConfigQualifyingMode, Converter={x:Static vm:RaceStageModeConverter.ToLaps}}"
+                                                         IsChecked="{Binding ConfigQualifyingMode, Mode=TwoWay, Converter={x:Static vm:RaceStageModeConverter.ToLaps}}"
                                                          GroupName="QMode" />
                                             <RadioButton Content="Time"
                                                          FontSize="11"
-                                                         IsChecked="{Binding ConfigQualifyingMode, Converter={x:Static vm:RaceStageModeConverter.ToTime}}"
+                                                         IsChecked="{Binding ConfigQualifyingMode, Mode=TwoWay, Converter={x:Static vm:RaceStageModeConverter.ToTime}}"
                                                          GroupName="QMode" />
                                             <NumericUpDown Value="{Binding ConfigQualifyingLapCount}"
                                                            Minimum="1"
@@ -1132,11 +1132,11 @@
                                                     IsVisible="{Binding ConfigRaceEnabled}">
                                             <RadioButton Content="Laps"
                                                          FontSize="11"
-                                                         IsChecked="{Binding ConfigRaceMode, Converter={x:Static vm:RaceStageModeConverter.ToLaps}}"
+                                                         IsChecked="{Binding ConfigRaceMode, Mode=TwoWay, Converter={x:Static vm:RaceStageModeConverter.ToLaps}}"
                                                          GroupName="RMode" />
                                             <RadioButton Content="Time"
                                                          FontSize="11"
-                                                         IsChecked="{Binding ConfigRaceMode, Converter={x:Static vm:RaceStageModeConverter.ToTime}}"
+                                                         IsChecked="{Binding ConfigRaceMode, Mode=TwoWay, Converter={x:Static vm:RaceStageModeConverter.ToTime}}"
                                                          GroupName="RMode" />
                                             <NumericUpDown Value="{Binding ConfigRaceLapCount}"
                                                            Minimum="1"
@@ -1238,20 +1238,80 @@
                                    Margin="0,5,0,0" />
                     </StackPanel>
 
-                    <!-- Racing Content (placeholder for now) -->
-                    <StackPanel Grid.Row="1"
-                                VerticalAlignment="Center"
-                                HorizontalAlignment="Center">
-                        <TextBlock Text="Racing functionality coming soon..."
-                                   FontSize="16"
-                                   Foreground="#666666"
-                                   HorizontalAlignment="Center" />
-                        <TextBlock Text="{Binding ActiveRace.StagesSummary}"
-                                   FontSize="14"
-                                   Foreground="#555555"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,10,0,0" />
-                    </StackPanel>
+                    <!-- Racing Content -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding RaceConfig.EnabledEntries}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:RaceEntryViewModel">
+                                    <Border Background="#2a2a3e"
+                                            CornerRadius="8"
+                                            Padding="20"
+                                            Margin="0,0,0,15">
+                                        <Grid ColumnDefinitions="10,Auto,*,Auto,Auto">
+                                            <!-- Color indicator -->
+                                            <Border Grid.Column="0"
+                                                    Background="{Binding SlotColor}"
+                                                    Width="10"
+                                                    CornerRadius="2"
+                                                    Margin="0,0,15,0" />
+
+                                            <!-- Car image -->
+                                            <Border Grid.Column="1"
+                                                    Width="96" Height="72"
+                                                    CornerRadius="4"
+                                                    ClipToBounds="True"
+                                                    Margin="0,0,20,0">
+                                                <Image Source="{Binding SelectedCar.ImagePath,
+                                                                Converter={x:Static converters:ImagePathToBitmapConverter.Instance}}"
+                                                       Stretch="UniformToFill" />
+                                            </Border>
+
+                                            <!-- Car and Driver names + Current lap -->
+                                            <StackPanel Grid.Column="2" Spacing="5" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding SelectedCar.Name}"
+                                                           FontSize="20"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="White" />
+                                                <TextBlock Text="{Binding SelectedDriver.Name}"
+                                                           FontSize="16"
+                                                           Foreground="#AAAAAA" />
+                                                <TextBlock Text="{Binding CurrentLap, StringFormat='Lap {0}'}"
+                                                           FontSize="14"
+                                                           Foreground="#888888"
+                                                           Margin="0,5,0,0" />
+                                            </StackPanel>
+
+                                            <!-- Last lap time -->
+                                            <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="30,0">
+                                                <TextBlock Text="Last Lap"
+                                                           FontSize="12"
+                                                           Foreground="#888888"
+                                                           HorizontalAlignment="Center" />
+                                                <TextBlock Text="{Binding LastLapTimeDisplay}"
+                                                           FontSize="24"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="#4CAF50"
+                                                           HorizontalAlignment="Center" />
+                                            </StackPanel>
+
+                                            <!-- Best lap time -->
+                                            <StackPanel Grid.Column="4" VerticalAlignment="Center" Margin="30,0,0,0">
+                                                <TextBlock Text="Best Lap"
+                                                           FontSize="12"
+                                                           Foreground="#888888"
+                                                           HorizontalAlignment="Center" />
+                                                <TextBlock Text="{Binding BestLapTimeDisplay}"
+                                                           FontSize="24"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="#9C27B0"
+                                                           HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
 
                     <!-- Exit Instructions -->
                     <StackPanel Grid.Row="2" HorizontalAlignment="Center" Spacing="10">

@@ -118,6 +118,32 @@ public partial class RaceEntryViewModel : ObservableObject
     private int _raceDefaultPower = 40;
 
     /// <summary>
+    /// Current lap number (starts at 0).
+    /// </summary>
+    [ObservableProperty]
+    private int _currentLap;
+
+    /// <summary>
+    /// Last lap time in seconds (null if no laps completed).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LastLapTimeDisplay))]
+    private double? _lastLapTime;
+
+    /// <summary>
+    /// Best lap time in seconds (null if no laps completed).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BestLapTimeDisplay))]
+    private double? _bestLapTime;
+
+    /// <summary>
+    /// Current lane (1 or 2, or 0 if not yet crossed).
+    /// </summary>
+    [ObservableProperty]
+    private int _currentLane;
+
+    /// <summary>
     /// Gets whether a car is selected.
     /// </summary>
     public bool HasCar => SelectedCar != null;
@@ -176,6 +202,20 @@ public partial class RaceEntryViewModel : ObservableObject
     /// Gets whether this entry is fully configured (enabled with car and driver).
     /// </summary>
     public bool IsConfigured => IsEnabled && HasCar && HasDriver;
+
+    /// <summary>
+    /// Formatted last lap time for display.
+    /// </summary>
+    public string LastLapTimeDisplay => LastLapTime.HasValue
+        ? $"{LastLapTime.Value:F2}s"
+        : "--";
+
+    /// <summary>
+    /// Formatted best lap time for display.
+    /// </summary>
+    public string BestLapTimeDisplay => BestLapTime.HasValue
+        ? $"{BestLapTime.Value:F2}s"
+        : "--";
 
     /// <summary>
     /// Creates a new race entry view model.

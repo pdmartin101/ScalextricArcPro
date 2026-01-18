@@ -16,6 +16,12 @@ public partial class RaceConfigurationViewModel : ObservableObject
     public ObservableCollection<RaceEntryViewModel> RaceEntries { get; } = [];
 
     /// <summary>
+    /// Gets only the enabled race entries for display.
+    /// </summary>
+    public IEnumerable<RaceEntryViewModel> EnabledEntries =>
+        RaceEntries.Where(e => e.IsEnabled);
+
+    /// <summary>
     /// Gets whether the race can be started (at least one configured entry).
     /// </summary>
     [ObservableProperty]
@@ -232,6 +238,11 @@ public partial class RaceConfigurationViewModel : ObservableObject
         if (e.PropertyName == nameof(RaceEntryViewModel.IsConfigured))
         {
             UpdateCanStartRace();
+        }
+
+        if (e.PropertyName == nameof(RaceEntryViewModel.IsEnabled))
+        {
+            OnPropertyChanged(nameof(EnabledEntries));
         }
     }
 

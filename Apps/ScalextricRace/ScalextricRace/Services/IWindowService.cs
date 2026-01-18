@@ -38,4 +38,12 @@ public interface IWindowService
     /// </summary>
     /// <param name="raceViewModel">The race to edit.</param>
     Task ShowRaceConfigDialogAsync(RaceViewModel raceViewModel);
+
+    /// <summary>
+    /// Shows a confirmation dialog with Yes/No buttons.
+    /// </summary>
+    /// <param name="title">The dialog title.</param>
+    /// <param name="message">The confirmation message.</param>
+    /// <returns>True if user clicked Yes, false if user clicked No.</returns>
+    Task<bool> ShowConfirmationDialogAsync(string title, string message);
 }

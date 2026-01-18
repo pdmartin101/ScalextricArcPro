@@ -87,6 +87,16 @@ public class AppSettings : IAppSettings
     public StartupSettings Startup { get; set; } = new();
 
     /// <summary>
+    /// Last saved window width. If 0, uses default.
+    /// </summary>
+    public double WindowWidth { get; set; } = 0;
+
+    /// <summary>
+    /// Last saved window height. If 0, uses default.
+    /// </summary>
+    public double WindowHeight { get; set; } = 0;
+
+    /// <summary>
     /// Gets the base application data folder path.
     /// </summary>
     public static string AppDataFolder

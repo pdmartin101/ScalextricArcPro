@@ -1,0 +1,36 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ScalextricRace.Views.ConfirmationDialog"
+        Title="Confirm"
+        Width="400"
+        Height="180"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False"
+        ShowInTaskbar="False">
+    <Grid RowDefinitions="*,Auto" Margin="20">
+        <!-- Message -->
+        <TextBlock Grid.Row="0"
+                   Text="{Binding Message}"
+                   FontSize="14"
+                   TextWrapping="Wrap"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Center" />
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Spacing="10"
+                    Margin="0,20,0,0">
+            <Button Content="Yes"
+                    Width="100"
+                    Height="35"
+                    Click="OnYesClick"
+                    Classes="accent" />
+            <Button Content="No"
+                    Width="100"
+                    Height="35"
+                    Click="OnNoClick" />
+        </StackPanel>
+    </Grid>
+</Window>

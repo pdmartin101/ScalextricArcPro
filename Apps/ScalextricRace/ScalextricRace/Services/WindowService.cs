@@ -86,6 +86,25 @@ public class WindowService : IWindowService
         return CopyImageToAppFolder(sourcePath, entityId, prefix);
     }
 
+    /// <inheritdoc />
+    public async Task<bool> ShowConfirmationDialogAsync(string title, string message)
+    {
+        if (_owner == null)
+        {
+            Log.Warning("WindowService.ShowConfirmationDialogAsync called before owner was set");
+            return false;
+        }
+
+        var dialog = new ConfirmationDialog
+        {
+            Title = title,
+            Message = message
+        };
+
+        var result = await dialog.ShowDialog<bool?>(_owner);
+        return result == true;
+    }
+
     /// <summary>
     /// Copies an image to the app's Images folder.
     /// </summary>

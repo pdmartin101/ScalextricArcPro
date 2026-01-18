@@ -2,6 +2,8 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.VisualTree;
+using Microsoft.Extensions.DependencyInjection;
+using ScalextricRace.Services;
 using ScalextricRace.ViewModels;
 
 namespace ScalextricRace.Views;
@@ -24,13 +26,22 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Handles window closing - saves all data.
+    /// Handles window closing - saves all data and window size.
     /// </summary>
     private void OnWindowClosing(object? sender, WindowClosingEventArgs e)
     {
         if (DataContext is MainViewModel viewModel)
         {
             viewModel.SaveAllOnShutdown();
+        }
+
+        // Save window size
+        var settings = App.Services?.GetService<AppSettings>();
+        if (settings != null)
+        {
+            settings.WindowWidth = Width;
+            settings.WindowHeight = Height;
+            settings.Save();
         }
     }
 
