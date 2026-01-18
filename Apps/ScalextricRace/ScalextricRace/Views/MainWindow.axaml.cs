@@ -1,5 +1,4 @@
 using Avalonia.Controls;
-using Microsoft.Extensions.DependencyInjection;
 using ScalextricRace.Services;
 using ScalextricRace.ViewModels;
 
@@ -13,11 +12,23 @@ namespace ScalextricRace.Views;
 /// </summary>
 public partial class MainWindow : Window
 {
+    private readonly AppSettings? _settings;
+
     /// <summary>
     /// Initializes the main window.
+    /// Parameterless constructor for XAML designer support.
     /// </summary>
-    public MainWindow()
+    public MainWindow() : this(null!)
     {
+    }
+
+    /// <summary>
+    /// Initializes the main window with dependency injection.
+    /// </summary>
+    /// <param name="settings">Application settings for window size persistence.</param>
+    public MainWindow(AppSettings settings)
+    {
+        _settings = settings;
         InitializeComponent();
         Closing += OnWindowClosing;
     }
@@ -33,12 +44,11 @@ public partial class MainWindow : Window
         }
 
         // Save window size
-        var settings = App.Services?.GetService<AppSettings>();
-        if (settings != null)
+        if (_settings != null)
         {
-            settings.WindowWidth = Width;
-            settings.WindowHeight = Height;
-            settings.Save();
+            _settings.WindowWidth = Width;
+            _settings.WindowHeight = Height;
+            _settings.Save();
         }
     }
 }

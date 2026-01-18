@@ -39,14 +39,12 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            // Resolve the main view model from DI
+            // Resolve dependencies from DI
             _mainViewModel = Services.GetRequiredService<MainViewModel>();
-
-            // Load settings to restore window size
             var settings = Services.GetRequiredService<AppSettings>();
 
-            // Create and configure the main window
-            var mainWindow = new MainWindow
+            // Create and configure the main window with injected settings
+            var mainWindow = new MainWindow(settings)
             {
                 DataContext = _mainViewModel
             };
