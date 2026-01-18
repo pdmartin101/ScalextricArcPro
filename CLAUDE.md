@@ -55,7 +55,6 @@ ScalextricTest/
 ├── Docs/
 │   └── ArcPro-BLE-Protocol.md             # BLE protocol specification
 │
-├── PLAN.md                                # Code quality improvement plan with issue tracking
 └── CLAUDE.md                              # This file
 ```
 
@@ -211,37 +210,31 @@ bleService.StartScanning();
 
 ## Code Quality Notes
 
-See [Apps/ScalextricRace/PLAN00.md](Apps/ScalextricRace/PLAN00.md) for the comprehensive MVVM improvement plan with issue tracking.
-
-### ScalextricRace - Recent MVVM Fixes (Jan 2026)
+### ScalextricRace - Previous MVVM Fixes (Jan 2026)
 
 **3 commits implementing strict MVVM compliance:**
 
-1. **Critical fixes** (628f174): Removed all event handlers from code-behind, converted dialogs to proper MVVM
+1. **Critical fixes** (aed2057): Removed all event handlers from code-behind, converted dialogs to proper MVVM
 2. **Major fixes** (1b12f9c): Replaced EventHandlers with callbacks/PropertyChanged in ViewModels
 3. **Minor fixes** (5e9766c): Eliminated static service locator, implemented constructor injection
 
 **Results:**
 - 15 files modified, 167 lines added, 190 removed (net -23 lines)
 - All builds: 0 warnings, 0 errors
-- Cleaner, more testable, fully MVVM-compliant architecture
+- Significant progress toward MVVM compliance
 
 ### Current Strengths
 
 - Strict MVVM separation with CommunityToolkit.Mvvm source generators
-- Callback pattern for cross-ViewModel communication (no event subscriptions)
+- Callback pattern for cross-ViewModel communication (mostly implemented)
 - Constructor injection throughout (no static service locators)
 - Comprehensive Serilog logging
 - 148 unit tests (67 BleMonitor + 81 ScalextricRace)
 
-### Remaining Issues (ScalextricRace)
+### Notes
 
-See [Apps/ScalextricRace/PLAN00.md](Apps/ScalextricRace/PLAN00.md) for detailed tracking of remaining MVVM violations:
-- **4 Critical** - Unmanaged PropertyChanged subscriptions, async void method, memory leaks
-- **6 Major** - Event handlers in XAML, business logic in code-behind
-- **4 Minor** - Unnecessary Dispatcher usage
-
-**Note**: BleMonitor has not been analyzed for MVVM violations yet.
+- Both applications follow strict MVVM architecture with CommunityToolkit.Mvvm
+- Recent commits focused on MVVM compliance improvements
 
 ## Adding Libraries to a New App
 

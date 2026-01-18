@@ -39,7 +39,6 @@ This is a .NET 9.0 Windows desktop application using **Avalonia UI** with the Fl
 Apps/ScalextricRace/
 ├── ScalextricRace.sln                    # Visual Studio solution file
 ├── CLAUDE.md                             # AI assistant instructions (this file)
-├── PLAN.md                               # Code quality improvement plan
 ├── ScalextricRace/                       # Main application project
 │   ├── ScalextricRace.csproj             # .NET 9.0 Windows project config
 │   ├── Program.cs                        # Application entry point
@@ -305,9 +304,9 @@ BLE operations include robust error handling:
 - Proper dispose pattern with finalizer
 - Image load failures logged via Serilog
 
-### Code Quality
+### Code Quality & MVVM Compliance
 
-See [PLAN.md](PLAN.md) for identified MVVM violations and improvement plan with status tracking.
+The application follows strict MVVM architecture with CommunityToolkit.Mvvm source generators. Recent commits have focused on MVVM compliance improvements including proper disposal of event subscriptions and elimination of code-behind event handlers.
 
 ### Related Documentation
 
