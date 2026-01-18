@@ -74,10 +74,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// Creates a MainViewModel with default services. Used for design-time and simple instantiation.
     /// </summary>
     public MainViewModel() : this(
-        new BleMonitorService(),
+        new BleService(),
         new GhostRecordingService(),
         new GhostPlaybackService(),
-        new PowerHeartbeatService(new BleMonitorService()),
+        new PowerHeartbeatService(new BleService()),
         new TimingCalibrationService(),
         AppSettings.Load())
     {
@@ -87,7 +87,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// Creates a MainViewModel with injected dependencies.
     /// </summary>
     public MainViewModel(
-        IBleMonitorService bleMonitorService,
+        Services.IBleService bleService,
         IGhostRecordingService ghostRecordingService,
         IGhostPlaybackService ghostPlaybackService,
         IPowerHeartbeatService powerHeartbeatService,
@@ -98,8 +98,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _settings = settings;
 
         // Create child ViewModels
-        _connection = new BleConnectionViewModel(bleMonitorService);
-        _power = new PowerControlViewModel(bleMonitorService, powerHeartbeatService, timingCalibrationService, settings);
+        _connection = new BleConnectionViewModel(bleService);
+        _power = new PowerControlViewModel(bleService, powerHeartbeatService, timingCalibrationService, settings);
         _notifications = new NotificationLogViewModel();
         _ghost = new GhostControlViewModel(ghostRecordingService, ghostPlaybackService, settings);
 

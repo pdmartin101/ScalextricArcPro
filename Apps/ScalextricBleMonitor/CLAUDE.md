@@ -92,8 +92,8 @@ Apps/ScalextricBleMonitor/
 │   │   ├── ThrottleToScaleConverter.cs
 │   │   └── BoolToBrushConverter.cs
 │   └── Services/                         # Application services
-│       ├── IBleMonitorService.cs         # BLE service interface
-│       ├── BleMonitorService.cs          # Windows BLE implementation
+│       ├── IBleService.cs                # BLE service interface
+│       ├── BleService.cs                 # Windows BLE implementation
 │       ├── IWindowService.cs             # Window management interface
 │       ├── WindowService.cs              # Child window lifecycle
 │       ├── ThrottleProfileHelper.cs      # Maps ThrottleProfileType to curves
@@ -145,7 +145,7 @@ The application follows strict MVVM (Model-View-ViewModel) pattern:
 - **MVVM with CommunityToolkit.Mvvm** - Uses `[ObservableProperty]` and `[RelayCommand]` source generators
 - **Dependency Injection** - Microsoft.Extensions.DependencyInjection for service management
 - **Compiled Bindings** - `x:DataType` specified in XAML for compile-time binding validation
-- **Service Abstraction** - `IBleMonitorService`, `IWindowService` for testability
+- **Service Abstraction** - `IBleService`, `IWindowService` for testability
 - **Event-Driven Architecture** - BLE service communicates via events
 - **Model Wrapping** - ViewModels wrap pure domain Models and sync state via partial methods
 - **Structured Logging** - Serilog with file and debug sinks
@@ -185,7 +185,7 @@ Program.Main()
 ### BLE Monitoring Flow
 
 1. `MainWindow` resolves `MainViewModel` from DI container
-2. `MainViewModel` receives `IBleMonitorService` via constructor injection
+2. `MainViewModel` receives `IBleService` via constructor injection
 3. Service scans for advertisements containing "Scalextric" in LocalName
 4. On detection, establishes GATT connection via `BluetoothLEDevice.FromBluetoothAddressAsync()`
 5. Discovers services and subscribes to all notification characteristics
@@ -237,7 +237,7 @@ Program.Main()
 | ViewModel | `ServiceViewModel` | GATT service wrapper |
 | ViewModel | `CharacteristicViewModel` | GATT characteristic wrapper with ReadCommand |
 | ViewModel | `NotificationDataViewModel` | Notification entry wrapper |
-| Service | `IBleMonitorService` | BLE abstraction interface |
+| Service | `IBleService` | BLE abstraction interface |
 | Service | `IWindowService` | Window management abstraction |
 | Library | `ScalextricProtocol` | Protocol constants & command builders (ScalextricBle) |
 | Library | `ScalextricProtocolDecoder` | Protocol data decoding (ScalextricBle) |

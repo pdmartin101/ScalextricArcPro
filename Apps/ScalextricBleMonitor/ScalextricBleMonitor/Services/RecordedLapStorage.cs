@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using ScalextricBleMonitor.Models;
 
 namespace ScalextricBleMonitor.Services;
@@ -8,7 +10,7 @@ namespace ScalextricBleMonitor.Services;
 /// Stores all recorded laps in a single file in the user's local app data folder.
 /// Uses internal instance for base class functionality while maintaining static API.
 /// </summary>
-public class RecordedLapStorage : JsonStorageBase<RecordedLap>
+public class RecordedLapStorage : Scalextric.JsonStorageBase<RecordedLap>
 {
     /// <summary>
     /// Singleton instance for static access pattern.
@@ -20,6 +22,16 @@ public class RecordedLapStorage : JsonStorageBase<RecordedLap>
 
     /// <inheritdoc />
     protected override string EntityName => "recorded laps";
+
+    /// <inheritdoc />
+    protected override string AppDataFolder
+    {
+        get
+        {
+            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            return Path.Combine(appDataPath, "ScalextricPdm", "ScalextricBleMonitor");
+        }
+    }
 
     /// <summary>
     /// Loads all recorded laps from disk.

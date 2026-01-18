@@ -50,12 +50,12 @@ public partial class MainViewModel : ObservableObject
     public bool IsGattConnected => _connection.IsGattConnected;
 
     /// <summary>
-    /// Status message to display to the user.
+    /// Status text to display to the user.
     /// </summary>
-    public string StatusMessage
+    public string StatusText
     {
-        get => _connection.StatusMessage;
-        set => _connection.StatusMessage = value;
+        get => _connection.StatusText;
+        set => _connection.StatusText = value;
     }
 
     /// <summary>
@@ -121,16 +121,11 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// Whether per-slot power mode is enabled.
     /// </summary>
-    public bool IsPerSlotPowerMode
+    public bool UsePerSlotPower
     {
-        get => _powerControl.IsPerSlotPowerMode;
-        set => _powerControl.IsPerSlotPowerMode = value;
+        get => _powerControl.UsePerSlotPower;
+        set => _powerControl.UsePerSlotPower = value;
     }
-
-    /// <summary>
-    /// Gets the text for the per-slot power mode toggle button.
-    /// </summary>
-    public string PerSlotToggleText => _powerControl.PerSlotToggleText;
 
     /// <summary>
     /// Collection of controller view models for per-slot power settings.
@@ -423,8 +418,8 @@ public partial class MainViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsGattConnected));
                 OnPropertyChanged(nameof(IsConnected));
             }
-            else if (e.PropertyName == nameof(BleConnectionViewModel.StatusMessage))
-                OnPropertyChanged(nameof(StatusMessage));
+            else if (e.PropertyName == nameof(BleConnectionViewModel.StatusText))
+                OnPropertyChanged(nameof(StatusText));
             else if (e.PropertyName == nameof(BleConnectionViewModel.ConnectionStatusText))
                 OnPropertyChanged(nameof(ConnectionStatusText));
             else if (e.PropertyName == nameof(BleConnectionViewModel.CurrentConnectionState))
@@ -441,7 +436,7 @@ public partial class MainViewModel : ObservableObject
         _isInitializing = false;
 
         Log.Information("MainViewModel initialized. PowerLevel={PowerLevel}, ThrottleProfile={ThrottleProfile}, PerSlotMode={PerSlotMode}, PowerEnabled={PowerEnabled}",
-            PowerLevel, SelectedThrottleProfile, IsPerSlotPowerMode, IsPowerEnabled);
+            PowerLevel, SelectedThrottleProfile, UsePerSlotPower, IsPowerEnabled);
     }
 
     #endregion
@@ -506,8 +501,8 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void TogglePerSlotPowerMode()
     {
-        IsPerSlotPowerMode = !IsPerSlotPowerMode;
-        Log.Information("Per-slot power mode toggled to {PerSlotMode}", IsPerSlotPowerMode);
+        UsePerSlotPower = !UsePerSlotPower;
+        Log.Information("Per-slot power mode toggled to {PerSlotMode}", UsePerSlotPower);
         SaveSettings();
     }
 
@@ -841,7 +836,7 @@ public partial class MainViewModel : ObservableObject
         _settings.StartWithPowerEnabled = IsPowerEnabled;
         _settings.Startup.PowerLevel = PowerLevel;
         _settings.Startup.ThrottleProfile = SelectedThrottleProfile.ToString();
-        _settings.Startup.IsPerSlotPowerMode = IsPerSlotPowerMode;
+        _settings.Startup.UsePerSlotPower = UsePerSlotPower;
 
         // Save per-slot startup settings
         for (int i = 0; i < Controllers.Count; i++)
@@ -862,7 +857,7 @@ public partial class MainViewModel : ObservableObject
         if (_powerHeartbeatService == null)
         {
             Log.Warning("Power heartbeat service not available");
-            StatusMessage = "Power service not available";
+            StatusText = "Power service not available";
             IsPowerEnabled = false;
             SaveSettings();
             return;
@@ -870,7 +865,7 @@ public partial class MainViewModel : ObservableObject
 
         Log.Information("Enabling track power");
         _powerHeartbeatService.Start(BuildPowerCommand);
-        StatusMessage = "Power enabled";
+        StatusText = "Power enabled";
     }
 
     /// <summary>
@@ -892,7 +887,7 @@ public partial class MainViewModel : ObservableObject
 
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
-            StatusMessage = errorMessage;
+            StatusText = errorMessage;
             IsPowerEnabled = false;
             SaveSettings();
         });
@@ -916,7 +911,7 @@ public partial class MainViewModel : ObservableObject
             await _powerHeartbeatService.SendPowerOffSequenceAsync();
 
             Log.Information("Power disabled successfully");
-            StatusMessage = "Power disabled";
+            StatusText = "Power disabled";
         }, "DisablePower");
     }
 

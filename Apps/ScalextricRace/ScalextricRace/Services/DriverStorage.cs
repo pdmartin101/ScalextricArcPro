@@ -1,3 +1,4 @@
+using Scalextric;
 using ScalextricRace.Models;
 
 namespace ScalextricRace.Services;
@@ -6,13 +7,16 @@ namespace ScalextricRace.Services;
 /// Handles persistence of driver data to JSON file.
 /// Stored in %LocalAppData%/ScalextricPdm/ScalextricRace/drivers.json
 /// </summary>
-public class DriverStorage : JsonStorageBase<Driver>, IDriverStorage
+public class DriverStorage : Scalextric.JsonStorageBase<Driver>, IDriverStorage
 {
     /// <inheritdoc />
     protected override string FileName => "drivers.json";
 
     /// <inheritdoc />
     protected override string EntityName => "drivers";
+
+    /// <inheritdoc />
+    protected override string AppDataFolder => AppSettings.AppDataFolder;
 
     /// <inheritdoc />
     protected override void ValidateItems(List<Driver> items)

@@ -3,36 +3,35 @@ using System.IO;
 using Serilog;
 using Serilog.Events;
 
-namespace ScalextricRace.Services;
+namespace Scalextric;
 
 /// <summary>
-/// Configures Serilog logging for the application.
+/// Configures Serilog logging for Scalextric applications.
 /// </summary>
 public static class LoggingConfiguration
 {
     private static bool _isInitialized;
+    private static string _logDirectory = string.Empty;
 
     /// <summary>
     /// Gets the path to the log file directory.
     /// </summary>
-    public static string LogDirectory
-    {
-        get
-        {
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            return Path.Combine(appDataPath, "ScalextricPdm", "ScalextricRace", "logs");
-        }
-    }
+    public static string LogDirectory => _logDirectory;
 
     /// <summary>
     /// Initializes the Serilog logging infrastructure.
     /// Call this once at application startup.
     /// </summary>
-    public static void Initialize()
+    /// <param name="appName">The application name (e.g., "ScalextricRace", "ScalextricBleMonitor").</param>
+    /// <param name="logFilePrefix">The log file name prefix (e.g., "scalextric-race-", "scalextric-").</param>
+    public static void Initialize(string appName, string logFilePrefix = "scalextric-")
     {
         if (_isInitialized) return;
 
-        var logPath = Path.Combine(LogDirectory, "scalextric-race-.log");
+        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        _logDirectory = Path.Combine(appDataPath, "ScalextricPdm", appName, "logs");
+
+        var logPath = Path.Combine(_logDirectory, $"{logFilePrefix}.log");
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
@@ -48,7 +47,7 @@ public static class LoggingConfiguration
             .CreateLogger();
 
         _isInitialized = true;
-        Log.Information("Logging initialized. Log directory: {LogDirectory}", LogDirectory);
+        Log.Information("Logging initialized. Log directory: {LogDirectory}", _logDirectory);
     }
 
     /// <summary>

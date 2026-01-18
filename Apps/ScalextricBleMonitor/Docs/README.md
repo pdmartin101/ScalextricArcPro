@@ -92,8 +92,8 @@ ScalextricBleMonitor/
 │   └── NotificationWindow.axaml(.cs) # Live notification log
 ├── Converters/                   # UI value converters (6 converters)
 └── Services/
-    ├── IBleMonitorService.cs    # BLE service abstraction
-    ├── BleMonitorService.cs     # Windows BLE implementation
+    ├── IBleService.cs           # BLE service abstraction
+    ├── BleService.cs            # Windows BLE implementation
     ├── IWindowService.cs        # Window management abstraction
     ├── WindowService.cs         # Window lifecycle management
     ├── IGhostRecordingService.cs # Ghost lap recording abstraction
@@ -149,7 +149,7 @@ The application follows strict MVVM with clear layer separation:
 └─────────────────────────────────────────────────────────────────┘
 ┌─────────────────────────────────────────────────────────────────┐
 │                       SERVICES                                   │
-│  IBleMonitorService → BleMonitorService                         │
+│  IBleService → BleService                                       │
 │  IWindowService → WindowService                                  │
 │  AppSettings, ThrottleProfileHelper                             │
 └─────────────────────────────────────────────────────────────────┘
@@ -187,7 +187,7 @@ Services are registered in `ServiceConfiguration.cs` and resolved via `App.Servi
 ```csharp
 public static IServiceCollection ConfigureServices(this IServiceCollection services)
 {
-    services.AddSingleton<IBleMonitorService, BleMonitorService>();
+    services.AddSingleton<IBleService, BleService>();
     services.AddSingleton<AppSettings>(_ => AppSettings.Load());
     services.AddSingleton<MainViewModel>();
     return services;
@@ -199,12 +199,10 @@ public static IServiceCollection ConfigureServices(this IServiceCollection servi
 BLE and window management are abstracted behind interfaces for testability:
 
 ```csharp
-public interface IBleMonitorService : IDisposable
+public interface IBleService : Scalextric.IBleService
 {
-    event EventHandler<BleConnectionStateEventArgs>? ConnectionStateChanged;
-    event EventHandler<BleNotificationEventArgs>? NotificationReceived;
-    void StartScanning();
-    Task<bool> WriteCharacteristicAwaitAsync(Guid uuid, byte[] data);
+    // Extends shared IBleService interface
+    // No additional methods - uses WriteCharacteristicAsync from base
 }
 
 public interface IWindowService
@@ -226,7 +224,7 @@ Program.Main()
     └── App.axaml (FluentTheme)
         └── OnFrameworkInitializationCompleted()
             ├── ServiceConfiguration.BuildServiceProvider()
-            │   ├── Register IBleMonitorService → BleMonitorService
+            │   ├── Register IBleService → BleService
             │   ├── Register AppSettings (loaded from JSON)
             │   └── Register MainViewModel
             └── MainWindow()
@@ -264,15 +262,15 @@ Program.Main()
        ├── WriteThrottleProfilesAsync()
        │   └── For each slot (1-6)
        │       └── For each block (0-5)
-       │           └── WriteCharacteristicAwaitAsync(profile data)
+       │           └── WriteCharacteristicAsync(profile data)
        │           └── Delay 50ms
        └── Start PowerHeartbeatLoopAsync()
-           └── Every 200ms: WriteCharacteristicAwaitAsync(command)
+           └── Every 200ms: WriteCharacteristicAsync(command)
 
 2. User clicks "POWER OFF"
    └── DisablePower()
        ├── Cancel heartbeat CancellationToken
-       └── WriteCharacteristicAwaitAsync(power off command)
+       └── WriteCharacteristicAsync(power off command)
 ```
 
 ## Key Components
@@ -298,9 +296,9 @@ The central state manager with commands and properties:
 | `ShowGattServicesCommand` | Open GATT services window |
 | `ShowNotificationsCommand` | Open notifications window |
 
-### BleMonitorService
+### BleService
 
-Handles all BLE operations (implements `IBleMonitorService`):
+Handles all BLE operations (implements `IBleService`):
 
 | Method | Description |
 |--------|-------------|
@@ -309,7 +307,7 @@ Handles all BLE operations (implements `IBleMonitorService`):
 | `ConnectAndDiscoverServices()` | GATT connection with retry logic |
 | `SubscribeToAllNotifications()` | Subscribe to all notify characteristics |
 | `ReadCharacteristic()` | Read characteristic value |
-| `WriteCharacteristicAwaitAsync()` | Write with async completion |
+| `WriteCharacteristicAsync()` | Write with async completion |
 
 ### WindowService
 

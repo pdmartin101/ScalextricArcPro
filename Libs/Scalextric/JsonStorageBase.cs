@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using Serilog;
 
-namespace ScalextricBleMonitor.Services;
+namespace Scalextric;
 
 /// <summary>
 /// Base class for JSON file storage services.
@@ -17,26 +17,19 @@ public abstract class JsonStorageBase<T>
     private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
 
     /// <summary>
-    /// Gets the file name (e.g., "recorded_laps.json").
+    /// Gets the file name (e.g., "cars.json").
     /// </summary>
     protected abstract string FileName { get; }
 
     /// <summary>
-    /// Gets the entity name for logging (e.g., "recorded laps").
+    /// Gets the entity name for logging (e.g., "cars", "drivers").
     /// </summary>
     protected abstract string EntityName { get; }
 
     /// <summary>
     /// Gets the base application data folder path.
     /// </summary>
-    protected static string AppDataFolder
-    {
-        get
-        {
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            return Path.Combine(appDataPath, "ScalextricPdm", "ScalextricBleMonitor");
-        }
-    }
+    protected abstract string AppDataFolder { get; }
 
     /// <summary>
     /// Gets the full path to the storage file.
@@ -61,7 +54,7 @@ public abstract class JsonStorageBase<T>
             if (File.Exists(filePath))
             {
                 var json = File.ReadAllText(filePath);
-                var items = JsonSerializer.Deserialize<List<T>>(json, WriteOptions);
+                var items = JsonSerializer.Deserialize<List<T>>(json);
                 if (items != null)
                 {
                     ValidateItems(items);

@@ -14,7 +14,7 @@ namespace ScalextricBleMonitor.ViewModels;
 /// </summary>
 public partial class BleConnectionViewModel : ObservableObject, IDisposable
 {
-    private readonly IBleMonitorService _bleMonitorService;
+    private readonly Services.IBleService _bleService;
     private bool _disposed;
 
     // Brush constants for connection states
@@ -102,15 +102,15 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Initializes a new instance of the BleConnectionViewModel.
     /// </summary>
-    public BleConnectionViewModel(IBleMonitorService bleMonitorService)
+    public BleConnectionViewModel(Services.IBleService bleService)
     {
-        _bleMonitorService = bleMonitorService;
+        _bleService = bleService;
 
-        _bleMonitorService.ConnectionStateChanged += OnConnectionStateChanged;
-        _bleMonitorService.StatusMessageChanged += OnStatusMessageChanged;
-        _bleMonitorService.ServicesDiscovered += OnServicesDiscovered;
-        _bleMonitorService.NotificationReceived += OnNotificationReceived;
-        _bleMonitorService.CharacteristicValueRead += OnCharacteristicValueRead;
+        _bleService.ConnectionStateChanged += OnConnectionStateChanged;
+        _bleService.StatusMessageChanged += OnStatusMessageChanged;
+        _bleService.ServicesDiscovered += OnServicesDiscovered;
+        _bleService.NotificationReceived += OnNotificationReceived;
+        _bleService.CharacteristicValueRead += OnCharacteristicValueRead;
     }
 
     /// <summary>
@@ -118,7 +118,7 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
     /// </summary>
     public void StartMonitoring()
     {
-        _bleMonitorService.StartScanning();
+        _bleService.StartScanning();
     }
 
     /// <summary>
@@ -126,7 +126,7 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
     /// </summary>
     public void StopMonitoring()
     {
-        _bleMonitorService.StopScanning();
+        _bleService.StopScanning();
     }
 
     /// <summary>
@@ -134,7 +134,7 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
     /// </summary>
     public void ReadCharacteristic(Guid serviceUuid, Guid characteristicUuid)
     {
-        _bleMonitorService.ReadCharacteristic(serviceUuid, characteristicUuid);
+        _bleService.ReadCharacteristic(serviceUuid, characteristicUuid);
     }
 
     private void OnConnectionStateChanged(object? sender, BleConnectionStateEventArgs e)
@@ -202,7 +202,7 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
             }
 
             // Auto-subscribe to notifications after services are discovered
-            _bleMonitorService.SubscribeToAllNotifications();
+            _bleService.SubscribeToAllNotifications();
         });
     }
 
@@ -268,12 +268,12 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        _bleMonitorService.ConnectionStateChanged -= OnConnectionStateChanged;
-        _bleMonitorService.StatusMessageChanged -= OnStatusMessageChanged;
-        _bleMonitorService.ServicesDiscovered -= OnServicesDiscovered;
-        _bleMonitorService.NotificationReceived -= OnNotificationReceived;
-        _bleMonitorService.CharacteristicValueRead -= OnCharacteristicValueRead;
-        _bleMonitorService.Dispose();
+        _bleService.ConnectionStateChanged -= OnConnectionStateChanged;
+        _bleService.StatusMessageChanged -= OnStatusMessageChanged;
+        _bleService.ServicesDiscovered -= OnServicesDiscovered;
+        _bleService.NotificationReceived -= OnNotificationReceived;
+        _bleService.CharacteristicValueRead -= OnCharacteristicValueRead;
+        _bleService.Dispose();
 
         GC.SuppressFinalize(this);
     }

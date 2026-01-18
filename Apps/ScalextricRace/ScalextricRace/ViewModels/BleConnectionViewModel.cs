@@ -41,10 +41,10 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
     private bool _isGattConnected;
 
     /// <summary>
-    /// Status message to display to the user.
+    /// Status text to display to the user.
     /// </summary>
     [ObservableProperty]
-    private string _statusMessage = "Starting...";
+    private string _statusText = "Starting...";
 
     /// <summary>
     /// Gets whether the device is connected and ready for commands.
@@ -110,7 +110,7 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
         if (_bleService == null)
         {
             Log.Warning("BLE service not available - cannot start monitoring");
-            StatusMessage = "BLE service not available";
+            StatusText = "BLE service not available";
             return;
         }
 
@@ -158,7 +158,7 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
     {
         PostToUIThread(() =>
         {
-            StatusMessage = message;
+            StatusText = message;
         });
     }
 

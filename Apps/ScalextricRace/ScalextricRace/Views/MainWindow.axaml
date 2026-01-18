@@ -86,7 +86,7 @@
                                         FontWeight="Bold" />
 
                                 <!-- Power Level (only in global mode) -->
-                                <StackPanel Spacing="5" IsVisible="{Binding !IsPerSlotPowerMode}">
+                                <StackPanel Spacing="5" IsVisible="{Binding !UsePerSlotPower}">
                                     <Grid ColumnDefinitions="*,Auto">
                                         <TextBlock Grid.Column="0"
                                                    Text="Power Level"
@@ -103,7 +103,7 @@
                                 </StackPanel>
 
                                 <!-- Throttle Profile (only in global mode) -->
-                                <StackPanel Spacing="5" IsVisible="{Binding !IsPerSlotPowerMode}">
+                                <StackPanel Spacing="5" IsVisible="{Binding !UsePerSlotPower}">
                                     <TextBlock Text="Throttle Profile"
                                                FontSize="12"
                                                Foreground="Gray" />
@@ -113,7 +113,7 @@
                                 </StackPanel>
 
                                 <!-- Per-Slot Controls (only in per-slot mode) -->
-                                <ScrollViewer IsVisible="{Binding IsPerSlotPowerMode}"
+                                <ScrollViewer IsVisible="{Binding UsePerSlotPower}"
                                               MaxHeight="400"
                                               VerticalScrollBarVisibility="Auto">
                                     <ItemsControl ItemsSource="{Binding Controllers}">
@@ -162,7 +162,7 @@
                                 <Separator Margin="0,5" />
 
                                 <!-- Per-Slot Mode Toggle -->
-                                <Button Content="{Binding PerSlotToggleText}"
+                                <Button Content="{Binding UsePerSlotPower, Converter={x:Static converters:PerSlotToggleTextConverter.Instance}}"
                                         Command="{Binding TogglePerSlotPowerModeCommand}"
                                         HorizontalAlignment="Stretch"
                                         Height="35"
@@ -1281,9 +1281,9 @@
                            VerticalAlignment="Center" />
             </StackPanel>
 
-            <!-- Status Message -->
+            <!-- Status Text -->
             <TextBlock Grid.Column="1"
-                       Text="{Binding StatusMessage}"
+                       Text="{Binding StatusText}"
                        FontSize="11"
                        Foreground="Gray"
                        HorizontalAlignment="Center"

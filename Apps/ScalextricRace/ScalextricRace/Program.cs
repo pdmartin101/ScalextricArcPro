@@ -1,5 +1,5 @@
 using Avalonia;
-using ScalextricRace.Services;
+using Scalextric;
 
 namespace ScalextricRace;
 
@@ -16,7 +16,7 @@ internal sealed class Program
     public static void Main(string[] args)
     {
         // Initialize logging first
-        LoggingConfiguration.Initialize();
+        LoggingConfiguration.Initialize("ScalextricRace", "scalextric-race-");
 
         try
         {

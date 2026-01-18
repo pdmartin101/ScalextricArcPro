@@ -14,7 +14,7 @@ namespace ScalextricBleMonitor.ViewModels;
 /// </summary>
 public partial class PowerControlViewModel : ObservableObject
 {
-    private readonly IBleMonitorService _bleMonitorService;
+    private readonly Services.IBleService _bleService;
     private readonly IPowerHeartbeatService _powerHeartbeatService;
     private readonly ITimingCalibrationService _timingCalibrationService;
     private readonly AppSettings _settings;
@@ -74,12 +74,12 @@ public partial class PowerControlViewModel : ObservableObject
     /// Initializes a new instance of the PowerControlViewModel.
     /// </summary>
     public PowerControlViewModel(
-        IBleMonitorService bleMonitorService,
+        Services.IBleService bleService,
         IPowerHeartbeatService powerHeartbeatService,
         ITimingCalibrationService timingCalibrationService,
         AppSettings settings)
     {
-        _bleMonitorService = bleMonitorService;
+        _bleService = bleService;
         _powerHeartbeatService = powerHeartbeatService;
         _timingCalibrationService = timingCalibrationService;
         _settings = settings;
@@ -230,7 +230,7 @@ public partial class PowerControlViewModel : ObservableObject
             {
                 StatusText = $"Writing throttle profile slot {slot} ({profileType}), block {blockIndex + 1}/6...";
 
-                var success = await _bleMonitorService.WriteCharacteristicAwaitAsync(uuid, blocks[blockIndex]);
+                var success = await _bleService.WriteCharacteristicAsync(uuid, blocks[blockIndex]);
 
                 if (!success)
                 {

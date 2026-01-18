@@ -7,13 +7,16 @@ namespace ScalextricRace.Services;
 /// Handles persistence of car data to JSON file.
 /// Stored in %LocalAppData%/ScalextricPdm/ScalextricRace/cars.json
 /// </summary>
-public class CarStorage : JsonStorageBase<Car>, ICarStorage
+public class CarStorage : Scalextric.JsonStorageBase<Car>, ICarStorage
 {
     /// <inheritdoc />
     protected override string FileName => "cars.json";
 
     /// <inheritdoc />
     protected override string EntityName => "cars";
+
+    /// <inheritdoc />
+    protected override string AppDataFolder => AppSettings.AppDataFolder;
 
     /// <inheritdoc />
     protected override void ValidateItems(List<Car> items)

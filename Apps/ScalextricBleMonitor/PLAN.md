@@ -701,6 +701,7 @@ public class RecordedLap { SlotNumber, RecordedAt, LapTime, List<ThrottleSample>
 | 2026-01-15 | Enhancement | Implemented: Separated PowerLevel (controller max power) from GhostThrottleLevel (ghost car speed) for clearer UX |
 | 2026-01-16 | Enhancement | Implemented: Advanced Ghost Cars - recording service with lap boundary detection, two-phase playback (approach speed then recorded lap) |
 | 2026-01-16 | Enhancement | Implemented: Ghost lap persistence - JSON storage in LocalApplicationData, auto-save on recording complete, auto-load on startup |
+| 2026-01-18 | Refactor | Renamed: IBleMonitorService/BleMonitorService → IBleService/BleService for consistency with ScalextricRace app |
 
 ---
 

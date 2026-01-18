@@ -1,5 +1,5 @@
 ﻿using Avalonia;
-using ScalextricBleMonitor.Services;
+using Scalextric;
 using System;
 
 namespace ScalextricBleMonitor;
@@ -13,7 +13,7 @@ class Program
     public static void Main(string[] args)
     {
         // Initialize structured logging before anything else
-        LoggingConfiguration.Initialize();
+        LoggingConfiguration.Initialize("ScalextricBleMonitor", "scalextric-");
 
         try
         {

@@ -38,13 +38,7 @@ public partial class PowerControlViewModel : ObservableObject
     /// When true, each controller has individual power settings.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(PerSlotToggleText))]
-    private bool _isPerSlotPowerMode;
-
-    /// <summary>
-    /// Gets the text for the per-slot power mode toggle button.
-    /// </summary>
-    public string PerSlotToggleText => IsPerSlotPowerMode ? "Global Mode" : "Per-Slot Mode";
+    private bool _usePerSlotPower;
 
     /// <summary>
     /// Collection of controller view models for per-slot power settings.
@@ -64,7 +58,7 @@ public partial class PowerControlViewModel : ObservableObject
         SelectedThrottleProfile = Enum.TryParse<ThrottleProfileType>(_settings.Startup.ThrottleProfile, out var profile)
             ? profile
             : ThrottleProfileType.Linear;
-        IsPerSlotPowerMode = _settings.Startup.IsPerSlotPowerMode;
+        UsePerSlotPower = _settings.Startup.UsePerSlotPower;
 
         // Create 6 controller ViewModels (one per slot)
         for (int i = 0; i < 6; i++)
@@ -86,7 +80,7 @@ public partial class PowerControlViewModel : ObservableObject
 
         _isInitializing = false;
         Log.Information("PowerControlViewModel initialized. PowerLevel={PowerLevel}, ThrottleProfile={ThrottleProfile}, PerSlotMode={PerSlotMode}",
-            PowerLevel, SelectedThrottleProfile, IsPerSlotPowerMode);
+            PowerLevel, SelectedThrottleProfile, UsePerSlotPower);
     }
 
     /// <summary>
@@ -99,7 +93,7 @@ public partial class PowerControlViewModel : ObservableObject
     {
         var builder = new ScalextricProtocol.CommandBuilder { Type = commandType };
 
-        if (IsPerSlotPowerMode && raceEntries != null)
+        if (UsePerSlotPower && raceEntries != null)
         {
             // Apply race entry configuration (car + driver power settings)
             for (int i = 0; i < Controllers.Count; i++)
@@ -109,7 +103,7 @@ public partial class PowerControlViewModel : ObservableObject
                 builder.SetSlotPower(i + 1, power);
             }
         }
-        else if (IsPerSlotPowerMode)
+        else if (UsePerSlotPower)
         {
             // Use controller power levels directly
             for (int i = 0; i < Controllers.Count; i++)
@@ -135,7 +129,7 @@ public partial class PowerControlViewModel : ObservableObject
 
         _settings.Startup.PowerLevel = PowerLevel;
         _settings.Startup.ThrottleProfile = SelectedThrottleProfile.ToString();
-        _settings.Startup.IsPerSlotPowerMode = IsPerSlotPowerMode;
+        _settings.Startup.UsePerSlotPower = UsePerSlotPower;
 
         // Save per-slot settings
         for (int i = 0; i < Controllers.Count && i < _settings.Startup.SlotSettings.Length; i++)
@@ -155,7 +149,7 @@ public partial class PowerControlViewModel : ObservableObject
         if (_isInitializing) return;
 
         // Sync all controllers to global value if not in per-slot mode
-        if (!IsPerSlotPowerMode)
+        if (!UsePerSlotPower)
         {
             foreach (var controller in Controllers)
             {
@@ -171,7 +165,7 @@ public partial class PowerControlViewModel : ObservableObject
         if (_isInitializing) return;
 
         // Sync all controllers to global value if not in per-slot mode
-        if (!IsPerSlotPowerMode)
+        if (!UsePerSlotPower)
         {
             foreach (var controller in Controllers)
             {
@@ -182,7 +176,7 @@ public partial class PowerControlViewModel : ObservableObject
         SaveSettings();
     }
 
-    partial void OnIsPerSlotPowerModeChanged(bool value)
+    partial void OnUsePerSlotPowerChanged(bool value)
     {
         if (_isInitializing) return;
 
@@ -207,7 +201,7 @@ public partial class PowerControlViewModel : ObservableObject
         if (_isInitializing) return;
 
         // If in global mode, update global power level
-        if (!IsPerSlotPowerMode && sender is ControllerViewModel)
+        if (!UsePerSlotPower && sender is ControllerViewModel)
         {
             PowerLevel = value;
         }
@@ -223,7 +217,7 @@ public partial class PowerControlViewModel : ObservableObject
         if (_isInitializing) return;
 
         // If in global mode, update global throttle profile
-        if (!IsPerSlotPowerMode && sender is ControllerViewModel)
+        if (!UsePerSlotPower && sender is ControllerViewModel)
         {
             SelectedThrottleProfile = value;
         }

@@ -45,7 +45,9 @@ ScalextricTest/
 │   │   ├── ScalextricProtocolDecoder.cs   # Notification data decoding
 │   │   ├── IBleService.cs                 # BLE service interface (portable)
 │   │   ├── IPowerHeartbeatService.cs      # Heartbeat interface (portable)
-│   │   └── PowerHeartbeatService.cs       # Heartbeat implementation (portable)
+│   │   ├── PowerHeartbeatService.cs       # Heartbeat implementation (portable)
+│   │   ├── LoggingConfiguration.cs        # Shared Serilog setup
+│   │   └── JsonStorageBase.cs             # Generic JSON storage base class
 │   │
 │   └── ScalextricBle/                     # Windows-specific BLE implementation
 │       └── BleService.cs                  # Windows WinRT BLE implementation
@@ -67,8 +69,9 @@ dotnet build ScalextricTest.sln
 dotnet build Apps/ScalextricBleMonitor/ScalextricBleMonitor.sln
 dotnet build Apps/ScalextricRace/ScalextricRace.sln
 
-# Run tests (BleMonitor only - 67 tests)
-dotnet test Apps/ScalextricBleMonitor/ScalextricBleMonitor.Tests/ScalextricBleMonitor.Tests.csproj
+# Run tests
+dotnet test Apps/ScalextricBleMonitor/ScalextricBleMonitor.Tests/ScalextricBleMonitor.Tests.csproj  # 67 tests
+dotnet test Apps/ScalextricRace/ScalextricRace.Tests/ScalextricRace.Tests.csproj  # 81 tests
 
 # Run applications
 dotnet run --project Apps/ScalextricRace/ScalextricRace/ScalextricRace.csproj
@@ -215,7 +218,7 @@ See [PLAN.md](PLAN.md) for the complete improvement plan with issue tracking.
 - Consistent use of source generators
 - Good service abstractions where they exist
 - Comprehensive Serilog logging
-- 67 unit tests for BleMonitor
+- 148 unit tests (67 BleMonitor + 81 ScalextricRace)
 
 ### Known Issues
 

@@ -32,14 +32,14 @@ public class StartupSettings
 {
     /// <summary>
     /// Startup global power level for track power (0-63).
-    /// Used when IsPerSlotPowerMode is false.
+    /// Used when UsePerSlotPower is false.
     /// </summary>
     public int PowerLevel { get; set; } = ScalextricProtocol.MaxPowerLevel;
 
     /// <summary>
     /// Startup throttle profile type name.
     /// Valid values: "Linear", "Exponential", "Stepped"
-    /// Used when IsPerSlotPowerMode is false.
+    /// Used when UsePerSlotPower is false.
     /// </summary>
     public string ThrottleProfile { get; set; } = "Linear";
 
@@ -47,11 +47,11 @@ public class StartupSettings
     /// Whether per-slot power mode is enabled on startup.
     /// When true, each slot can have individual power settings.
     /// </summary>
-    public bool IsPerSlotPowerMode { get; set; } = false;
+    public bool UsePerSlotPower { get; set; } = false;
 
     /// <summary>
     /// Startup per-slot settings (indexed 0-5 for slots 1-6).
-    /// Used when IsPerSlotPowerMode is true.
+    /// Used when UsePerSlotPower is true.
     /// </summary>
     public StartupSlotSettings[] SlotSettings { get; set; } = CreateStartupSlotSettings();
 

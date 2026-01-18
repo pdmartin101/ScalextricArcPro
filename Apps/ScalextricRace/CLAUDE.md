@@ -68,8 +68,7 @@ Apps/ScalextricRace/
 │   │   ├── IDriverStorage.cs             # Driver storage interface
 │   │   ├── DriverStorage.cs              # JSON driver persistence
 │   │   ├── IWindowService.cs             # Window management interface
-│   │   ├── WindowService.cs              # Window lifecycle management
-│   │   └── LoggingConfiguration.cs       # Serilog setup
+│   │   └── WindowService.cs              # Window lifecycle management
 │   └── Converters/                       # XAML value converters (2 files)
 │       ├── ConnectionStateToColorConverter.cs
 │       └── BoolToColorConverter.cs
@@ -87,8 +86,8 @@ The application references two shared libraries in `Libs/`:
 
 | Library | Purpose |
 |---------|---------|
-| `Scalextric` | Core domain: `ThrottleProfileType` enum, `LapTimingEngine` |
-| `ScalextricBle` | BLE protocol: `ScalextricProtocol` (characteristics, commands), `ScalextricProtocolDecoder`, unified `IBleService` |
+| `Scalextric` | Core domain: `ThrottleProfileType` enum, `LapTimingEngine`, `LoggingConfiguration`, `JsonStorageBase<T>` |
+| `ScalextricBle` | BLE protocol: `ScalextricProtocol` (characteristics, commands), `ScalextricProtocolDecoder`, `BleService` implementation |
 
 ### MVVM Architecture
 

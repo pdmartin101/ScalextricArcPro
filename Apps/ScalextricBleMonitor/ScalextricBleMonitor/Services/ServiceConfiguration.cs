@@ -17,9 +17,9 @@ public static class ServiceConfiguration
     public static IServiceCollection ConfigureServices(this IServiceCollection services)
     {
         // Register services
-        services.AddSingleton<IBleMonitorService, BleMonitorService>();
-        // Register IBleService pointing to the same instance for services that only need base interface
-        services.AddSingleton<Scalextric.IBleService>(sp => sp.GetRequiredService<IBleMonitorService>());
+        services.AddSingleton<IBleService, BleService>();
+        // Register Scalextric.IBleService pointing to the same instance for services that only need base interface
+        services.AddSingleton<Scalextric.IBleService>(sp => sp.GetRequiredService<IBleService>());
         services.AddSingleton<IGhostRecordingService, GhostRecordingService>();
         services.AddSingleton<IGhostPlaybackService, GhostPlaybackService>();
         services.AddSingleton<IPowerHeartbeatService>(sp =>
