@@ -43,6 +43,9 @@ If a proposed change violates any of these, flag it explicitly and suggest the M
 Reference: Official Avalonia docs (MVVM Pattern, ReactiveUI, Improving Performance), SimpleToDoList sample, and community consensus on GitHub Discussions.
 
 
+Always ask for a review before commit
+
+
 ## Repository Overview
 
 This is a collection of .NET 9.0 Windows applications and libraries for controlling Scalextric ARC Pro slot car powerbases via Bluetooth Low Energy (BLE). The repository contains two main applications and two shared libraries.

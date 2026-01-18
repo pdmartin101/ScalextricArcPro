@@ -22,7 +22,7 @@ public interface IWindowService
     /// <param name="carViewModel">The car to tune.</param>
     /// <param name="bleService">The BLE service for track control.</param>
     /// <returns>True if tuning completed successfully, false if cancelled.</returns>
-    Task<bool> ShowCarTuningDialogAsync(CarViewModel carViewModel, IBleService? bleService);
+    Task<bool> ShowCarTuningDialogAsync(CarViewModel carViewModel, Scalextric.IBleService? bleService);
 
     /// <summary>
     /// Shows an image file picker and copies the selected image to the app folder.

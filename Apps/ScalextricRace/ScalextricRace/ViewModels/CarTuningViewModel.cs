@@ -34,7 +34,7 @@ public enum TuningStage
 /// </summary>
 public partial class CarTuningViewModel : ObservableObject
 {
-    private readonly Services.IBleService? _bleService;
+    private readonly Scalextric.IBleService? _bleService;
     private readonly CarViewModel _carViewModel;
     private readonly Car _originalValues;
     private bool _suppressPowerCommand;
@@ -150,7 +150,7 @@ public partial class CarTuningViewModel : ObservableObject
     /// </summary>
     /// <param name="carViewModel">The car to tune.</param>
     /// <param name="bleService">The BLE service for track control.</param>
-    public CarTuningViewModel(CarViewModel carViewModel, Services.IBleService? bleService)
+    public CarTuningViewModel(CarViewModel carViewModel, Scalextric.IBleService? bleService)
     {
         _carViewModel = carViewModel;
         _bleService = bleService;

@@ -1,8 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
 using Scalextric;
-using ScalextricBleMonitor.ViewModels;
+using ScalextricRace.ViewModels;
 
-namespace ScalextricBleMonitor.Services;
+namespace ScalextricRace.Services;
 
 /// <summary>
 /// Configures dependency injection services for the application.
@@ -16,17 +16,28 @@ public static class ServiceConfiguration
     /// <returns>The configured service collection.</returns>
     public static IServiceCollection ConfigureServices(this IServiceCollection services)
     {
+        // Register settings (loaded from disk)
+        services.AddSingleton(_ => AppSettings.Load());
+
         // Register services
         services.AddSingleton<IDispatcherService, AvaloniaDispatcherService>();
+#if WINDOWS
         services.AddSingleton<Scalextric.IBleService, ScalextricBle.BleService>();
-        services.AddSingleton<IGhostRecordingService, GhostRecordingService>();
-        services.AddSingleton<IGhostPlaybackService, GhostPlaybackService>();
         services.AddSingleton<IPowerHeartbeatService>(sp =>
             new PowerHeartbeatService(sp.GetRequiredService<Scalextric.IBleService>()));
-        services.AddSingleton<ITimingCalibrationService, TimingCalibrationService>();
-        services.AddSingleton<AppSettings>(_ => AppSettings.Load());
+#endif
+        services.AddSingleton<IWindowService, WindowService>();
+        services.AddSingleton<ICarStorage, CarStorage>();
+        services.AddSingleton<IDriverStorage, DriverStorage>();
+        services.AddSingleton<IRaceStorage, RaceStorage>();
 
         // Register ViewModels
+        services.AddSingleton<BleConnectionViewModel>();
+        services.AddSingleton<CarManagementViewModel>();
+        services.AddSingleton<DriverManagementViewModel>();
+        services.AddSingleton<RaceManagementViewModel>();
+        services.AddSingleton<PowerControlViewModel>();
+        services.AddSingleton<RaceConfigurationViewModel>();
         services.AddSingleton<MainViewModel>();
 
         return services;

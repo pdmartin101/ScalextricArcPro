@@ -15,7 +15,7 @@ public partial class CarManagementViewModel : ObservableObject
 {
     private readonly ICarStorage _carStorage;
     private readonly IWindowService _windowService;
-    private readonly Services.IBleService? _bleService;
+    private readonly Scalextric.IBleService? _bleService;
     private bool _isInitializing = true;
 
     /// <summary>
@@ -38,7 +38,7 @@ public partial class CarManagementViewModel : ObservableObject
     public CarManagementViewModel(
         ICarStorage carStorage,
         IWindowService windowService,
-        Services.IBleService? bleService = null)
+        Scalextric.IBleService? bleService = null)
     {
         _carStorage = carStorage;
         _windowService = windowService;

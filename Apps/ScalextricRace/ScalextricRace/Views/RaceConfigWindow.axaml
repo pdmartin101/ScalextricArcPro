@@ -1,6 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:ScalextricRace.ViewModels"
+        xmlns:converters="using:ScalextricRace.Converters"
         x:Class="ScalextricRace.Views.RaceConfigWindow"
         x:DataType="vm:RaceViewModel"
         Title="Edit Race Configuration"
@@ -58,11 +59,11 @@
                                 <RadioButton Grid.Column="0"
                                              Content="Laps"
                                              GroupName="FreePracticeMode"
-                                             IsChecked="{Binding FreePracticeMode, Converter={x:Static vm:RaceStageModeConverter.ToLaps}}" />
+                                             IsChecked="{Binding FreePracticeMode, Converter={x:Static converters:RaceStageModeConverter.ToLaps}}" />
                                 <RadioButton Grid.Column="1"
                                              Content="Time"
                                              GroupName="FreePracticeMode"
-                                             IsChecked="{Binding FreePracticeMode, Converter={x:Static vm:RaceStageModeConverter.ToTime}}" />
+                                             IsChecked="{Binding FreePracticeMode, Converter={x:Static converters:RaceStageModeConverter.ToTime}}" />
                             </Grid>
 
                             <!-- Value Control -->
@@ -77,13 +78,13 @@
                                 <Slider Grid.Column="1"
                                         Minimum="1" Maximum="50"
                                         Value="{Binding FreePracticeLapCount}"
-                                        IsVisible="{Binding FreePracticeMode, Converter={x:Static vm:RaceStageModeConverter.IsLaps}}"
+                                        IsVisible="{Binding FreePracticeMode, Converter={x:Static converters:RaceStageModeConverter.IsLaps}}"
                                         Margin="10,0"
                                         VerticalAlignment="Center" />
                                 <Slider Grid.Column="1"
                                         Minimum="1" Maximum="60"
                                         Value="{Binding FreePracticeTimeMinutes}"
-                                        IsVisible="{Binding FreePracticeMode, Converter={x:Static vm:RaceStageModeConverter.IsTime}}"
+                                        IsVisible="{Binding FreePracticeMode, Converter={x:Static converters:RaceStageModeConverter.IsTime}}"
                                         Margin="10,0"
                                         VerticalAlignment="Center" />
                                 <TextBlock Grid.Column="2"
@@ -128,11 +129,11 @@
                                 <RadioButton Grid.Column="0"
                                              Content="Laps"
                                              GroupName="QualifyingMode"
-                                             IsChecked="{Binding QualifyingMode, Converter={x:Static vm:RaceStageModeConverter.ToLaps}}" />
+                                             IsChecked="{Binding QualifyingMode, Converter={x:Static converters:RaceStageModeConverter.ToLaps}}" />
                                 <RadioButton Grid.Column="1"
                                              Content="Time"
                                              GroupName="QualifyingMode"
-                                             IsChecked="{Binding QualifyingMode, Converter={x:Static vm:RaceStageModeConverter.ToTime}}" />
+                                             IsChecked="{Binding QualifyingMode, Converter={x:Static converters:RaceStageModeConverter.ToTime}}" />
                             </Grid>
 
                             <!-- Value Control -->
@@ -147,13 +148,13 @@
                                 <Slider Grid.Column="1"
                                         Minimum="1" Maximum="50"
                                         Value="{Binding QualifyingLapCount}"
-                                        IsVisible="{Binding QualifyingMode, Converter={x:Static vm:RaceStageModeConverter.IsLaps}}"
+                                        IsVisible="{Binding QualifyingMode, Converter={x:Static converters:RaceStageModeConverter.IsLaps}}"
                                         Margin="10,0"
                                         VerticalAlignment="Center" />
                                 <Slider Grid.Column="1"
                                         Minimum="1" Maximum="60"
                                         Value="{Binding QualifyingTimeMinutes}"
-                                        IsVisible="{Binding QualifyingMode, Converter={x:Static vm:RaceStageModeConverter.IsTime}}"
+                                        IsVisible="{Binding QualifyingMode, Converter={x:Static converters:RaceStageModeConverter.IsTime}}"
                                         Margin="10,0"
                                         VerticalAlignment="Center" />
                                 <TextBlock Grid.Column="2"
@@ -198,11 +199,11 @@
                                 <RadioButton Grid.Column="0"
                                              Content="Laps"
                                              GroupName="RaceStageMode"
-                                             IsChecked="{Binding RaceStageMode, Converter={x:Static vm:RaceStageModeConverter.ToLaps}}" />
+                                             IsChecked="{Binding RaceStageMode, Converter={x:Static converters:RaceStageModeConverter.ToLaps}}" />
                                 <RadioButton Grid.Column="1"
                                              Content="Time"
                                              GroupName="RaceStageMode"
-                                             IsChecked="{Binding RaceStageMode, Converter={x:Static vm:RaceStageModeConverter.ToTime}}" />
+                                             IsChecked="{Binding RaceStageMode, Converter={x:Static converters:RaceStageModeConverter.ToTime}}" />
                             </Grid>
 
                             <!-- Value Control -->
@@ -217,13 +218,13 @@
                                 <Slider Grid.Column="1"
                                         Minimum="1" Maximum="100"
                                         Value="{Binding RaceStageLapCount}"
-                                        IsVisible="{Binding RaceStageMode, Converter={x:Static vm:RaceStageModeConverter.IsLaps}}"
+                                        IsVisible="{Binding RaceStageMode, Converter={x:Static converters:RaceStageModeConverter.IsLaps}}"
                                         Margin="10,0"
                                         VerticalAlignment="Center" />
                                 <Slider Grid.Column="1"
                                         Minimum="1" Maximum="120"
                                         Value="{Binding RaceStageTimeMinutes}"
-                                        IsVisible="{Binding RaceStageMode, Converter={x:Static vm:RaceStageModeConverter.IsTime}}"
+                                        IsVisible="{Binding RaceStageMode, Converter={x:Static converters:RaceStageModeConverter.IsTime}}"
                                         Margin="10,0"
                                         VerticalAlignment="Center" />
                                 <TextBlock Grid.Column="2"

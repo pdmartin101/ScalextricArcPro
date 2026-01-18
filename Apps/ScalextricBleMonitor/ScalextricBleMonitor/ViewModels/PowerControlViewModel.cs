@@ -13,7 +13,7 @@ namespace ScalextricBleMonitor.ViewModels;
 /// </summary>
 public partial class PowerControlViewModel : ObservableObject
 {
-    private readonly Services.IBleService _bleService;
+    private readonly Scalextric.IBleService _bleService;
     private readonly IPowerHeartbeatService _powerHeartbeatService;
     private readonly ITimingCalibrationService _timingCalibrationService;
     private readonly IDispatcherService _dispatcher;
@@ -74,7 +74,7 @@ public partial class PowerControlViewModel : ObservableObject
     /// Initializes a new instance of the PowerControlViewModel.
     /// </summary>
     public PowerControlViewModel(
-        Services.IBleService bleService,
+        Scalextric.IBleService bleService,
         IPowerHeartbeatService powerHeartbeatService,
         ITimingCalibrationService timingCalibrationService,
         IDispatcherService dispatcher,

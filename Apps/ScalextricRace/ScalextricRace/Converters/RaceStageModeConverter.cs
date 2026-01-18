@@ -2,7 +2,7 @@ using System.Globalization;
 using Avalonia.Data.Converters;
 using ScalextricRace.Models;
 
-namespace ScalextricRace.ViewModels;
+namespace ScalextricRace.Converters;
 
 /// <summary>
 /// Converters for RaceStageMode enum to support RadioButton binding.

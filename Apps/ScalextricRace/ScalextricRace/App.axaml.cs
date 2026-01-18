@@ -92,32 +92,6 @@ public partial class App : Application
     /// </summary>
     private static IServiceProvider ConfigureServices()
     {
-        var services = new ServiceCollection();
-
-        // Register settings (loaded from disk)
-        services.AddSingleton(_ => AppSettings.Load());
-
-        // Register services
-        services.AddSingleton<Scalextric.IDispatcherService, Services.AvaloniaDispatcherService>();
-#if WINDOWS
-        services.AddSingleton<Services.IBleService, Services.BleService>();
-        services.AddSingleton<Scalextric.IPowerHeartbeatService>(sp =>
-            new Scalextric.PowerHeartbeatService(sp.GetRequiredService<Services.IBleService>()));
-#endif
-        services.AddSingleton<IWindowService, WindowService>();
-        services.AddSingleton<ICarStorage, CarStorage>();
-        services.AddSingleton<IDriverStorage, DriverStorage>();
-        services.AddSingleton<IRaceStorage, RaceStorage>();
-
-        // Register ViewModels
-        services.AddSingleton<BleConnectionViewModel>();
-        services.AddSingleton<CarManagementViewModel>();
-        services.AddSingleton<DriverManagementViewModel>();
-        services.AddSingleton<RaceManagementViewModel>();
-        services.AddSingleton<PowerControlViewModel>();
-        services.AddSingleton<RaceConfigurationViewModel>();
-        services.AddSingleton<MainViewModel>();
-
-        return services.BuildServiceProvider();
+        return ServiceConfiguration.BuildServiceProvider();
     }
 }

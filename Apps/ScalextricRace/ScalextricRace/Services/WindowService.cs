@@ -21,7 +21,7 @@ public class WindowService : IWindowService
     }
 
     /// <inheritdoc />
-    public async Task<bool> ShowCarTuningDialogAsync(CarViewModel carViewModel, IBleService? bleService)
+    public async Task<bool> ShowCarTuningDialogAsync(CarViewModel carViewModel, Scalextric.IBleService? bleService)
     {
         if (_owner == null)
         {

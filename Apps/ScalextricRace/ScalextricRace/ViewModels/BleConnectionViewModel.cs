@@ -12,7 +12,7 @@ namespace ScalextricRace.ViewModels;
 /// </summary>
 public partial class BleConnectionViewModel : ObservableObject, IDisposable
 {
-    private readonly Services.IBleService? _bleService;
+    private readonly Scalextric.IBleService? _bleService;
     private readonly SynchronizationContext? _syncContext;
 
     /// <summary>
@@ -88,7 +88,7 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
     /// Initializes a new instance of the BleConnectionViewModel.
     /// </summary>
     /// <param name="bleService">The BLE service for device communication.</param>
-    public BleConnectionViewModel(Services.IBleService? bleService = null)
+    public BleConnectionViewModel(Scalextric.IBleService? bleService = null)
     {
         _bleService = bleService;
         _syncContext = SynchronizationContext.Current;

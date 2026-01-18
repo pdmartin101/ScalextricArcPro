@@ -72,10 +72,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// Creates a MainViewModel with default services. Used for design-time and simple instantiation.
     /// </summary>
     public MainViewModel() : this(
-        new BleService(),
+        new ScalextricBle.BleService(),
         new GhostRecordingService(),
         new GhostPlaybackService(),
-        new PowerHeartbeatService(new BleService()),
+        new PowerHeartbeatService(new ScalextricBle.BleService()),
         new TimingCalibrationService(),
         new AvaloniaDispatcherService(),
         AppSettings.Load())
@@ -86,7 +86,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// Creates a MainViewModel with injected dependencies.
     /// </summary>
     public MainViewModel(
-        Services.IBleService bleService,
+        Scalextric.IBleService bleService,
         IGhostRecordingService ghostRecordingService,
         IGhostPlaybackService ghostPlaybackService,
         IPowerHeartbeatService powerHeartbeatService,

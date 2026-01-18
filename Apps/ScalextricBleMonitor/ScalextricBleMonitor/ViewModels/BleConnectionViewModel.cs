@@ -13,7 +13,7 @@ namespace ScalextricBleMonitor.ViewModels;
 /// </summary>
 public partial class BleConnectionViewModel : ObservableObject, IDisposable
 {
-    private readonly Services.IBleService _bleService;
+    private readonly Scalextric.IBleService _bleService;
     private readonly IDispatcherService _dispatcher;
     private bool _disposed;
 
@@ -89,7 +89,7 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Initializes a new instance of the BleConnectionViewModel.
     /// </summary>
-    public BleConnectionViewModel(Services.IBleService bleService, IDispatcherService dispatcher)
+    public BleConnectionViewModel(Scalextric.IBleService bleService, IDispatcherService dispatcher)
     {
         _bleService = bleService;
         _dispatcher = dispatcher;

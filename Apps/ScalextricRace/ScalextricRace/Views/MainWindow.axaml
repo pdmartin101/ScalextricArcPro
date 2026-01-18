@@ -1043,24 +1043,24 @@
                                                     IsVisible="{Binding ConfigFreePracticeEnabled}">
                                             <RadioButton Content="Laps"
                                                          FontSize="11"
-                                                         IsChecked="{Binding ConfigFreePracticeMode, Mode=TwoWay, Converter={x:Static vm:RaceStageModeConverter.ToLaps}}"
+                                                         IsChecked="{Binding ConfigFreePracticeMode, Mode=TwoWay, Converter={x:Static converters:RaceStageModeConverter.ToLaps}}"
                                                          GroupName="FPMode" />
                                             <RadioButton Content="Time"
                                                          FontSize="11"
-                                                         IsChecked="{Binding ConfigFreePracticeMode, Mode=TwoWay, Converter={x:Static vm:RaceStageModeConverter.ToTime}}"
+                                                         IsChecked="{Binding ConfigFreePracticeMode, Mode=TwoWay, Converter={x:Static converters:RaceStageModeConverter.ToTime}}"
                                                          GroupName="FPMode" />
                                             <NumericUpDown Value="{Binding ConfigFreePracticeLapCount}"
                                                            Minimum="1"
                                                            Maximum="999"
                                                            Width="70"
                                                            FontSize="12"
-                                                           IsVisible="{Binding ConfigFreePracticeMode, Converter={x:Static vm:RaceStageModeConverter.IsLaps}}" />
+                                                           IsVisible="{Binding ConfigFreePracticeMode, Converter={x:Static converters:RaceStageModeConverter.IsLaps}}" />
                                             <NumericUpDown Value="{Binding ConfigFreePracticeTimeMinutes}"
                                                            Minimum="1"
                                                            Maximum="999"
                                                            Width="70"
                                                            FontSize="12"
-                                                           IsVisible="{Binding ConfigFreePracticeMode, Converter={x:Static vm:RaceStageModeConverter.IsTime}}" />
+                                                           IsVisible="{Binding ConfigFreePracticeMode, Converter={x:Static converters:RaceStageModeConverter.IsTime}}" />
                                         </StackPanel>
                                     </Grid>
                                 </Border>
@@ -1089,24 +1089,24 @@
                                                     IsVisible="{Binding ConfigQualifyingEnabled}">
                                             <RadioButton Content="Laps"
                                                          FontSize="11"
-                                                         IsChecked="{Binding ConfigQualifyingMode, Mode=TwoWay, Converter={x:Static vm:RaceStageModeConverter.ToLaps}}"
+                                                         IsChecked="{Binding ConfigQualifyingMode, Mode=TwoWay, Converter={x:Static converters:RaceStageModeConverter.ToLaps}}"
                                                          GroupName="QMode" />
                                             <RadioButton Content="Time"
                                                          FontSize="11"
-                                                         IsChecked="{Binding ConfigQualifyingMode, Mode=TwoWay, Converter={x:Static vm:RaceStageModeConverter.ToTime}}"
+                                                         IsChecked="{Binding ConfigQualifyingMode, Mode=TwoWay, Converter={x:Static converters:RaceStageModeConverter.ToTime}}"
                                                          GroupName="QMode" />
                                             <NumericUpDown Value="{Binding ConfigQualifyingLapCount}"
                                                            Minimum="1"
                                                            Maximum="999"
                                                            Width="70"
                                                            FontSize="12"
-                                                           IsVisible="{Binding ConfigQualifyingMode, Converter={x:Static vm:RaceStageModeConverter.IsLaps}}" />
+                                                           IsVisible="{Binding ConfigQualifyingMode, Converter={x:Static converters:RaceStageModeConverter.IsLaps}}" />
                                             <NumericUpDown Value="{Binding ConfigQualifyingTimeMinutes}"
                                                            Minimum="1"
                                                            Maximum="999"
                                                            Width="70"
                                                            FontSize="12"
-                                                           IsVisible="{Binding ConfigQualifyingMode, Converter={x:Static vm:RaceStageModeConverter.IsTime}}" />
+                                                           IsVisible="{Binding ConfigQualifyingMode, Converter={x:Static converters:RaceStageModeConverter.IsTime}}" />
                                         </StackPanel>
                                     </Grid>
                                 </Border>
@@ -1134,24 +1134,24 @@
                                                     IsVisible="{Binding ConfigRaceEnabled}">
                                             <RadioButton Content="Laps"
                                                          FontSize="11"
-                                                         IsChecked="{Binding ConfigRaceMode, Mode=TwoWay, Converter={x:Static vm:RaceStageModeConverter.ToLaps}}"
+                                                         IsChecked="{Binding ConfigRaceMode, Mode=TwoWay, Converter={x:Static converters:RaceStageModeConverter.ToLaps}}"
                                                          GroupName="RMode" />
                                             <RadioButton Content="Time"
                                                          FontSize="11"
-                                                         IsChecked="{Binding ConfigRaceMode, Mode=TwoWay, Converter={x:Static vm:RaceStageModeConverter.ToTime}}"
+                                                         IsChecked="{Binding ConfigRaceMode, Mode=TwoWay, Converter={x:Static converters:RaceStageModeConverter.ToTime}}"
                                                          GroupName="RMode" />
                                             <NumericUpDown Value="{Binding ConfigRaceLapCount}"
                                                            Minimum="1"
                                                            Maximum="999"
                                                            Width="70"
                                                            FontSize="12"
-                                                           IsVisible="{Binding ConfigRaceMode, Converter={x:Static vm:RaceStageModeConverter.IsLaps}}" />
+                                                           IsVisible="{Binding ConfigRaceMode, Converter={x:Static converters:RaceStageModeConverter.IsLaps}}" />
                                             <NumericUpDown Value="{Binding ConfigRaceTimeMinutes}"
                                                            Minimum="1"
                                                            Maximum="999"
                                                            Width="70"
                                                            FontSize="12"
-                                                           IsVisible="{Binding ConfigRaceMode, Converter={x:Static vm:RaceStageModeConverter.IsTime}}" />
+                                                           IsVisible="{Binding ConfigRaceMode, Converter={x:Static converters:RaceStageModeConverter.IsTime}}" />
                                         </StackPanel>
                                     </Grid>
                                 </Border>
