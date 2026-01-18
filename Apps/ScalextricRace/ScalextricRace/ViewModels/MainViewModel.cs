@@ -411,9 +411,9 @@ public partial class MainViewModel : ObservableObject
         // (Cars/Drivers/Races are loaded by their respective ViewModels)
         _raceManagement.SetStartRequestedCallback(OnRaceStartRequested);
 
-        // Wire up connection events
-        _connection.GattConnected += OnGattConnected;
-        _connection.NotificationReceived += OnNotificationReceived;
+        // Wire up connection callbacks
+        _connection.GattConnectedCallback = OnGattConnected;
+        _connection.NotificationReceivedCallback = OnNotificationReceived;
         _connection.PropertyChanged += (s, e) =>
         {
             // Forward property change notifications for delegated properties
@@ -891,7 +891,7 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// Handles GATT connection established.
     /// </summary>
-    private void OnGattConnected(object? sender, EventArgs e)
+    private void OnGattConnected()
     {
         // If power should be on, enable it now that we're connected
         if (IsPowerEnabled)
@@ -904,7 +904,7 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// Handles BLE notification data.
     /// </summary>
-    private void OnNotificationReceived(object? sender, BleNotificationEventArgs e)
+    private void OnNotificationReceived(BleNotificationEventArgs e)
     {
         // Only process Slot characteristic (lap timing data)
         if (e.CharacteristicUuid != Scalextric.ScalextricProtocol.Characteristics.Slot)

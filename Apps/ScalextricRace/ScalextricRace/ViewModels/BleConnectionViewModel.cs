@@ -75,14 +75,14 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
     };
 
     /// <summary>
-    /// Event raised when GATT connection is established.
+    /// Callback invoked when GATT connection is established.
     /// </summary>
-    public event EventHandler? GattConnected;
+    public Action? GattConnectedCallback { get; set; }
 
     /// <summary>
-    /// Event raised when notification data is received.
+    /// Callback invoked when notification data is received.
     /// </summary>
-    public event EventHandler<BleNotificationEventArgs>? NotificationReceived;
+    public Action<BleNotificationEventArgs>? NotificationReceivedCallback { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the BleConnectionViewModel.
@@ -143,10 +143,10 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
             IsDeviceDetected = e.IsDeviceDetected;
             IsGattConnected = e.IsGattConnected;
 
-            // Raise event if we just connected
+            // Invoke callback if we just connected
             if (!wasConnected && IsGattConnected)
             {
-                GattConnected?.Invoke(this, EventArgs.Empty);
+                GattConnectedCallback?.Invoke();
             }
         });
     }
@@ -167,8 +167,8 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
     /// </summary>
     private void OnNotificationReceived(object? sender, BleNotificationEventArgs e)
     {
-        // Forward to subscribers
-        NotificationReceived?.Invoke(this, e);
+        // Forward to callback
+        NotificationReceivedCallback?.Invoke(e);
     }
 
     /// <summary>

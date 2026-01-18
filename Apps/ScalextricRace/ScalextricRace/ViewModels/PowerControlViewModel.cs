@@ -71,9 +71,8 @@ public partial class PowerControlViewModel : ObservableObject
                 ? slotProfile
                 : ThrottleProfileType.Linear;
 
-            // Subscribe to changes for auto-save
-            controller.PowerLevelChanged += OnControllerPowerLevelChanged;
-            controller.ThrottleProfileChanged += OnControllerThrottleProfileChanged;
+            // Subscribe to PropertyChanged for auto-save
+            controller.PropertyChanged += OnControllerPropertyChanged;
 
             Controllers.Add(controller);
         }
@@ -194,34 +193,33 @@ public partial class PowerControlViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Handles power level changes from individual controller ViewModels.
+    /// Handles property changes from individual controller ViewModels.
     /// </summary>
-    private void OnControllerPowerLevelChanged(object? sender, int value)
+    private void OnControllerPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (_isInitializing) return;
 
-        // If in global mode, update global power level
-        if (!UsePerSlotPower && sender is ControllerViewModel)
+        if (sender is not ControllerViewModel controller)
+            return;
+
+        // If in global mode, sync changes back to global settings
+        if (!UsePerSlotPower)
         {
-            PowerLevel = value;
+            if (e.PropertyName == nameof(ControllerViewModel.PowerLevel))
+            {
+                PowerLevel = controller.PowerLevel;
+            }
+            else if (e.PropertyName == nameof(ControllerViewModel.ThrottleProfile))
+            {
+                SelectedThrottleProfile = controller.ThrottleProfile;
+            }
         }
 
-        SaveSettings();
-    }
-
-    /// <summary>
-    /// Handles throttle profile changes from individual controller ViewModels.
-    /// </summary>
-    private void OnControllerThrottleProfileChanged(object? sender, ThrottleProfileType value)
-    {
-        if (_isInitializing) return;
-
-        // If in global mode, update global throttle profile
-        if (!UsePerSlotPower && sender is ControllerViewModel)
+        // Save settings whenever any controller property changes
+        if (e.PropertyName == nameof(ControllerViewModel.PowerLevel) ||
+            e.PropertyName == nameof(ControllerViewModel.ThrottleProfile))
         {
-            SelectedThrottleProfile = value;
+            SaveSettings();
         }
-
-        SaveSettings();
     }
 }

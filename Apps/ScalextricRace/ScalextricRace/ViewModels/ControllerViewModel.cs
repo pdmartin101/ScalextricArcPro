@@ -39,26 +39,6 @@ public partial class ControllerViewModel : ObservableObject
     public string SlotLabel => $"Slot {SlotNumber}";
 
     /// <summary>
-    /// Event raised when power level changes (for settings save).
-    /// </summary>
-    public event EventHandler<int>? PowerLevelChanged;
-
-    /// <summary>
-    /// Event raised when throttle profile changes (for settings save).
-    /// </summary>
-    public event EventHandler<ThrottleProfileType>? ThrottleProfileChanged;
-
-    partial void OnPowerLevelChanged(int value)
-    {
-        PowerLevelChanged?.Invoke(this, value);
-    }
-
-    partial void OnThrottleProfileChanged(ThrottleProfileType value)
-    {
-        ThrottleProfileChanged?.Invoke(this, value);
-    }
-
-    /// <summary>
     /// Creates a controller view model for the specified slot.
     /// </summary>
     /// <param name="slotNumber">The slot number (1-6).</param>
