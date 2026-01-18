@@ -124,9 +124,10 @@ Program.Main()
 - **Compiled bindings** with `x:DataType` throughout all XAML
 - **Source generators** for `[ObservableProperty]` and `[RelayCommand]`
 - **Model wrapping** - ViewModels wrap Models, sync via partial methods
-- **Service abstractions** - IBleService, IWindowService (BleMonitor)
-- **Event-driven BLE** - Services emit events, ViewModels subscribe
-- **JSON persistence** - Settings, cars, drivers stored in %LocalAppData%
+- **Service abstractions** - IBleService, IWindowService
+- **Callback pattern** - Cross-ViewModel communication via Action<T> callbacks (not events)
+- **Constructor injection** - Dependencies injected via DI, no static service locators
+- **JSON persistence** - Settings, cars, drivers, races stored in %LocalAppData%
 
 ## Domain Concepts
 
@@ -210,20 +211,37 @@ bleService.StartScanning();
 
 ## Code Quality Notes
 
-See [PLAN.md](PLAN.md) for the complete improvement plan with issue tracking.
+See [Apps/ScalextricRace/PLAN00.md](Apps/ScalextricRace/PLAN00.md) for the comprehensive MVVM improvement plan with issue tracking.
+
+### ScalextricRace - Recent MVVM Fixes (Jan 2026)
+
+**3 commits implementing strict MVVM compliance:**
+
+1. **Critical fixes** (628f174): Removed all event handlers from code-behind, converted dialogs to proper MVVM
+2. **Major fixes** (1b12f9c): Replaced EventHandlers with callbacks/PropertyChanged in ViewModels
+3. **Minor fixes** (5e9766c): Eliminated static service locator, implemented constructor injection
+
+**Results:**
+- 15 files modified, 167 lines added, 190 removed (net -23 lines)
+- All builds: 0 warnings, 0 errors
+- Cleaner, more testable, fully MVVM-compliant architecture
 
 ### Current Strengths
 
-- Excellent MVVM separation - zero business logic in code-behind
-- Consistent use of source generators
-- Good service abstractions where they exist
+- Strict MVVM separation with CommunityToolkit.Mvvm source generators
+- Callback pattern for cross-ViewModel communication (no event subscriptions)
+- Constructor injection throughout (no static service locators)
 - Comprehensive Serilog logging
 - 148 unit tests (67 BleMonitor + 81 ScalextricRace)
 
-### Known Issues
+### Remaining Issues (ScalextricRace)
 
-- **High**: BleMonitor MainViewModel large (920+ lines) - functional but could be split
-- **Low**: Some remaining code could be further abstracted
+See [Apps/ScalextricRace/PLAN00.md](Apps/ScalextricRace/PLAN00.md) for detailed tracking of remaining MVVM violations:
+- **4 Critical** - Unmanaged PropertyChanged subscriptions, async void method, memory leaks
+- **6 Major** - Event handlers in XAML, business logic in code-behind
+- **4 Minor** - Unnecessary Dispatcher usage
+
+**Note**: BleMonitor has not been analyzed for MVVM violations yet.
 
 ## Adding Libraries to a New App
 

@@ -12,7 +12,7 @@ namespace ScalextricRace.ViewModels;
 /// Main view model for the ScalextricRace application.
 /// Manages connection state, race status, and car/slot information.
 /// </summary>
-public partial class MainViewModel : ObservableObject
+public partial class MainViewModel : ObservableObject, IDisposable
 {
     #region Fields
 
@@ -30,6 +30,9 @@ public partial class MainViewModel : ObservableObject
     private readonly RaceManagementViewModel _raceManagement;
     private readonly PowerControlViewModel _powerControl;
     private readonly RaceConfigurationViewModel _raceConfig;
+
+    // Event handlers (stored for cleanup in Dispose)
+    private readonly System.ComponentModel.PropertyChangedEventHandler _connectionPropertyChangedHandler;
 
     #endregion
 
@@ -414,7 +417,9 @@ public partial class MainViewModel : ObservableObject
         // Wire up connection callbacks
         _connection.GattConnectedCallback = OnGattConnected;
         _connection.NotificationReceivedCallback = OnNotificationReceived;
-        _connection.PropertyChanged += (s, e) =>
+
+        // Create and store event handler for proper cleanup
+        _connectionPropertyChangedHandler = (s, e) =>
         {
             // Forward property change notifications for delegated properties
             if (e.PropertyName == nameof(BleConnectionViewModel.IsScanning))
@@ -433,6 +438,7 @@ public partial class MainViewModel : ObservableObject
             else if (e.PropertyName == nameof(BleConnectionViewModel.CurrentConnectionState))
                 OnPropertyChanged(nameof(CurrentConnectionState));
         };
+        _connection.PropertyChanged += _connectionPropertyChangedHandler;
 
         // Forward race configuration property changes
         _raceConfig.PropertyChanged += (s, e) =>
@@ -1067,6 +1073,22 @@ public partial class MainViewModel : ObservableObject
                 Log.Error(ex, "Error in {OperationName}", operationName);
             }
         });
+    }
+
+    #endregion
+
+    #region IDisposable
+
+    /// <summary>
+    /// Disposes resources and unsubscribes from events to prevent memory leaks.
+    /// </summary>
+    public void Dispose()
+    {
+        // Unsubscribe from connection property changes
+        if (_connection != null)
+        {
+            _connection.PropertyChanged -= _connectionPropertyChangedHandler;
+        }
     }
 
     #endregion

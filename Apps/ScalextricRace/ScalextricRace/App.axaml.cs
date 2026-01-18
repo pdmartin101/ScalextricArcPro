@@ -84,6 +84,7 @@ public partial class App : Application
     private void OnApplicationExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
     {
         _mainViewModel?.StopMonitoring();
+        _mainViewModel?.Dispose();
     }
 
     /// <summary>
