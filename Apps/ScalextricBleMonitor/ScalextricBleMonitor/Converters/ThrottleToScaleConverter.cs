@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using Avalonia.Data.Converters;
+using Scalextric;
 
 namespace ScalextricBleMonitor.Converters;
 
@@ -15,8 +16,8 @@ public class ThrottleToScaleConverter : IValueConverter
     {
         if (value is int throttle)
         {
-            // Scale 0-63 to 0.0-1.0
-            return throttle / 63.0;
+            // Scale 0-MaxPowerLevel to 0.0-1.0
+            return throttle / (double)ScalextricProtocol.MaxPowerLevel;
         }
         return 0.0;
     }

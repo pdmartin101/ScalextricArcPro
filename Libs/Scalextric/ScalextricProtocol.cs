@@ -8,6 +8,24 @@ namespace Scalextric;
 /// </summary>
 public static class ScalextricProtocol
 {
+    #region Power and Slot Constants
+
+    /// <summary>Maximum power level (0x3F = 63).</summary>
+    public const int MaxPowerLevel = 63;
+
+    /// <summary>Minimum power level.</summary>
+    public const int MinPowerLevel = 0;
+
+    /// <summary>Number of controller/car slots supported by ARC Pro.</summary>
+    public const int SlotCount = 6;
+
+    /// <summary>Minimum driver power percentage (50%).</summary>
+    public const int DriverPowerMinPercent = 50;
+
+    /// <summary>Maximum driver power percentage (100%).</summary>
+    public const int DriverPowerMaxPercent = 100;
+
+    #endregion
     /// <summary>
     /// Byte offsets and masks for Slot characteristic notification data (finish line timestamps).
     /// Format: 20 bytes total
@@ -196,7 +214,7 @@ public static class ScalextricProtocol
         /// </summary>
         public CommandBuilder SetAllPower(byte power)
         {
-            byte clampedPower = power > 63 ? (byte)63 : power;
+            byte clampedPower = power > MaxPowerLevel ? (byte)MaxPowerLevel : power;
             foreach (var slot in _slots)
             {
                 slot.PowerMultiplier = clampedPower;
@@ -209,7 +227,7 @@ public static class ScalextricProtocol
         /// </summary>
         public CommandBuilder SetSlotPower(int slot, byte power)
         {
-            GetSlot(slot).PowerMultiplier = power > 63 ? (byte)63 : power;
+            GetSlot(slot).PowerMultiplier = power > MaxPowerLevel ? (byte)MaxPowerLevel : power;
             return this;
         }
 
@@ -262,7 +280,7 @@ public static class ScalextricProtocol
         /// <summary>
         /// Creates a simple "power on racing" command with specified power for all slots.
         /// </summary>
-        public static byte[] CreatePowerOnCommand(byte power = 63)
+        public static byte[] CreatePowerOnCommand(byte power = MaxPowerLevel)
         {
             var builder = new CommandBuilder
             {

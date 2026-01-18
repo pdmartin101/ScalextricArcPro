@@ -182,7 +182,7 @@ public partial class CarTuningViewModel : ObservableObject
     [RelayCommand]
     private void IncrementPower()
     {
-        if (PowerLevel < 63)
+        if (PowerLevel < ScalextricProtocol.MaxPowerLevel)
         {
             PowerLevel++;
         }
@@ -194,7 +194,7 @@ public partial class CarTuningViewModel : ObservableObject
     [RelayCommand]
     private void DecrementPower()
     {
-        if (PowerLevel > 0)
+        if (PowerLevel > ScalextricProtocol.MinPowerLevel)
         {
             PowerLevel--;
         }

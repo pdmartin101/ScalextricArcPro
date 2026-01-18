@@ -1,3 +1,5 @@
+using Scalextric;
+
 namespace ScalextricBleMonitor.Models;
 
 /// <summary>
@@ -40,7 +42,7 @@ public class Controller
     /// Power level for this controller (0-63). Used as a multiplier for track power.
     /// In ghost mode, this becomes the direct throttle index (0-63).
     /// </summary>
-    public int PowerLevel { get; set; } = 63;
+    public int PowerLevel { get; set; } = ScalextricProtocol.MaxPowerLevel;
 
     /// <summary>
     /// When true, this slot operates in ghost mode - GhostThrottleLevel becomes the direct throttle

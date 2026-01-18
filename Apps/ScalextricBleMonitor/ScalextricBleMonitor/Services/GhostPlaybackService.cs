@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using Scalextric;
 using ScalextricBleMonitor.Models;
 using Serilog;
 
@@ -218,7 +219,7 @@ public class GhostPlaybackService : IGhostPlaybackService
         double interpolated = v1 + factor * (v2 - v1);
 
         // Clamp to valid range and return
-        return (byte)Math.Clamp((int)Math.Round(interpolated), 0, 63);
+        return (byte)Math.Clamp((int)Math.Round(interpolated), ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
     }
 
     private static void ValidateSlotNumber(int slotNumber)

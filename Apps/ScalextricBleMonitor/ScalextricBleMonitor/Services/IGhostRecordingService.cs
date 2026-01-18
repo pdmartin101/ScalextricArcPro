@@ -12,18 +12,18 @@ public class LapRecordingCompletedEventArgs : EventArgs
     /// <summary>
     /// The slot number (1-6) that completed the recording.
     /// </summary>
-    public int SlotNumber { get; init; }
+    public required int SlotNumber { get; init; }
 
     /// <summary>
     /// The recorded lap data.
     /// </summary>
-    public RecordedLap RecordedLap { get; init; } = null!;
+    public required RecordedLap RecordedLap { get; init; }
 
     /// <summary>
     /// The true event time when the lap ended (delay-adjusted).
     /// This is also the start time of the next lap for multi-lap recording.
     /// </summary>
-    public DateTime TrueLapEndTime { get; init; }
+    public required DateTime TrueLapEndTime { get; init; }
 }
 
 /// <summary>
@@ -34,7 +34,7 @@ public class LapRecordingStartedEventArgs : EventArgs
     /// <summary>
     /// The slot number (1-6) that started recording.
     /// </summary>
-    public int SlotNumber { get; init; }
+    public required int SlotNumber { get; init; }
 }
 
 /// <summary>

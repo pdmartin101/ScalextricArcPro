@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using Scalextric;
 using Serilog;
 
 namespace ScalextricRace.Services;
@@ -14,7 +15,7 @@ public class StartupSlotSettings
     /// <summary>
     /// Startup power level for this slot (0-63).
     /// </summary>
-    public int PowerLevel { get; set; } = 63;
+    public int PowerLevel { get; set; } = ScalextricProtocol.MaxPowerLevel;
 
     /// <summary>
     /// Startup throttle profile type name for this slot.
@@ -33,7 +34,7 @@ public class StartupSettings
     /// Startup global power level for track power (0-63).
     /// Used when IsPerSlotPowerMode is false.
     /// </summary>
-    public int PowerLevel { get; set; } = 63;
+    public int PowerLevel { get; set; } = ScalextricProtocol.MaxPowerLevel;
 
     /// <summary>
     /// Startup throttle profile type name.
@@ -58,12 +59,12 @@ public class StartupSettings
     {
         return new StartupSlotSettings[]
         {
-            new() { PowerLevel = 63, ThrottleProfile = "Linear" },
-            new() { PowerLevel = 63, ThrottleProfile = "Linear" },
-            new() { PowerLevel = 63, ThrottleProfile = "Linear" },
-            new() { PowerLevel = 63, ThrottleProfile = "Linear" },
-            new() { PowerLevel = 63, ThrottleProfile = "Linear" },
-            new() { PowerLevel = 63, ThrottleProfile = "Linear" }
+            new() { PowerLevel = ScalextricProtocol.MaxPowerLevel, ThrottleProfile = "Linear" },
+            new() { PowerLevel = ScalextricProtocol.MaxPowerLevel, ThrottleProfile = "Linear" },
+            new() { PowerLevel = ScalextricProtocol.MaxPowerLevel, ThrottleProfile = "Linear" },
+            new() { PowerLevel = ScalextricProtocol.MaxPowerLevel, ThrottleProfile = "Linear" },
+            new() { PowerLevel = ScalextricProtocol.MaxPowerLevel, ThrottleProfile = "Linear" },
+            new() { PowerLevel = ScalextricProtocol.MaxPowerLevel, ThrottleProfile = "Linear" }
         };
     }
 }
@@ -125,7 +126,7 @@ public class AppSettings : IAppSettings
                     settings.Startup ??= new StartupSettings();
 
                     // Validate loaded values
-                    settings.Startup.PowerLevel = Math.Clamp(settings.Startup.PowerLevel, 0, 63);
+                    settings.Startup.PowerLevel = Math.Clamp(settings.Startup.PowerLevel, ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
 
                     // Validate throttle profile
                     var validProfiles = new[] { "Linear", "Exponential", "Stepped" };
@@ -136,16 +137,16 @@ public class AppSettings : IAppSettings
                     }
 
                     // Ensure SlotSettings array has 6 elements
-                    if (settings.Startup.SlotSettings == null || settings.Startup.SlotSettings.Length != 6)
+                    if (settings.Startup.SlotSettings == null || settings.Startup.SlotSettings.Length != ScalextricProtocol.SlotCount)
                     {
                         settings.Startup.SlotSettings = new StartupSlotSettings[]
                         {
-                            new() { PowerLevel = 63, ThrottleProfile = "Linear" },
-                            new() { PowerLevel = 63, ThrottleProfile = "Linear" },
-                            new() { PowerLevel = 63, ThrottleProfile = "Linear" },
-                            new() { PowerLevel = 63, ThrottleProfile = "Linear" },
-                            new() { PowerLevel = 63, ThrottleProfile = "Linear" },
-                            new() { PowerLevel = 63, ThrottleProfile = "Linear" }
+                            new() { PowerLevel = ScalextricProtocol.MaxPowerLevel, ThrottleProfile = "Linear" },
+                            new() { PowerLevel = ScalextricProtocol.MaxPowerLevel, ThrottleProfile = "Linear" },
+                            new() { PowerLevel = ScalextricProtocol.MaxPowerLevel, ThrottleProfile = "Linear" },
+                            new() { PowerLevel = ScalextricProtocol.MaxPowerLevel, ThrottleProfile = "Linear" },
+                            new() { PowerLevel = ScalextricProtocol.MaxPowerLevel, ThrottleProfile = "Linear" },
+                            new() { PowerLevel = ScalextricProtocol.MaxPowerLevel, ThrottleProfile = "Linear" }
                         };
                     }
                     else
@@ -153,7 +154,7 @@ public class AppSettings : IAppSettings
                         // Validate each slot's settings
                         foreach (var slot in settings.Startup.SlotSettings)
                         {
-                            slot.PowerLevel = Math.Clamp(slot.PowerLevel, 0, 63);
+                            slot.PowerLevel = Math.Clamp(slot.PowerLevel, ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
                             if (string.IsNullOrEmpty(slot.ThrottleProfile) ||
                                 Array.IndexOf(validProfiles, slot.ThrottleProfile) < 0)
                             {

@@ -78,7 +78,7 @@ public partial class RaceManagementViewModel : ObservableObject
         var viewModel = new RaceViewModel(race, isDefault)
         {
             OnDeleteRequested = DeleteRace,
-            OnChanged = _ => SaveRaces(),
+            OnPropertyValueChanged = _ => SaveRaces(),
             OnImageChangeRequested = OnRaceImageChangeRequested,
             OnEditRequested = OnRaceEditRequested,
             OnStartRequested = OnRaceStartRequested
@@ -160,7 +160,7 @@ public partial class RaceManagementViewModel : ObservableObject
 
         // Clear callbacks to avoid any potential issues
         race.OnDeleteRequested = null;
-        race.OnChanged = null;
+        race.OnPropertyValueChanged = null;
         race.OnImageChangeRequested = null;
         race.OnEditRequested = null;
         race.OnStartRequested = null;

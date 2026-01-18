@@ -82,7 +82,7 @@ public partial class CarManagementViewModel : ObservableObject
         var viewModel = new CarViewModel(car, isDefault)
         {
             OnDeleteRequested = DeleteCar,
-            OnChanged = _ => SaveCars(),
+            OnPropertyValueChanged = _ => SaveCars(),
             OnTuneRequested = OnCarTuneRequested,
             OnImageChangeRequested = OnCarImageChangeRequested
         };
@@ -153,7 +153,7 @@ public partial class CarManagementViewModel : ObservableObject
 
         // Clear callbacks to avoid any potential issues
         car.OnDeleteRequested = null;
-        car.OnChanged = null;
+        car.OnPropertyValueChanged = null;
         car.OnTuneRequested = null;
         car.OnImageChangeRequested = null;
 

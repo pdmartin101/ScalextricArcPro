@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
+using Scalextric;
 using Serilog;
 
 namespace ScalextricBleMonitor.Services;
@@ -13,12 +14,12 @@ public class AppSettings : IAppSettings
     /// <summary>
     /// Global power level for track power (0-63). Legacy, kept for backwards compatibility.
     /// </summary>
-    public int PowerLevel { get; set; } = 63;
+    public int PowerLevel { get; set; } = ScalextricProtocol.MaxPowerLevel;
 
     /// <summary>
     /// Per-slot power levels (0-63). Array index 0 = slot 1, etc.
     /// </summary>
-    public int[] SlotPowerLevels { get; set; } = [63, 63, 63, 63, 63, 63];
+    public int[] SlotPowerLevels { get; set; } = [ScalextricProtocol.MaxPowerLevel, ScalextricProtocol.MaxPowerLevel, ScalextricProtocol.MaxPowerLevel, ScalextricProtocol.MaxPowerLevel, ScalextricProtocol.MaxPowerLevel, ScalextricProtocol.MaxPowerLevel];
 
     /// <summary>
     /// When true, use individual per-slot power levels. When false, use global PowerLevel for all slots.
@@ -78,42 +79,42 @@ public class AppSettings : IAppSettings
                 if (settings != null)
                 {
                     // Validate loaded values
-                    settings.PowerLevel = Math.Clamp(settings.PowerLevel, 0, 63);
+                    settings.PowerLevel = Math.Clamp(settings.PowerLevel, ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
 
                     // Validate per-slot power levels
-                    if (settings.SlotPowerLevels == null || settings.SlotPowerLevels.Length != 6)
+                    if (settings.SlotPowerLevels == null || settings.SlotPowerLevels.Length != ScalextricProtocol.SlotCount)
                     {
-                        settings.SlotPowerLevels = [63, 63, 63, 63, 63, 63];
+                        settings.SlotPowerLevels = [ScalextricProtocol.MaxPowerLevel, ScalextricProtocol.MaxPowerLevel, ScalextricProtocol.MaxPowerLevel, ScalextricProtocol.MaxPowerLevel, ScalextricProtocol.MaxPowerLevel, ScalextricProtocol.MaxPowerLevel];
                     }
                     else
                     {
-                        for (int i = 0; i < 6; i++)
+                        for (int i = 0; i < ScalextricProtocol.SlotCount; i++)
                         {
-                            settings.SlotPowerLevels[i] = Math.Clamp(settings.SlotPowerLevels[i], 0, 63);
+                            settings.SlotPowerLevels[i] = Math.Clamp(settings.SlotPowerLevels[i], ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
                         }
                     }
 
                     // Validate per-slot ghost modes
-                    if (settings.SlotGhostModes == null || settings.SlotGhostModes.Length != 6)
+                    if (settings.SlotGhostModes == null || settings.SlotGhostModes.Length != ScalextricProtocol.SlotCount)
                     {
                         settings.SlotGhostModes = [false, false, false, false, false, false];
                     }
 
                     // Validate per-slot ghost throttle levels
-                    if (settings.SlotGhostThrottleLevels == null || settings.SlotGhostThrottleLevels.Length != 6)
+                    if (settings.SlotGhostThrottleLevels == null || settings.SlotGhostThrottleLevels.Length != ScalextricProtocol.SlotCount)
                     {
                         settings.SlotGhostThrottleLevels = [0, 0, 0, 0, 0, 0];
                     }
                     else
                     {
-                        for (int i = 0; i < 6; i++)
+                        for (int i = 0; i < ScalextricProtocol.SlotCount; i++)
                         {
-                            settings.SlotGhostThrottleLevels[i] = Math.Clamp(settings.SlotGhostThrottleLevels[i], 0, 63);
+                            settings.SlotGhostThrottleLevels[i] = Math.Clamp(settings.SlotGhostThrottleLevels[i], ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
                         }
                     }
 
                     // Validate per-slot throttle profiles
-                    if (settings.SlotThrottleProfiles == null || settings.SlotThrottleProfiles.Length != 6)
+                    if (settings.SlotThrottleProfiles == null || settings.SlotThrottleProfiles.Length != ScalextricProtocol.SlotCount)
                     {
                         settings.SlotThrottleProfiles = ["Linear", "Linear", "Linear", "Linear", "Linear", "Linear"];
                     }
@@ -121,7 +122,7 @@ public class AppSettings : IAppSettings
                     {
                         // Ensure each value is a valid profile name
                         var validProfiles = new[] { "Linear", "Exponential", "Stepped" };
-                        for (int i = 0; i < 6; i++)
+                        for (int i = 0; i < ScalextricProtocol.SlotCount; i++)
                         {
                             if (string.IsNullOrEmpty(settings.SlotThrottleProfiles[i]) ||
                                 Array.IndexOf(validProfiles, settings.SlotThrottleProfiles[i]) < 0)
@@ -132,7 +133,7 @@ public class AppSettings : IAppSettings
                     }
 
                     // Validate per-slot ghost sources
-                    if (settings.SlotGhostSources == null || settings.SlotGhostSources.Length != 6)
+                    if (settings.SlotGhostSources == null || settings.SlotGhostSources.Length != ScalextricProtocol.SlotCount)
                     {
                         settings.SlotGhostSources = ["FixedSpeed", "FixedSpeed", "FixedSpeed", "FixedSpeed", "FixedSpeed", "FixedSpeed"];
                     }
@@ -140,7 +141,7 @@ public class AppSettings : IAppSettings
                     {
                         // Ensure each value is a valid ghost source name
                         var validSources = new[] { "FixedSpeed", "RecordedLap" };
-                        for (int i = 0; i < 6; i++)
+                        for (int i = 0; i < ScalextricProtocol.SlotCount; i++)
                         {
                             if (string.IsNullOrEmpty(settings.SlotGhostSources[i]) ||
                                 Array.IndexOf(validSources, settings.SlotGhostSources[i]) < 0)

@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Scalextric;
 using ScalextricRace.Models;
 
 namespace ScalextricRace.ViewModels;
@@ -20,7 +21,7 @@ public partial class CarViewModel : ObservableObject
     /// <summary>
     /// Callback invoked when any car property changes (for auto-save).
     /// </summary>
-    public Action<CarViewModel>? OnChanged { get; set; }
+    public Action<CarViewModel>? OnPropertyValueChanged { get; set; }
 
     /// <summary>
     /// Callback invoked when tuning is requested for this car.
@@ -111,31 +112,31 @@ public partial class CarViewModel : ObservableObject
     partial void OnNameChanged(string value)
     {
         _car.Name = value;
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnImagePathChanged(string? value)
     {
         _car.ImagePath = value;
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnDefaultPowerChanged(int value)
     {
-        _car.DefaultPower = Math.Clamp(value, 0, 63);
-        OnChanged?.Invoke(this);
+        _car.DefaultPower = Math.Clamp(value, ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnGhostMaxPowerChanged(int value)
     {
-        _car.GhostMaxPower = Math.Clamp(value, 0, 63);
-        OnChanged?.Invoke(this);
+        _car.GhostMaxPower = Math.Clamp(value, ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnMinPowerChanged(int value)
     {
-        _car.MinPower = Math.Clamp(value, 0, 63);
-        OnChanged?.Invoke(this);
+        _car.MinPower = Math.Clamp(value, ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     /// <summary>

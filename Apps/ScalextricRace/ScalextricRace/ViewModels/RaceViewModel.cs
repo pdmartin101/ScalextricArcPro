@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Scalextric;
 using ScalextricRace.Models;
 
 namespace ScalextricRace.ViewModels;
@@ -20,7 +21,7 @@ public partial class RaceViewModel : ObservableObject
     /// <summary>
     /// Callback invoked when any race property changes (for auto-save).
     /// </summary>
-    public Action<RaceViewModel>? OnChanged { get; set; }
+    public Action<RaceViewModel>? OnPropertyValueChanged { get; set; }
 
     /// <summary>
     /// Callback invoked when image selection is requested for this race.
@@ -224,94 +225,94 @@ public partial class RaceViewModel : ObservableObject
     partial void OnNameChanged(string value)
     {
         _race.Name = value;
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnImagePathChanged(string? value)
     {
         _race.ImagePath = value;
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnDefaultPowerChanged(int value)
     {
-        _race.DefaultPower = Math.Clamp(value, 0, 63);
-        OnChanged?.Invoke(this);
+        _race.DefaultPower = Math.Clamp(value, ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     // Free Practice sync
     partial void OnFreePracticeEnabledChanged(bool value)
     {
         _race.FreePractice.Enabled = value;
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnFreePracticeModeChanged(RaceStageMode value)
     {
         _race.FreePractice.Mode = value;
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnFreePracticeLapCountChanged(int value)
     {
         _race.FreePractice.LapCount = Math.Max(1, value);
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnFreePracticeTimeMinutesChanged(int value)
     {
         _race.FreePractice.TimeMinutes = Math.Max(1, value);
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     // Qualifying sync
     partial void OnQualifyingEnabledChanged(bool value)
     {
         _race.Qualifying.Enabled = value;
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnQualifyingModeChanged(RaceStageMode value)
     {
         _race.Qualifying.Mode = value;
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnQualifyingLapCountChanged(int value)
     {
         _race.Qualifying.LapCount = Math.Max(1, value);
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnQualifyingTimeMinutesChanged(int value)
     {
         _race.Qualifying.TimeMinutes = Math.Max(1, value);
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     // Race stage sync
     partial void OnRaceStageEnabledChanged(bool value)
     {
         _race.RaceStage.Enabled = value;
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnRaceStageModeChanged(RaceStageMode value)
     {
         _race.RaceStage.Mode = value;
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnRaceStageLapCountChanged(int value)
     {
         _race.RaceStage.LapCount = Math.Max(1, value);
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnRaceStageTimeMinutesChanged(int value)
     {
         _race.RaceStage.TimeMinutes = Math.Max(1, value);
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     /// <summary>

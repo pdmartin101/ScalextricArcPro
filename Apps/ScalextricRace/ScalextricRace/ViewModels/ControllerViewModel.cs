@@ -19,7 +19,7 @@ public partial class ControllerViewModel : ObservableObject
     /// Power level for this slot (0-63).
     /// </summary>
     [ObservableProperty]
-    private int _powerLevel = 63;
+    private int _powerLevel = ScalextricProtocol.MaxPowerLevel;
 
     /// <summary>
     /// Throttle profile type for this slot.

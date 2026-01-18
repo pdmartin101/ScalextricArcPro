@@ -1,3 +1,5 @@
+using Scalextric;
+
 namespace ScalextricRace.Models;
 
 /// <summary>
@@ -25,7 +27,7 @@ public class Car
     /// Default power level for normal driving (0-63).
     /// This is the typical power setting for this car.
     /// </summary>
-    public int DefaultPower { get; set; } = 63;
+    public int DefaultPower { get; set; } = ScalextricProtocol.MaxPowerLevel;
 
     /// <summary>
     /// Maximum ghost mode power without crashing (0-63).
@@ -66,9 +68,9 @@ public class Car
     public Car(string name, int defaultPower, int ghostMaxPower, int minPower)
     {
         Name = name;
-        DefaultPower = Math.Clamp(defaultPower, 0, 63);
-        GhostMaxPower = Math.Clamp(ghostMaxPower, 0, 63);
-        MinPower = Math.Clamp(minPower, 0, 63);
+        DefaultPower = Math.Clamp(defaultPower, ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
+        GhostMaxPower = Math.Clamp(ghostMaxPower, ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
+        MinPower = Math.Clamp(minPower, ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
     }
 
     /// <summary>
@@ -89,7 +91,7 @@ public class Car
         {
             Id = DefaultCarId,
             Name = "Default Car",
-            DefaultPower = 63,
+            DefaultPower = ScalextricProtocol.MaxPowerLevel,
             GhostMaxPower = 45,
             MinPower = 10
         };

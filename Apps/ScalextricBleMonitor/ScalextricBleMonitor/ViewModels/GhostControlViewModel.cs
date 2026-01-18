@@ -69,7 +69,7 @@ public partial class GhostControlViewModel : ObservableObject
         Controllers.Clear();
         for (int i = 0; i < MaxControllers; i++)
         {
-            var powerLevel = _settings.SlotPowerLevels.Length > i ? _settings.SlotPowerLevels[i] : 63;
+            var powerLevel = _settings.SlotPowerLevels.Length > i ? _settings.SlotPowerLevels[i] : ScalextricProtocol.MaxPowerLevel;
             var isGhostMode = _settings.SlotGhostModes.Length > i && _settings.SlotGhostModes[i];
 
             // Load throttle profile from settings

@@ -1,3 +1,4 @@
+using Scalextric;
 using ScalextricRace.Models;
 
 namespace ScalextricRace.Services;
@@ -19,9 +20,9 @@ public class CarStorage : JsonStorageBase<Car>, ICarStorage
     {
         foreach (var car in items)
         {
-            car.DefaultPower = Math.Clamp(car.DefaultPower, 0, 63);
-            car.GhostMaxPower = Math.Clamp(car.GhostMaxPower, 0, 63);
-            car.MinPower = Math.Clamp(car.MinPower, 0, 63);
+            car.DefaultPower = Math.Clamp(car.DefaultPower, ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
+            car.GhostMaxPower = Math.Clamp(car.GhostMaxPower, ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
+            car.MinPower = Math.Clamp(car.MinPower, ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Scalextric;
 using ScalextricBleMonitor.Models;
 using Serilog;
 
@@ -124,12 +125,12 @@ public class GhostRecordingService : IGhostRecordingService
             return;
 
         // Scale the throttle value by power level to capture actual power delivered.
-        // During recording: Final Power = (PowerLevel/63) × ThrottleProfile[ThrottleValue]
+        // During recording: Final Power = (PowerLevel/MaxPowerLevel) × ThrottleProfile[ThrottleValue]
         // For playback in ghost mode: Final Power = ThrottleProfile[PowerMultiplier]
-        // So we store: scaledThrottle = (throttleValue × powerLevel) / 63
+        // So we store: scaledThrottle = (throttleValue × powerLevel) / MaxPowerLevel
         // This way playback directly uses the scaled value without needing the original power level.
-        int scaledThrottle = (throttleValue * powerLevel) / 63;
-        byte clampedThrottle = (byte)Math.Clamp(scaledThrottle, 0, 63);
+        int scaledThrottle = (throttleValue * powerLevel) / ScalextricProtocol.MaxPowerLevel;
+        byte clampedThrottle = (byte)Math.Clamp(scaledThrottle, ScalextricProtocol.MinPowerLevel, ScalextricProtocol.MaxPowerLevel);
 
         // Add to circular buffer with wall-clock timestamp
         var bufferedSample = new BufferedThrottleSample(timestamp, clampedThrottle);
@@ -277,7 +278,7 @@ public class GhostRecordingService : IGhostRecordingService
         var recordingDurationSec = recordingDurationCs / 100.0;
         var avgSamplesPerSec = recordedLap.SampleCount / (recordingDurationSec > 0 ? recordingDurationSec : 1);
 
-        byte minThrottle = 63, maxThrottle = 0;
+        byte minThrottle = ScalextricProtocol.MaxPowerLevel, maxThrottle = 0;
         foreach (var sample in recordedLap.Samples)
         {
             if (sample.ThrottleValue < minThrottle) minThrottle = sample.ThrottleValue;

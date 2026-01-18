@@ -48,7 +48,7 @@ public partial class ControllerViewModel : ObservableObject
     /// In ghost mode, this becomes the direct throttle index (0-63).
     /// </summary>
     [ObservableProperty]
-    private int _powerLevel = 63;
+    private int _powerLevel = ScalextricProtocol.MaxPowerLevel;
 
     partial void OnPowerLevelChanged(int value)
     {
@@ -355,7 +355,7 @@ public partial class ControllerViewModel : ObservableObject
     [RelayCommand]
     private void IncrementGhostThrottle()
     {
-        if (GhostThrottleLevel < 63) GhostThrottleLevel++;
+        if (GhostThrottleLevel < ScalextricProtocol.MaxPowerLevel) GhostThrottleLevel++;
     }
 
     /// <summary>
@@ -365,7 +365,7 @@ public partial class ControllerViewModel : ObservableObject
     [RelayCommand]
     private void DecrementGhostThrottle()
     {
-        if (GhostThrottleLevel > 0) GhostThrottleLevel--;
+        if (GhostThrottleLevel > ScalextricProtocol.MinPowerLevel) GhostThrottleLevel--;
     }
 
     public void UpdateFromByte(byte data)

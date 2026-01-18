@@ -1,9 +1,7 @@
 using System.Linq;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.VisualTree;
-using ScalextricRace.Models;
 using ScalextricRace.ViewModels;
 
 namespace ScalextricRace.Views;
@@ -12,6 +10,7 @@ namespace ScalextricRace.Views;
 /// Main window for the ScalextricRace application.
 /// Uses MVVM pattern - all business logic is in MainViewModel.
 /// Window service configuration is handled by App.axaml.cs.
+/// Keyboard handling (Escape key) is done via XAML KeyBinding.
 /// </summary>
 public partial class MainWindow : Window
 {
@@ -21,7 +20,6 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        KeyDown += OnKeyDown;
         Closing += OnWindowClosing;
     }
 
@@ -33,32 +31,6 @@ public partial class MainWindow : Window
         if (DataContext is MainViewModel viewModel)
         {
             viewModel.SaveAllOnShutdown();
-        }
-    }
-
-    /// <summary>
-    /// Handles key down events.
-    /// Escape key exits racing or configure mode, or closes menu.
-    /// </summary>
-    private void OnKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Escape && DataContext is MainViewModel viewModel)
-        {
-            if (viewModel.CurrentAppMode == AppMode.Racing)
-            {
-                viewModel.ExitRacingCommand.Execute(null);
-                e.Handled = true;
-            }
-            else if (viewModel.CurrentAppMode == AppMode.Configure)
-            {
-                viewModel.ExitConfigureCommand.Execute(null);
-                e.Handled = true;
-            }
-            else if (viewModel.IsMenuOpen)
-            {
-                viewModel.IsMenuOpen = false;
-                e.Handled = true;
-            }
         }
     }
 

@@ -38,7 +38,7 @@ public partial class PowerControlViewModel : ObservableObject
     /// Global power level for all slots (0-63). Only used when UsePerSlotPower is false.
     /// </summary>
     [ObservableProperty]
-    private int _powerLevel = 63;
+    private int _powerLevel = ScalextricProtocol.MaxPowerLevel;
 
     /// <summary>
     /// Status text for power operations.

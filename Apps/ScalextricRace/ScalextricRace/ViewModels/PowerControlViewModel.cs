@@ -19,7 +19,7 @@ public partial class PowerControlViewModel : ObservableObject
     /// The global power level (0-63) applied to all slots.
     /// </summary>
     [ObservableProperty]
-    private int _powerLevel = 63;
+    private int _powerLevel = ScalextricProtocol.MaxPowerLevel;
 
     /// <summary>
     /// The selected throttle profile type for all cars.

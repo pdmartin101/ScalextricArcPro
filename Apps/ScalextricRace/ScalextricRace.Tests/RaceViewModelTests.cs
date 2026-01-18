@@ -143,13 +143,13 @@ public class RaceViewModelTests
     }
 
     [Fact]
-    public void OnChanged_CalledOnPropertyChange()
+    public void OnPropertyValueChanged_CalledOnPropertyChange()
     {
         // Arrange
         var race = new Race();
         var viewModel = new RaceViewModel(race);
         var callbackInvoked = false;
-        viewModel.OnChanged = _ => callbackInvoked = true;
+        viewModel.OnPropertyValueChanged = _ => callbackInvoked = true;
 
         // Act
         viewModel.Name = "New Name";
@@ -159,13 +159,13 @@ public class RaceViewModelTests
     }
 
     [Fact]
-    public void OnChanged_CalledOnStageChange()
+    public void OnPropertyValueChanged_CalledOnStageChange()
     {
         // Arrange
         var race = new Race();
         var viewModel = new RaceViewModel(race);
         var callbackInvoked = false;
-        viewModel.OnChanged = _ => callbackInvoked = true;
+        viewModel.OnPropertyValueChanged = _ => callbackInvoked = true;
 
         // Act
         viewModel.FreePracticeEnabled = false;

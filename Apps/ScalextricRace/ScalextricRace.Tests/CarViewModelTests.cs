@@ -85,13 +85,13 @@ public class CarViewModelTests
     }
 
     [Fact]
-    public void OnChanged_CalledOnPropertyChange()
+    public void OnPropertyValueChanged_CalledOnPropertyChange()
     {
         // Arrange
         var car = new Car("Test Car");
         var viewModel = new CarViewModel(car);
         var callbackInvoked = false;
-        viewModel.OnChanged = _ => callbackInvoked = true;
+        viewModel.OnPropertyValueChanged = _ => callbackInvoked = true;
 
         // Act
         viewModel.Name = "New Name";

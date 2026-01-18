@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Scalextric;
 using ScalextricRace.Models;
 
 namespace ScalextricRace.ViewModels;
@@ -20,7 +21,7 @@ public partial class DriverViewModel : ObservableObject
     /// <summary>
     /// Callback invoked when any driver property changes (for auto-save).
     /// </summary>
-    public Action<DriverViewModel>? OnChanged { get; set; }
+    public Action<DriverViewModel>? OnPropertyValueChanged { get; set; }
 
     /// <summary>
     /// Callback invoked when image selection is requested for this driver.
@@ -76,14 +77,14 @@ public partial class DriverViewModel : ObservableObject
     /// </summary>
     public int PowerPercentageSliderValue
     {
-        get => PowerPercentage ?? 100;
-        set => PowerPercentage = value >= 100 ? null : value;
+        get => PowerPercentage ?? ScalextricProtocol.DriverPowerMaxPercent;
+        set => PowerPercentage = value >= ScalextricProtocol.DriverPowerMaxPercent ? null : value;
     }
 
     /// <summary>
     /// Gets whether this driver has a power restriction (less than 100%).
     /// </summary>
-    public bool HasPowerRestriction => PowerPercentage.HasValue && PowerPercentage.Value < 100;
+    public bool HasPowerRestriction => PowerPercentage.HasValue && PowerPercentage.Value < ScalextricProtocol.DriverPowerMaxPercent;
 
     /// <summary>
     /// Gets the power percentage as a display string (e.g., "75%").
@@ -115,19 +116,21 @@ public partial class DriverViewModel : ObservableObject
     partial void OnNameChanged(string value)
     {
         _driver.Name = value;
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnImagePathChanged(string? value)
     {
         _driver.ImagePath = value;
-        OnChanged?.Invoke(this);
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     partial void OnPowerPercentageChanged(int? value)
     {
-        _driver.PowerPercentage = value.HasValue ? Math.Clamp(value.Value, 50, 100) : null;
-        OnChanged?.Invoke(this);
+        _driver.PowerPercentage = value.HasValue
+            ? Math.Clamp(value.Value, ScalextricProtocol.DriverPowerMinPercent, ScalextricProtocol.DriverPowerMaxPercent)
+            : null;
+        OnPropertyValueChanged?.Invoke(this);
     }
 
     /// <summary>
@@ -158,8 +161,8 @@ public partial class DriverViewModel : ObservableObject
     [RelayCommand]
     private void IncrementPowerPercentage()
     {
-        var current = PowerPercentage ?? 100;
-        if (current < 100)
+        var current = PowerPercentage ?? ScalextricProtocol.DriverPowerMaxPercent;
+        if (current < ScalextricProtocol.DriverPowerMaxPercent)
         {
             PowerPercentage = current + 1;
         }
@@ -172,8 +175,8 @@ public partial class DriverViewModel : ObservableObject
     [RelayCommand]
     private void DecrementPowerPercentage()
     {
-        var current = PowerPercentage ?? 100;
-        if (current > 50)
+        var current = PowerPercentage ?? ScalextricProtocol.DriverPowerMaxPercent;
+        if (current > ScalextricProtocol.DriverPowerMinPercent)
         {
             PowerPercentage = current - 1;
         }

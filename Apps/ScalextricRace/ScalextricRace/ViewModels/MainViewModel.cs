@@ -521,6 +521,27 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Handles the Escape key press. Exits racing or configure mode, or closes menu.
+    /// This command is bound to the Escape key via KeyBinding in XAML.
+    /// </summary>
+    [RelayCommand]
+    private void HandleEscapeKey()
+    {
+        if (CurrentAppMode == AppMode.Racing)
+        {
+            ExitRacing();
+        }
+        else if (CurrentAppMode == AppMode.Configure)
+        {
+            ExitConfigure();
+        }
+        else if (IsMenuOpen)
+        {
+            IsMenuOpen = false;
+        }
+    }
+
+    /// <summary>
     /// Navigates to the specified mode and closes the menu.
     /// </summary>
     /// <param name="mode">The navigation mode to switch to.</param>

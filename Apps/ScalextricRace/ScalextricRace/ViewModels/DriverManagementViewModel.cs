@@ -76,7 +76,7 @@ public partial class DriverManagementViewModel : ObservableObject
         var viewModel = new DriverViewModel(driver, isDefault)
         {
             OnDeleteRequested = DeleteDriver,
-            OnChanged = _ => SaveDrivers(),
+            OnPropertyValueChanged = _ => SaveDrivers(),
             OnImageChangeRequested = OnDriverImageChangeRequested
         };
         return viewModel;
@@ -132,7 +132,7 @@ public partial class DriverManagementViewModel : ObservableObject
 
         // Clear callbacks to avoid any potential issues
         driver.OnDeleteRequested = null;
-        driver.OnChanged = null;
+        driver.OnPropertyValueChanged = null;
         driver.OnImageChangeRequested = null;
 
         Drivers.Remove(driver);
