@@ -1,5 +1,4 @@
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 
 namespace ScalextricRace.Views;
 
@@ -14,13 +13,5 @@ public partial class RaceConfigWindow : Window
     public RaceConfigWindow()
     {
         InitializeComponent();
-    }
-
-    /// <summary>
-    /// Handles the Close button click.
-    /// </summary>
-    private void OnCloseClick(object? sender, RoutedEventArgs e)
-    {
-        Close();
     }
 }

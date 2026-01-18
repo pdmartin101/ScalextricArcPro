@@ -283,7 +283,7 @@
                     Spacing="10"
                     Margin="0,15,0,0">
             <Button Content="Close"
-                    Click="OnCloseClick"
+                    Command="{Binding $parent[Window].Close}"
                     Padding="20,10"
                     FontSize="14" />
         </StackPanel>
