@@ -26,7 +26,8 @@
       "Bash(move ScalextricBleMonitor \"Apps\\\\ScalextricBleMonitor\\\\ScalextricBleMonitor\")",
       "Bash(ls:*)",
       "Bash(findstr:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(dotnet:*)"
     ]
   }
 }

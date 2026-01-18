@@ -1,7 +1,7 @@
 # Scalextric Codebase Analysis & Improvement Plan
 
 **Last Updated:** 2026-01-18
-**Status:** Phase 1 Complete - Awaiting Further Instructions
+**Status:** Phase 1 & 2 Complete - Awaiting Further Instructions
 
 ---
 
@@ -35,13 +35,13 @@ Comprehensive analysis of the Scalextric codebase reveals **high-quality MVVM im
 - ✅ **1.3** Create ConnectionStateToBrushConverter for XAML binding
 - ✅ **1.4** Update XAML bindings to use converters instead of brush properties
 
-### Phase 2: Testability Improvements
-- ❌ **2.1** Create IDispatcherService abstraction for UI thread marshalling
-- ❌ **2.2** Replace Dispatcher.UIThread calls in BleConnectionViewModel (BleMonitor)
-- ❌ **2.3** Replace Dispatcher.UIThread calls in PowerControlViewModel (BleMonitor)
-- ❌ **2.4** Replace Dispatcher.UIThread calls in GhostControlViewModel (BleMonitor)
-- ❌ **2.5** Replace Dispatcher.UIThread calls in NotificationLogViewModel (BleMonitor)
-- ❌ **2.6** Replace Dispatcher.UIThread calls in MainViewModel (ScalextricRace)
+### Phase 2: Testability Improvements ✅ COMPLETE
+- ✅ **2.1** Create IDispatcherService abstraction for UI thread marshalling
+- ✅ **2.2** Replace Dispatcher.UIThread calls in BleConnectionViewModel (BleMonitor)
+- ✅ **2.3** Replace Dispatcher.UIThread calls in PowerControlViewModel (BleMonitor)
+- ✅ **2.4** Replace Dispatcher.UIThread calls in GhostControlViewModel (BleMonitor)
+- ✅ **2.5** Replace Dispatcher.UIThread calls in NotificationLogViewModel (BleMonitor)
+- ✅ **2.6** Replace Dispatcher.UIThread calls in MainViewModel (ScalextricRace)
 
 ### Phase 3: Code Organization
 - ❌ **3.1** Move RaceStageModeConverter from ViewModels to Converters folder

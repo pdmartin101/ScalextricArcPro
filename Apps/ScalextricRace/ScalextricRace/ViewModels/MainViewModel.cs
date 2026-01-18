@@ -16,6 +16,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 {
     #region Fields
 
+    private readonly IDispatcherService _dispatcher;
     private readonly IPowerHeartbeatService? _powerHeartbeatService;
     private readonly IWindowService _windowService;
     private readonly AppSettings _settings;
@@ -374,6 +375,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// </summary>
     /// <param name="settings">The application settings.</param>
     /// <param name="windowService">The window service for dialogs.</param>
+    /// <param name="dispatcher">The dispatcher service for UI thread marshaling.</param>
     /// <param name="connection">The BLE connection view model.</param>
     /// <param name="carManagement">The car management view model.</param>
     /// <param name="driverManagement">The driver management view model.</param>
@@ -383,6 +385,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     /// <param name="powerHeartbeatService">The power heartbeat service for maintaining track power.</param>
     /// <param name="carStorage">The car storage service.</param>
     public MainViewModel(AppSettings settings, IWindowService windowService,
+        IDispatcherService dispatcher,
         BleConnectionViewModel connection,
         CarManagementViewModel carManagement, DriverManagementViewModel driverManagement,
         RaceManagementViewModel raceManagement, PowerControlViewModel powerControl,
@@ -392,6 +395,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         _settings = settings;
         _windowService = windowService;
+        _dispatcher = dispatcher;
         _connection = connection;
         _carManagement = carManagement;
         _driverManagement = driverManagement;
@@ -939,7 +943,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                     var entry = _raceConfig.RaceEntries[slotNumber - 1];
                     if (entry.IsEnabled)
                     {
-                        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                        _dispatcher.Post(() =>
                         {
                             entry.CurrentLap = result.CurrentLap;
                             entry.LastLapTime = result.LapTimeSeconds;
@@ -1031,7 +1035,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         Log.Error("Power heartbeat error: {ErrorMessage}", errorMessage);
 
-        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        _dispatcher.Post(() =>
         {
             StatusText = errorMessage;
             IsPowerEnabled = false;

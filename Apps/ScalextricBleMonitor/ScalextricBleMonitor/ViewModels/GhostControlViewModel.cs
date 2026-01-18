@@ -1,7 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Scalextric;
 using ScalextricBleMonitor.Models;
@@ -19,6 +18,7 @@ public partial class GhostControlViewModel : ObservableObject
     private readonly IGhostRecordingService _ghostRecordingService;
     private readonly IGhostPlaybackService _ghostPlaybackService;
     private readonly AppSettings _settings;
+    private readonly IDispatcherService _dispatcher;
 
     private const int MaxControllers = 6;
 
@@ -48,11 +48,13 @@ public partial class GhostControlViewModel : ObservableObject
     public GhostControlViewModel(
         IGhostRecordingService ghostRecordingService,
         IGhostPlaybackService ghostPlaybackService,
-        AppSettings settings)
+        AppSettings settings,
+        IDispatcherService dispatcher)
     {
         _ghostRecordingService = ghostRecordingService;
         _ghostPlaybackService = ghostPlaybackService;
         _settings = settings;
+        _dispatcher = dispatcher;
 
         // Subscribe to recording events
         _ghostRecordingService.RecordingStarted += OnRecordingStarted;
@@ -248,7 +250,7 @@ public partial class GhostControlViewModel : ObservableObject
     private void OnRecordingStarted(object? sender, LapRecordingStartedEventArgs e)
     {
         // Update controller to show actively recording (after first finish line crossing)
-        Dispatcher.UIThread.Post(() =>
+        _dispatcher.Post(() =>
         {
             var controller = Controllers.FirstOrDefault(c => c.SlotNumber == e.SlotNumber);
             if (controller != null)
@@ -262,7 +264,7 @@ public partial class GhostControlViewModel : ObservableObject
     private void OnRecordingCompleted(object? sender, LapRecordingCompletedEventArgs e)
     {
         // Add the recorded lap to the appropriate controller's available laps
-        Dispatcher.UIThread.Post(() =>
+        _dispatcher.Post(() =>
         {
             var controller = Controllers.FirstOrDefault(c => c.SlotNumber == e.SlotNumber);
             if (controller != null)

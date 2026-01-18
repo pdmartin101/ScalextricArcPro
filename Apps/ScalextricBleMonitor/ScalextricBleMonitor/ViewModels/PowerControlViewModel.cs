@@ -1,6 +1,5 @@
 using System;
 using System.Threading.Tasks;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Scalextric;
@@ -17,6 +16,7 @@ public partial class PowerControlViewModel : ObservableObject
     private readonly Services.IBleService _bleService;
     private readonly IPowerHeartbeatService _powerHeartbeatService;
     private readonly ITimingCalibrationService _timingCalibrationService;
+    private readonly IDispatcherService _dispatcher;
     private readonly AppSettings _settings;
 
     // Delay between BLE write operations to avoid flooding the connection
@@ -77,11 +77,13 @@ public partial class PowerControlViewModel : ObservableObject
         Services.IBleService bleService,
         IPowerHeartbeatService powerHeartbeatService,
         ITimingCalibrationService timingCalibrationService,
+        IDispatcherService dispatcher,
         AppSettings settings)
     {
         _bleService = bleService;
         _powerHeartbeatService = powerHeartbeatService;
         _timingCalibrationService = timingCalibrationService;
+        _dispatcher = dispatcher;
         _settings = settings;
 
         // Subscribe to power heartbeat errors
@@ -94,7 +96,7 @@ public partial class PowerControlViewModel : ObservableObject
 
     private void OnPowerHeartbeatError(object? sender, string message)
     {
-        Dispatcher.UIThread.Post(() =>
+        _dispatcher.Post(() =>
         {
             StatusText = message;
             IsPowerEnabled = false;
@@ -271,7 +273,7 @@ public partial class PowerControlViewModel : ObservableObject
             catch (Exception ex)
             {
                 Log.Error(ex, "Error in {OperationName}", operationName);
-                Dispatcher.UIThread.Post(() => StatusText = $"Error: {ex.Message}");
+                _dispatcher.Post(() => StatusText = $"Error: {ex.Message}");
             }
         });
     }

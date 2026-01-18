@@ -98,6 +98,7 @@ public partial class App : Application
         services.AddSingleton(_ => AppSettings.Load());
 
         // Register services
+        services.AddSingleton<Scalextric.IDispatcherService, Services.AvaloniaDispatcherService>();
 #if WINDOWS
         services.AddSingleton<Services.IBleService, Services.BleService>();
         services.AddSingleton<Scalextric.IPowerHeartbeatService>(sp =>

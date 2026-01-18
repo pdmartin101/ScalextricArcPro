@@ -77,6 +77,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         new GhostPlaybackService(),
         new PowerHeartbeatService(new BleService()),
         new TimingCalibrationService(),
+        new AvaloniaDispatcherService(),
         AppSettings.Load())
     {
     }
@@ -90,16 +91,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IGhostPlaybackService ghostPlaybackService,
         IPowerHeartbeatService powerHeartbeatService,
         ITimingCalibrationService timingCalibrationService,
+        IDispatcherService dispatcher,
         AppSettings settings)
     {
         _timingCalibrationService = timingCalibrationService;
         _settings = settings;
 
         // Create child ViewModels
-        _connection = new BleConnectionViewModel(bleService);
-        _power = new PowerControlViewModel(bleService, powerHeartbeatService, timingCalibrationService, settings);
-        _notifications = new NotificationLogViewModel();
-        _ghost = new GhostControlViewModel(ghostRecordingService, ghostPlaybackService, settings);
+        _connection = new BleConnectionViewModel(bleService, dispatcher);
+        _power = new PowerControlViewModel(bleService, powerHeartbeatService, timingCalibrationService, dispatcher, settings);
+        _notifications = new NotificationLogViewModel(dispatcher);
+        _ghost = new GhostControlViewModel(ghostRecordingService, ghostPlaybackService, settings, dispatcher);
 
         // Wire up connection events
         _connection.GattConnected += OnGattConnected;

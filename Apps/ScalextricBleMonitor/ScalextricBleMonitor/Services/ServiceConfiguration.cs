@@ -17,6 +17,7 @@ public static class ServiceConfiguration
     public static IServiceCollection ConfigureServices(this IServiceCollection services)
     {
         // Register services
+        services.AddSingleton<IDispatcherService, AvaloniaDispatcherService>();
         services.AddSingleton<IBleService, BleService>();
         // Register Scalextric.IBleService pointing to the same instance for services that only need base interface
         services.AddSingleton<Scalextric.IBleService>(sp => sp.GetRequiredService<IBleService>());

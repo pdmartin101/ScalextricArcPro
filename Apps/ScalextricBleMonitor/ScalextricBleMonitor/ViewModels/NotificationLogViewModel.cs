@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Scalextric;
@@ -19,6 +18,7 @@ public partial class NotificationLogViewModel : ObservableObject, IDisposable
     private const int MaxNotificationLogEntries = 100;
     private const int NotificationBatchIntervalMs = 50;
 
+    private readonly IDispatcherService _dispatcher;
     private readonly ConcurrentQueue<BleNotificationEventArgs> _notificationBatch = new();
     private Timer? _notificationBatchTimer;
     private bool _disposed;
@@ -63,8 +63,10 @@ public partial class NotificationLogViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Initializes a new instance of the NotificationLogViewModel.
     /// </summary>
-    public NotificationLogViewModel()
+    public NotificationLogViewModel(IDispatcherService dispatcher)
     {
+        _dispatcher = dispatcher;
+
         // Start notification batch timer to reduce UI dispatcher load
         _notificationBatchTimer = new Timer(
             FlushNotificationBatch,
@@ -97,7 +99,7 @@ public partial class NotificationLogViewModel : ObservableObject, IDisposable
             return;
 
         // Process entire batch in a single UI dispatcher call
-        Dispatcher.UIThread.Post(() =>
+        _dispatcher.Post(() =>
         {
             foreach (var e in batch)
             {

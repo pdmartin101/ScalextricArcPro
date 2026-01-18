@@ -1,7 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Scalextric;
 using ScalextricBleMonitor.Models;
@@ -15,6 +14,7 @@ namespace ScalextricBleMonitor.ViewModels;
 public partial class BleConnectionViewModel : ObservableObject, IDisposable
 {
     private readonly Services.IBleService _bleService;
+    private readonly IDispatcherService _dispatcher;
     private bool _disposed;
 
     /// <summary>
@@ -89,9 +89,10 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
     /// <summary>
     /// Initializes a new instance of the BleConnectionViewModel.
     /// </summary>
-    public BleConnectionViewModel(Services.IBleService bleService)
+    public BleConnectionViewModel(Services.IBleService bleService, IDispatcherService dispatcher)
     {
         _bleService = bleService;
+        _dispatcher = dispatcher;
 
         _bleService.ConnectionStateChanged += OnConnectionStateChanged;
         _bleService.StatusMessageChanged += OnStatusMessageChanged;
@@ -126,7 +127,7 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
 
     private void OnConnectionStateChanged(object? sender, BleConnectionStateEventArgs e)
     {
-        Dispatcher.UIThread.Post(() =>
+        _dispatcher.Post(() =>
         {
             var wasGattConnected = IsGattConnected;
             IsConnected = e.IsDeviceDetected;
@@ -154,7 +155,7 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
 
     private void OnStatusMessageChanged(object? sender, string message)
     {
-        Dispatcher.UIThread.Post(() =>
+        _dispatcher.Post(() =>
         {
             StatusText = message;
         });
@@ -162,7 +163,7 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
 
     private void OnServicesDiscovered(object? sender, BleServicesDiscoveredEventArgs e)
     {
-        Dispatcher.UIThread.Post(() =>
+        _dispatcher.Post(() =>
         {
             Services.Clear();
             foreach (var service in e.Services)
@@ -200,7 +201,7 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
 
     private void OnCharacteristicValueRead(object? sender, BleCharacteristicReadEventArgs e)
     {
-        Dispatcher.UIThread.Post(() =>
+        _dispatcher.Post(() =>
         {
             // Find the characteristic in our Services collection and update its value
             foreach (var service in Services)
