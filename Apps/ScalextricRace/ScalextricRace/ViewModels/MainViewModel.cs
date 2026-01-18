@@ -33,6 +33,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     // Event handlers (stored for cleanup in Dispose)
     private readonly System.ComponentModel.PropertyChangedEventHandler _connectionPropertyChangedHandler;
+    private readonly System.ComponentModel.PropertyChangedEventHandler _raceConfigPropertyChangedHandler;
 
     #endregion
 
@@ -440,8 +441,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
         };
         _connection.PropertyChanged += _connectionPropertyChangedHandler;
 
-        // Forward race configuration property changes
-        _raceConfig.PropertyChanged += (s, e) =>
+        // Create and store race configuration event handler for proper cleanup
+        _raceConfigPropertyChangedHandler = (s, e) =>
         {
             if (e.PropertyName == nameof(RaceConfigurationViewModel.CanStartRace))
                 OnPropertyChanged(nameof(CanStartRace));
@@ -484,6 +485,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             else if (e.PropertyName == nameof(RaceConfigurationViewModel.ConfigRaceDisplay))
                 OnPropertyChanged(nameof(ConfigRaceDisplay));
         };
+        _raceConfig.PropertyChanged += _raceConfigPropertyChangedHandler;
 
         // Subscribe to heartbeat service events
         if (_powerHeartbeatService != null)
@@ -1088,6 +1090,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (_connection != null)
         {
             _connection.PropertyChanged -= _connectionPropertyChangedHandler;
+        }
+
+        // Unsubscribe from race configuration property changes
+        if (_raceConfig != null)
+        {
+            _raceConfig.PropertyChanged -= _raceConfigPropertyChangedHandler;
         }
     }
 

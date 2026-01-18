@@ -11,16 +11,16 @@ Comprehensive plan to fix all remaining MVVM violations in ScalextricRace, follo
 
 | Phase | Description | Issues | Fixed | Remaining | Progress |
 |-------|-------------|--------|-------|-----------|----------|
-| Phase 1 | Critical Issues | 4 | 1 | 3 | ✅⬜⬜⬜ 25% |
+| Phase 1 | Critical Issues | 4 | 2 | 2 | ✅✅⬜⬜ 50% |
 | Phase 2 | Major Issues | 6 | 0 | 6 | ⬜⬜⬜⬜⬜⬜ 0% |
 | Phase 3 | Minor Issues | 4 | 0 | 4 | ⬜⬜⬜⬜ 0% |
-| **Total** | | **14** | **1** | **13** | **7%** |
+| **Total** | | **14** | **2** | **12** | **14%** |
 
 ---
 
 ## Phase 1: Critical Issues (Memory Leaks & Dangerous Patterns)
 
-**Status**: 🔄 In Progress (1/4 complete)
+**Status**: 🔄 In Progress (2/4 complete)
 **Priority**: Fix these first - they cause memory leaks and unstable behavior
 
 ### ✅ Issue 1.1: MainViewModel - Unmanaged PropertyChanged Subscription (_connection)
@@ -65,7 +65,7 @@ Option B: Implement IDisposable and unsubscribe in Dispose()
 
 ---
 
-### ❌ Issue 1.2: MainViewModel - Unmanaged PropertyChanged Subscription (_raceConfig)
+### ✅ Issue 1.2: MainViewModel - Unmanaged PropertyChanged Subscription (_raceConfig)
 
 **File**: `ViewModels/MainViewModel.cs` (Lines 438-480)
 **Severity**: Critical - Memory Leak
@@ -86,6 +86,11 @@ _raceConfig.PropertyChanged += (s, e) =>
 - Never unsubscribed → memory leak
 
 **Fix Strategy**: Same as Issue 1.1
+
+**Fix Applied**: Implemented IDisposable cleanup
+- Stored event handler as field `_raceConfigPropertyChangedHandler`
+- Added unsubscribe in Dispose() method
+- **Result**: Memory leak fixed, 14 property forwards now properly cleaned up on shutdown
 
 ---
 
@@ -425,6 +430,6 @@ Per user request:
 ---
 
 **Phase Progress**:
-- Phase 1: ✅⬜⬜⬜ (1/4 complete - 25%)
+- Phase 1: ✅✅⬜⬜ (2/4 complete - 50%)
 - Phase 2: ⬜⬜⬜⬜⬜⬜ (0/6 complete - 0%)
 - Phase 3: ⬜⬜⬜⬜ (0/4 complete - 0%)
