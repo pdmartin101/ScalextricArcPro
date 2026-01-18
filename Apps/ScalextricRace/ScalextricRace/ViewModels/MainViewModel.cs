@@ -569,6 +569,15 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Closes the hamburger menu.
+    /// </summary>
+    [RelayCommand]
+    private void CloseMenu()
+    {
+        IsMenuOpen = false;
+    }
+
+    /// <summary>
     /// Handles the Escape key press. Exits racing or configure mode, or closes menu.
     /// This command is bound to the Escape key via KeyBinding in XAML.
     /// </summary>

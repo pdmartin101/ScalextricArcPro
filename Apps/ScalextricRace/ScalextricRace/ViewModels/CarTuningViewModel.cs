@@ -40,14 +40,9 @@ public partial class CarTuningViewModel : ObservableObject
     private bool _suppressPowerCommand;
 
     /// <summary>
-    /// Event raised when tuning is complete and values should be saved.
+    /// Callback raised when tuning is complete and values should be saved.
     /// </summary>
-    public event EventHandler? TuningComplete;
-
-    /// <summary>
-    /// Event raised when tuning is cancelled.
-    /// </summary>
-    public event EventHandler? TuningCancelled;
+    public Action<bool>? CompletionCallback { get; set; }
 
     /// <summary>
     /// Gets the car being tuned.
@@ -240,7 +235,7 @@ public partial class CarTuningViewModel : ObservableObject
                 Log.Information("Min power set to {Power} for {CarName}", PowerLevel, CarName);
                 // Stop power and complete
                 await SendStopCommand();
-                TuningComplete?.Invoke(this, EventArgs.Empty);
+                CompletionCallback?.Invoke(true);
                 break;
         }
     }
@@ -260,7 +255,7 @@ public partial class CarTuningViewModel : ObservableObject
         _carViewModel.MinPower = _originalValues.MinPower;
 
         Log.Information("Car tuning cancelled for {CarName}", CarName);
-        TuningCancelled?.Invoke(this, EventArgs.Empty);
+        CompletionCallback?.Invoke(false);
     }
 
     /// <summary>

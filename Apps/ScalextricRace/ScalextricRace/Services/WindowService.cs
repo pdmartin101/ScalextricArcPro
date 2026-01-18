@@ -29,11 +29,26 @@ public class WindowService : IWindowService
             return false;
         }
 
-        var tuningViewModel = new CarTuningViewModel(carViewModel, bleService);
-        var window = new CarTuningWindow(tuningViewModel);
+        var taskCompletionSource = new TaskCompletionSource<bool>();
 
-        var result = await window.ShowDialog<bool?>(_owner);
-        return result == true;
+        var tuningViewModel = new CarTuningViewModel(carViewModel, bleService);
+        var window = new CarTuningWindow
+        {
+            DataContext = tuningViewModel
+        };
+
+        // Wire up the completion callback
+        tuningViewModel.CompletionCallback = result =>
+        {
+            taskCompletionSource.SetResult(result);
+            window.CloseWithResult(result);
+        };
+
+        // Show the dialog
+        _ = window.ShowDialog(_owner);
+
+        // Wait for the result from the callback
+        return await taskCompletionSource.Task;
     }
 
     /// <inheritdoc />
@@ -95,14 +110,33 @@ public class WindowService : IWindowService
             return false;
         }
 
+        var taskCompletionSource = new TaskCompletionSource<bool>();
+
+        var viewModel = new ConfirmationDialogViewModel
+        {
+            Message = message,
+            ResultCallback = result =>
+            {
+                taskCompletionSource.SetResult(result);
+            }
+        };
+
         var dialog = new ConfirmationDialog
         {
             Title = title,
-            Message = message
+            DataContext = viewModel
         };
 
-        var result = await dialog.ShowDialog<bool?>(_owner);
-        return result == true;
+        // Show the dialog non-blocking
+        dialog.Show(_owner);
+
+        // Wait for the result from the callback
+        var dialogResult = await taskCompletionSource.Task;
+
+        // Close the dialog
+        dialog.Close();
+
+        return dialogResult;
     }
 
     /// <summary>

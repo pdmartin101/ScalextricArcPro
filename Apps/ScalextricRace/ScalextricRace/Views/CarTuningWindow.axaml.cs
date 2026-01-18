@@ -5,6 +5,7 @@ namespace ScalextricRace.Views;
 
 /// <summary>
 /// Car tuning wizard window.
+/// Uses MVVM pattern - business logic is in CarTuningViewModel.
 /// </summary>
 public partial class CarTuningWindow : Window
 {
@@ -16,18 +17,6 @@ public partial class CarTuningWindow : Window
     public CarTuningWindow()
     {
         InitializeComponent();
-    }
-
-    /// <summary>
-    /// Initializes with a view model and wires up completion events.
-    /// </summary>
-    /// <param name="viewModel">The tuning view model.</param>
-    public CarTuningWindow(CarTuningViewModel viewModel) : this()
-    {
-        DataContext = viewModel;
-
-        viewModel.TuningComplete += (_, _) => CloseWithCleanup(true);
-        viewModel.TuningCancelled += (_, _) => CloseWithCleanup(false);
 
         Closing += async (_, e) =>
         {
@@ -37,16 +26,20 @@ public partial class CarTuningWindow : Window
 
             // Cancel the close, await cleanup, then close properly
             e.Cancel = true;
-            await viewModel.OnClosing();
+            if (DataContext is CarTuningViewModel viewModel)
+            {
+                await viewModel.OnClosing();
+            }
             _isClosingHandled = true;
             Close();
         };
     }
 
     /// <summary>
-    /// Performs cleanup before closing the window.
+    /// Closes the window with cleanup.
+    /// Called by the ViewModel via CompletionCallback.
     /// </summary>
-    private async void CloseWithCleanup(bool? result)
+    public async void CloseWithResult(bool result)
     {
         if (_isClosingHandled)
         {

@@ -255,11 +255,15 @@
         </Border>
 
         <!-- Click-away overlay to close menu -->
-        <Border Grid.Row="1"
+        <!-- Clicking sets IsMenuOpen to false via the Click event and Command binding -->
+        <Button Grid.Row="1"
                 Background="Transparent"
                 IsVisible="{Binding IsMenuOpen}"
                 ZIndex="99"
-                PointerPressed="OnMenuOverlayPressed" />
+                Command="{Binding CloseMenuCommand}"
+                BorderThickness="0"
+                Padding="0"
+                Cursor="Arrow" />
 
         <!-- Main Content Area -->
         <Grid Grid.Row="1">
@@ -866,8 +870,7 @@
                                                                              MinWidth="180"
                                                                              MaxHeight="250"
                                                                              Background="White"
-                                                                             Padding="4"
-                                                                             SelectionChanged="OnCarSelectionChanged">
+                                                                             Padding="4">
                                                                         <ListBox.ItemTemplate>
                                                                             <DataTemplate x:DataType="vm:CarViewModel">
                                                                                 <Grid ColumnDefinitions="Auto,*" Margin="2">
@@ -942,8 +945,7 @@
                                                                              MinWidth="180"
                                                                              MaxHeight="250"
                                                                              Background="White"
-                                                                             Padding="4"
-                                                                             SelectionChanged="OnDriverSelectionChanged">
+                                                                             Padding="4">
                                                                         <ListBox.ItemTemplate>
                                                                             <DataTemplate x:DataType="vm:DriverViewModel">
                                                                                 <Grid ColumnDefinitions="Auto,*" Margin="2">

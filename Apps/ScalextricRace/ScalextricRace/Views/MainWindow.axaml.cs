@@ -1,7 +1,4 @@
-using System.Linq;
 using Avalonia.Controls;
-using Avalonia.Input;
-using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
 using ScalextricRace.Services;
 using ScalextricRace.ViewModels;
@@ -42,64 +39,6 @@ public partial class MainWindow : Window
             settings.WindowWidth = Width;
             settings.WindowHeight = Height;
             settings.Save();
-        }
-    }
-
-    /// <summary>
-    /// Handles pointer press on the menu overlay to close the menu.
-    /// </summary>
-    private void OnMenuOverlayPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (DataContext is MainViewModel viewModel)
-        {
-            viewModel.IsMenuOpen = false;
-        }
-    }
-
-    /// <summary>
-    /// Handles car selection changed - closes the flyout.
-    /// </summary>
-    private void OnCarSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (sender is ListBox && e.AddedItems.Count > 0)
-        {
-            // Use dispatcher to close after binding updates
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-            {
-                // Find all car selection buttons and hide their flyouts
-                HideAllFlyoutsInRaceEntries();
-            });
-        }
-    }
-
-    /// <summary>
-    /// Handles driver selection changed - closes the flyout.
-    /// </summary>
-    private void OnDriverSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (sender is ListBox && e.AddedItems.Count > 0)
-        {
-            // Use dispatcher to close after binding updates
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-            {
-                // Find all driver selection buttons and hide their flyouts
-                HideAllFlyoutsInRaceEntries();
-            });
-        }
-    }
-
-    /// <summary>
-    /// Hides all open flyouts in race entry buttons.
-    /// </summary>
-    private void HideAllFlyoutsInRaceEntries()
-    {
-        // Find all buttons with flyouts and hide them
-        foreach (var button in this.GetVisualDescendants().OfType<Button>())
-        {
-            if (button.Flyout is Flyout flyout)
-            {
-                flyout.Hide();
-            }
         }
     }
 }

@@ -1,6 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ScalextricRace.ViewModels"
         x:Class="ScalextricRace.Views.ConfirmationDialog"
+        x:DataType="vm:ConfirmationDialogViewModel"
         Title="Confirm"
         Width="400"
         Height="180"
@@ -25,12 +27,12 @@
             <Button Content="Yes"
                     Width="100"
                     Height="35"
-                    Click="OnYesClick"
+                    Command="{Binding YesCommand}"
                     Classes="accent" />
             <Button Content="No"
                     Width="100"
                     Height="35"
-                    Click="OnNoClick" />
+                    Command="{Binding NoCommand}" />
         </StackPanel>
     </Grid>
 </Window>
