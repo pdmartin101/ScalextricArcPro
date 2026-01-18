@@ -11,16 +11,16 @@ Comprehensive plan to fix all remaining MVVM violations in ScalextricRace, follo
 
 | Phase | Description | Issues | Fixed | Remaining | Progress |
 |-------|-------------|--------|-------|-----------|----------|
-| Phase 1 | Critical Issues | 4 | 2 | 2 | ✅✅⬜⬜ 50% |
+| Phase 1 | Critical Issues | 4 | 4 | 0 | ✅✅✅✅ 100% |
 | Phase 2 | Major Issues | 6 | 0 | 6 | ⬜⬜⬜⬜⬜⬜ 0% |
 | Phase 3 | Minor Issues | 4 | 0 | 4 | ⬜⬜⬜⬜ 0% |
-| **Total** | | **14** | **2** | **12** | **14%** |
+| **Total** | | **14** | **4** | **10** | **29%** |
 
 ---
 
 ## Phase 1: Critical Issues (Memory Leaks & Dangerous Patterns)
 
-**Status**: 🔄 In Progress (2/4 complete)
+**Status**: ✅ Complete (4/4 complete)
 **Priority**: Fix these first - they cause memory leaks and unstable behavior
 
 ### ✅ Issue 1.1: MainViewModel - Unmanaged PropertyChanged Subscription (_connection)
@@ -94,7 +94,7 @@ _raceConfig.PropertyChanged += (s, e) =>
 
 ---
 
-### ❌ Issue 1.3: MainViewModel - HeartbeatError Event Subscription
+### ✅ Issue 1.3: MainViewModel - HeartbeatError Event Subscription
 
 **File**: `ViewModels/MainViewModel.cs` (Lines 485-486)
 **Severity**: Critical - Memory Leak
@@ -128,9 +128,14 @@ if (_powerHeartbeatService != null)
     _powerHeartbeatService.HeartbeatErrorCallback = OnHeartbeatError;
 ```
 
+**Fix Applied**: Option A - Extended IDisposable implementation
+- Stored event handler as field `_heartbeatErrorHandler`
+- Added unsubscribe in Dispose() method
+- **Result**: Memory leak fixed, heartbeat error event properly cleaned up on shutdown
+
 ---
 
-### ❌ Issue 1.4: CarTuningWindow - Async Void Method
+### ✅ Issue 1.4: CarTuningWindow - Async Void Method
 
 **File**: `Views/CarTuningWindow.axaml.cs` (Lines 42-56)
 **Severity**: Critical - Dangerous Pattern
@@ -156,6 +161,13 @@ public async void CloseWithResult(bool result)
 1. Change to `public async Task CloseWithResultAsync(bool result)`
 2. Move `_isClosingHandled` to CarTuningViewModel
 3. Update WindowService to await the async operation
+
+**Fix Applied**: Changed async void to async Task
+- Changed `CloseWithResult` to `CloseWithResultAsync` returning Task
+- Updated `CarTuningViewModel.CompletionCallback` from `Action<bool>` to `Func<bool, Task>`
+- Updated WindowService to await `CloseWithResultAsync`
+- Updated ViewModel invocations to await CompletionCallback
+- **Result**: Proper async/await pattern, exceptions can be caught, no fire-and-forget
 
 ---
 
@@ -430,6 +442,6 @@ Per user request:
 ---
 
 **Phase Progress**:
-- Phase 1: ✅✅⬜⬜ (2/4 complete - 50%)
+- Phase 1: ✅✅✅✅ (4/4 complete - 100%)
 - Phase 2: ⬜⬜⬜⬜⬜⬜ (0/6 complete - 0%)
 - Phase 3: ⬜⬜⬜⬜ (0/4 complete - 0%)

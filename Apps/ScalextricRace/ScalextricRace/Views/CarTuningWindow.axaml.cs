@@ -39,7 +39,7 @@ public partial class CarTuningWindow : Window
     /// Closes the window with cleanup.
     /// Called by the ViewModel via CompletionCallback.
     /// </summary>
-    public async void CloseWithResult(bool result)
+    public async Task CloseWithResultAsync(bool result)
     {
         if (_isClosingHandled)
         {

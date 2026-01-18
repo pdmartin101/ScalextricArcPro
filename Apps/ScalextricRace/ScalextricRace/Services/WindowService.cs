@@ -38,10 +38,10 @@ public class WindowService : IWindowService
         };
 
         // Wire up the completion callback
-        tuningViewModel.CompletionCallback = result =>
+        tuningViewModel.CompletionCallback = async result =>
         {
             taskCompletionSource.SetResult(result);
-            window.CloseWithResult(result);
+            await window.CloseWithResultAsync(result);
         };
 
         // Show the dialog

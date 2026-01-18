@@ -41,8 +41,9 @@ public partial class CarTuningViewModel : ObservableObject
 
     /// <summary>
     /// Callback raised when tuning is complete and values should be saved.
+    /// Returns a Task to support async window cleanup.
     /// </summary>
-    public Action<bool>? CompletionCallback { get; set; }
+    public Func<bool, Task>? CompletionCallback { get; set; }
 
     /// <summary>
     /// Gets the car being tuned.
@@ -235,7 +236,8 @@ public partial class CarTuningViewModel : ObservableObject
                 Log.Information("Min power set to {Power} for {CarName}", PowerLevel, CarName);
                 // Stop power and complete
                 await SendStopCommand();
-                CompletionCallback?.Invoke(true);
+                if (CompletionCallback != null)
+                    await CompletionCallback(true);
                 break;
         }
     }
@@ -255,7 +257,8 @@ public partial class CarTuningViewModel : ObservableObject
         _carViewModel.MinPower = _originalValues.MinPower;
 
         Log.Information("Car tuning cancelled for {CarName}", CarName);
-        CompletionCallback?.Invoke(false);
+        if (CompletionCallback != null)
+            await CompletionCallback(false);
     }
 
     /// <summary>

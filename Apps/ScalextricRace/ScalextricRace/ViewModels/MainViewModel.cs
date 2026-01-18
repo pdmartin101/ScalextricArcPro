@@ -34,6 +34,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     // Event handlers (stored for cleanup in Dispose)
     private readonly System.ComponentModel.PropertyChangedEventHandler _connectionPropertyChangedHandler;
     private readonly System.ComponentModel.PropertyChangedEventHandler _raceConfigPropertyChangedHandler;
+    private readonly EventHandler<string>? _heartbeatErrorHandler;
 
     #endregion
 
@@ -487,10 +488,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
         };
         _raceConfig.PropertyChanged += _raceConfigPropertyChangedHandler;
 
-        // Subscribe to heartbeat service events
+        // Subscribe to heartbeat service events (store handler for cleanup)
         if (_powerHeartbeatService != null)
         {
-            _powerHeartbeatService.HeartbeatError += OnHeartbeatError;
+            _heartbeatErrorHandler = OnHeartbeatError;
+            _powerHeartbeatService.HeartbeatError += _heartbeatErrorHandler;
         }
 
         // Initialization complete - enable auto-save
@@ -1096,6 +1098,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (_raceConfig != null)
         {
             _raceConfig.PropertyChanged -= _raceConfigPropertyChangedHandler;
+        }
+
+        // Unsubscribe from heartbeat service events
+        if (_powerHeartbeatService != null && _heartbeatErrorHandler != null)
+        {
+            _powerHeartbeatService.HeartbeatError -= _heartbeatErrorHandler;
         }
     }
 

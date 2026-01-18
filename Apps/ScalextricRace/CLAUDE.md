@@ -6,6 +6,7 @@ Write strict MVVM code for Avalonia using CommunityToolkit.Mvvm.
 - No code-behind logic except bare-minimum interaction plumbing
 - Follow official Avalonia MVVM docs and CommunityToolkit patterns
 
+Before each commit, can you always ask for a review.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this project.
 
