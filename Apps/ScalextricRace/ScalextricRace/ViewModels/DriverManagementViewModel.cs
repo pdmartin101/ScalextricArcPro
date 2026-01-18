@@ -104,19 +104,16 @@ public partial class DriverManagementViewModel : ObservableObject
     /// Safely runs an async task without awaiting, handling any exceptions.
     /// Runs on the UI thread to avoid InvalidOperationException.
     /// </summary>
-    private static void RunFireAndForget(Func<Task> asyncAction, string operationName)
+    private static async void RunFireAndForget(Func<Task> asyncAction, string operationName)
     {
-        Avalonia.Threading.Dispatcher.UIThread.Post(async () =>
+        try
         {
-            try
-            {
-                await asyncAction();
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Error in {OperationName}", operationName);
-            }
-        });
+            await asyncAction();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error in {OperationName}", operationName);
+        }
     }
 
     /// <summary>

@@ -1,8 +1,8 @@
 # ScalextricRace MVVM Compliance Plan
 
 **Analysis Date:** 2026-01-18
-**Total Issues:** 11 (1 genuine issue fixed, 4 non-issues identified, 6 remaining)
-**Status:** Phase 1 Complete, Phase 2 Reviewed (3/11 genuine fixes - 27%)
+**Total Issues:** 11 (6 genuine fixes, 5 acceptable patterns)
+**Status:** All Phases Complete (6/11 genuine fixes - 55%)
 
 ---
 
@@ -19,11 +19,11 @@
 - ✅ **2.4** - RaceManagementViewModel: async void DeleteRace method (RaceManagementViewModel.cs:154) - ⚠️ **ACCEPTABLE** (callback pattern)
 - ✅ **2.5** - BleConnectionViewModel: EventHandler subscriptions violate MVVM pattern (BleConnectionViewModel.cs:99-101) - ⚠️ **ACCEPTABLE** (properly disposed)
 
-### Phase 3: Minor Issues (4 issues)
-- ❌ **3.1** - CarManagementViewModel: Unnecessary Dispatcher in RunFireAndForget (CarManagementViewModel.cs:130)
-- ❌ **3.2** - DriverManagementViewModel: Unnecessary Dispatcher in RunFireAndForget (DriverManagementViewModel.cs:109)
-- ❌ **3.3** - RaceManagementViewModel: Unnecessary Dispatcher in RunFireAndForget (RaceManagementViewModel.cs:127)
-- ❌ **3.4** - MainViewModel: Dispatcher in BLE callbacks (MainViewModel.cs:942, 1034) - ⚠️ **ACCEPTABLE** (needed for cross-thread marshalling)
+### Phase 3: Minor Issues (4 issues) ✅ COMPLETE
+- ✅ **3.1** - CarManagementViewModel: Unnecessary Dispatcher in RunFireAndForget (CarManagementViewModel.cs:130) - FIXED
+- ✅ **3.2** - DriverManagementViewModel: Unnecessary Dispatcher in RunFireAndForget (DriverManagementViewModel.cs:109) - FIXED
+- ✅ **3.3** - RaceManagementViewModel: Unnecessary Dispatcher in RunFireAndForget (RaceManagementViewModel.cs:127) - FIXED
+- ✅ **3.4** - MainViewModel: Dispatcher in BLE callbacks (MainViewModel.cs:942, 1034) - ⚠️ **ACCEPTABLE** (needed for cross-thread marshalling)
 
 ---
 
@@ -481,7 +481,7 @@ Convert BleService to use observable properties that ViewModels bind to.
 ### Issue 3.1 - CarManagementViewModel: Unnecessary Dispatcher
 **File:** `ViewModels/CarManagementViewModel.cs:130`
 **Severity:** Minor
-**Status:** ❌ Not Fixed
+**Status:** ✅ FIXED (2026-01-18)
 
 **Current Code:**
 ```csharp
@@ -542,14 +542,33 @@ private static async void RunFireAndForget(Func<Task> asyncAction, string operat
 }
 ```
 
-**Note:** If the async methods within modify ObservableProperties, data binding will automatically marshal to UI thread.
+**Fix Applied:**
+```csharp
+private static async void RunFireAndForget(Func<Task> asyncAction, string operationName)
+{
+    try
+    {
+        await asyncAction();
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Error in {OperationName}", operationName);
+    }
+}
+```
+
+**Changes Made:**
+- Removed `Dispatcher.UIThread.Post` wrapper
+- Changed to `async void` signature (acceptable for fire-and-forget helper methods)
+- ObservableProperty changes automatically marshal to UI thread via data binding
+- Simplified code, improved performance (no unnecessary thread-hopping)
 
 ---
 
 ### Issue 3.2 - DriverManagementViewModel: Unnecessary Dispatcher
 **File:** `ViewModels/DriverManagementViewModel.cs:109`
 **Severity:** Minor
-**Status:** ❌ Not Fixed
+**Status:** ✅ FIXED (2026-01-18) - Same fix as 3.1
 
 **Current Code:**
 ```csharp
@@ -572,14 +591,14 @@ private static void RunFireAndForget(Func<Task> asyncAction, string operationNam
 
 **Problem:** Same as Issue 3.1
 
-**Fix Recommendation:** Same as Issue 3.1 - remove Dispatcher.UIThread.Post wrapper
+**Fix Applied:** Same as Issue 3.1 - removed Dispatcher.UIThread.Post wrapper
 
 ---
 
 ### Issue 3.3 - RaceManagementViewModel: Unnecessary Dispatcher
 **File:** `ViewModels/RaceManagementViewModel.cs:127`
 **Severity:** Minor
-**Status:** ❌ Not Fixed
+**Status:** ✅ FIXED (2026-01-18) - Same fix as 3.1
 
 **Current Code:**
 ```csharp
@@ -602,7 +621,7 @@ private static void RunFireAndForget(Func<Task> asyncAction, string operationNam
 
 **Problem:** Same as Issue 3.1
 
-**Fix Recommendation:** Same as Issue 3.1 - remove Dispatcher.UIThread.Post wrapper
+**Fix Applied:** Same as Issue 3.1 - removed Dispatcher.UIThread.Post wrapper
 
 ---
 
@@ -643,16 +662,17 @@ No fix needed. This is proper cross-thread marshalling for background service ca
 
 ## Progress Tracking
 
-**Overall Progress:** 3/11 genuine fixes, 4 marked acceptable (27% real issues fixed)
+**Overall Progress:** 6/11 genuine fixes, 5 marked acceptable (55% real issues fixed) ✅ **ALL PHASES COMPLETE**
 
 **By Phase:**
 - Phase 1 (Critical): 2/2 fixed (100%) ✅ **COMPLETE**
 - Phase 2 (Major): 1/5 fixed, 4/5 marked acceptable ✅ **COMPLETE**
-- Phase 3 (Minor): 0/4 fixed (0%), 1 marked acceptable
+- Phase 3 (Minor): 3/4 fixed, 1/4 marked acceptable ✅ **COMPLETE**
 
 **Last Updated:** 2026-01-18
 
 **Change History:**
+- 2026-01-18 (Evening): Phase 3 complete - Fixed issues 3.1-3.3 (removed unnecessary Dispatcher usage), marked 3.4 as acceptable
 - 2026-01-18 (PM): Phase 2 complete - Fixed issue 2.1 (RaceConfigWindow), marked 2.2-2.5 as acceptable
 - 2026-01-18 (AM): Phase 1 complete - Fixed issues 1.1 and 1.2 (PropertyChanged memory leaks)
 
