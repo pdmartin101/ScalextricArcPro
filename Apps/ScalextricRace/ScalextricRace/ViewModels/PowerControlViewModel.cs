@@ -10,10 +10,11 @@ namespace ScalextricRace.ViewModels;
 /// Manages power control settings for the track.
 /// Handles global and per-slot power levels, throttle profiles, and controller state.
 /// </summary>
-public partial class PowerControlViewModel : ObservableObject
+public partial class PowerControlViewModel : ObservableObject, IDisposable
 {
     private readonly AppSettings _settings;
     private bool _isInitializing = true;
+    private bool _disposed;
 
     /// <summary>
     /// The global power level (0-63) applied to all slots.
@@ -221,5 +222,21 @@ public partial class PowerControlViewModel : ObservableObject
         {
             SaveSettings();
         }
+    }
+
+    /// <summary>
+    /// Disposes the PowerControlViewModel and unsubscribes from all controller PropertyChanged events.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+
+        foreach (var controller in Controllers)
+        {
+            controller.PropertyChanged -= OnControllerPropertyChanged;
+        }
+
+        _disposed = true;
+        Log.Debug("PowerControlViewModel disposed");
     }
 }

@@ -8,8 +8,9 @@ namespace ScalextricRace.ViewModels;
 /// <summary>
 /// Manages race configuration including race entries (car/driver pairings) and stage settings.
 /// </summary>
-public partial class RaceConfigurationViewModel : ObservableObject
+public partial class RaceConfigurationViewModel : ObservableObject, IDisposable
 {
+    private bool _disposed;
     /// <summary>
     /// Collection of race entries (car/driver pairings) for the current race.
     /// </summary>
@@ -252,5 +253,17 @@ public partial class RaceConfigurationViewModel : ObservableObject
         {
             entry.RaceDefaultPower = value;
         }
+    }
+
+    /// <summary>
+    /// Disposes the RaceConfigurationViewModel and ensures all event subscriptions are cleaned up.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed) return;
+
+        ClearRaceEntries();
+        _disposed = true;
+        Log.Debug("RaceConfigurationViewModel disposed");
     }
 }

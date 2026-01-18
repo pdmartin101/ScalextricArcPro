@@ -39,6 +39,7 @@ This is a .NET 9.0 Windows desktop application using **Avalonia UI** with the Fl
 Apps/ScalextricRace/
 ├── ScalextricRace.sln                    # Visual Studio solution file
 ├── CLAUDE.md                             # AI assistant instructions (this file)
+├── PLAN00.md                             # MVVM compliance improvement plan with issue tracking
 ├── ScalextricRace/                       # Main application project
 │   ├── ScalextricRace.csproj             # .NET 9.0 Windows project config
 │   ├── Program.cs                        # Application entry point
@@ -306,7 +307,31 @@ BLE operations include robust error handling:
 
 ### Code Quality & MVVM Compliance
 
-The application follows strict MVVM architecture with CommunityToolkit.Mvvm source generators. Recent commits have focused on MVVM compliance improvements including proper disposal of event subscriptions and elimination of code-behind event handlers.
+**Analysis Date:** 2026-01-18
+**Status:** Phase 1 Complete (2/11 issues fixed - 18%)
+
+The application follows strict MVVM architecture with CommunityToolkit.Mvvm source generators. A comprehensive MVVM compliance analysis has been completed, identifying current violations in the codebase.
+
+**Issue Summary (One Line Per Issue):**
+
+**Phase 1: Critical (2 issues) ✅ COMPLETE**
+- ✅ **1.1** - PowerControlViewModel: PropertyChanged subscriptions without cleanup (PowerControlViewModel.cs:75) - FIXED
+- ✅ **1.2** - RaceConfigurationViewModel: PropertyChanged subscriptions without IDisposable (RaceConfigurationViewModel.cs:134) - FIXED
+
+**Phase 2: Major (5 issues)**
+- ❌ **2.1** - RaceConfigWindow: Event handler in code-behind instead of command (RaceConfigWindow.axaml.cs:22-25)
+- ❌ **2.2** - CarManagementViewModel: async void DeleteCar method (CarManagementViewModel.cs:147)
+- ❌ **2.3** - DriverManagementViewModel: async void DeleteDriver method (DriverManagementViewModel.cs:126)
+- ❌ **2.4** - RaceManagementViewModel: async void DeleteRace method (RaceManagementViewModel.cs:154)
+- ❌ **2.5** - BleConnectionViewModel: EventHandler subscriptions violate MVVM (BleConnectionViewModel.cs:99-101)
+
+**Phase 3: Minor (4 issues)**
+- ❌ **3.1** - CarManagementViewModel: Unnecessary Dispatcher in RunFireAndForget (CarManagementViewModel.cs:130)
+- ❌ **3.2** - DriverManagementViewModel: Unnecessary Dispatcher in RunFireAndForget (DriverManagementViewModel.cs:109)
+- ❌ **3.3** - RaceManagementViewModel: Unnecessary Dispatcher in RunFireAndForget (RaceManagementViewModel.cs:127)
+- ❌ **3.4** - MainViewModel: Dispatcher in BLE callbacks (MainViewModel.cs:942, 1034) - ⚠️ **ACCEPTABLE**
+
+See [PLAN00.md](PLAN00.md) for detailed analysis, fix recommendations, and progress tracking.
 
 ### Related Documentation
 
