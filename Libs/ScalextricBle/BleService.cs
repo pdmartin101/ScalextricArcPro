@@ -805,7 +805,7 @@ public class BleService : IBleService
         }
         catch (OperationCanceledException)
         {
-            throw new TimeoutException($"BLE operation '{operationName}' timed out after {BleOperationTimeout.TotalSeconds} seconds");
+            throw new BleTimeoutException(operationName, BleOperationTimeout);
         }
     }
 

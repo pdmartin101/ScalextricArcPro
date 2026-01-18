@@ -90,19 +90,37 @@ public static class ScalextricProtocol
     /// </summary>
     public static class Characteristics
     {
-        // Scalextric ARC Custom Characteristics
+        /// <summary>Command characteristic - write 20-byte commands to control power, timer, and racing mode.</summary>
         public static readonly Guid Command = Guid.Parse("00003b0a-0000-1000-8000-00805f9b34fb");
+
+        /// <summary>Slot characteristic - notifications for finish line timestamp data per slot.</summary>
         public static readonly Guid Slot = Guid.Parse("00003b0b-0000-1000-8000-00805f9b34fb");
+
+        /// <summary>Throttle characteristic - notifications for controller input data (throttle, brake, lane change).</summary>
         public static readonly Guid Throttle = Guid.Parse("00003b09-0000-1000-8000-00805f9b34fb");
+
+        /// <summary>Track characteristic - track configuration data.</summary>
         public static readonly Guid Track = Guid.Parse("00003b0c-0000-1000-8000-00805f9b34fb");
+
+        /// <summary>Car ID characteristic - car identification data.</summary>
         public static readonly Guid CarId = Guid.Parse("00003b0d-0000-1000-8000-00805f9b34fb");
 
-        // Throttle Profiles (per car slot 1-6)
+        /// <summary>Throttle profile for slot 1 - write 96-value curve in 6 blocks of 17 bytes.</summary>
         public static readonly Guid ThrottleProfile1 = Guid.Parse("0000ff01-0000-1000-8000-00805f9b34fb");
+
+        /// <summary>Throttle profile for slot 2 - write 96-value curve in 6 blocks of 17 bytes.</summary>
         public static readonly Guid ThrottleProfile2 = Guid.Parse("0000ff02-0000-1000-8000-00805f9b34fb");
+
+        /// <summary>Throttle profile for slot 3 - write 96-value curve in 6 blocks of 17 bytes.</summary>
         public static readonly Guid ThrottleProfile3 = Guid.Parse("0000ff03-0000-1000-8000-00805f9b34fb");
+
+        /// <summary>Throttle profile for slot 4 - write 96-value curve in 6 blocks of 17 bytes.</summary>
         public static readonly Guid ThrottleProfile4 = Guid.Parse("0000ff04-0000-1000-8000-00805f9b34fb");
+
+        /// <summary>Throttle profile for slot 5 - write 96-value curve in 6 blocks of 17 bytes.</summary>
         public static readonly Guid ThrottleProfile5 = Guid.Parse("0000ff05-0000-1000-8000-00805f9b34fb");
+
+        /// <summary>Throttle profile for slot 6 - write 96-value curve in 6 blocks of 17 bytes.</summary>
         public static readonly Guid ThrottleProfile6 = Guid.Parse("0000ff06-0000-1000-8000-00805f9b34fb");
 
         /// <summary>
@@ -189,6 +207,9 @@ public static class ScalextricProtocol
     {
         private readonly SlotPower[] _slots = new SlotPower[6];
 
+        /// <summary>
+        /// Gets or sets the command type (power state, timer mode, etc.).
+        /// </summary>
         public CommandType Type { get; set; } = CommandType.NoPowerTimerStopped;
 
         public CommandBuilder()
