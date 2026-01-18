@@ -1,7 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -35,8 +34,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public bool IsConnected => _connection.IsConnected;
     public bool IsGattConnected => _connection.IsGattConnected;
     public string DeviceName => _connection.DeviceName;
-    public ISolidColorBrush StatusIndicatorBrush => _connection.StatusIndicatorBrush;
-    public ISolidColorBrush StatusTextBrush => _connection.StatusTextBrush;
+    public ConnectionState CurrentConnectionState => _connection.CurrentConnectionState;
     public string ConnectionStatusText => _connection.ConnectionStatusText;
     public ObservableCollection<ServiceViewModel> Services => _connection.Services;
 

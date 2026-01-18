@@ -1,10 +1,10 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Avalonia.Media;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Scalextric;
+using ScalextricBleMonitor.Models;
 using ScalextricBleMonitor.Services;
 
 namespace ScalextricBleMonitor.ViewModels;
@@ -17,19 +17,11 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
     private readonly Services.IBleService _bleService;
     private bool _disposed;
 
-    // Brush constants for connection states
-    private static readonly ISolidColorBrush ConnectedBrush = new SolidColorBrush(Color.FromRgb(0, 200, 83));   // Green
-    private static readonly ISolidColorBrush DisconnectedBrush = new SolidColorBrush(Color.FromRgb(220, 53, 69)); // Red
-    private static readonly ISolidColorBrush GattConnectedBrush = new SolidColorBrush(Color.FromRgb(0, 150, 255)); // Blue
-    private static readonly ISolidColorBrush ConnectedTextBrush = new SolidColorBrush(Color.FromRgb(0, 200, 83));
-    private static readonly ISolidColorBrush DisconnectedTextBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128)); // Gray
-
     /// <summary>
     /// Indicates whether the Scalextric device is currently detected via advertisement.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(StatusIndicatorBrush))]
-    [NotifyPropertyChangedFor(nameof(StatusTextBrush))]
+    [NotifyPropertyChangedFor(nameof(CurrentConnectionState))]
     [NotifyPropertyChangedFor(nameof(ConnectionStatusText))]
     private bool _isConnected;
 
@@ -37,7 +29,7 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
     /// Indicates whether we have an active GATT connection.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(StatusIndicatorBrush))]
+    [NotifyPropertyChangedFor(nameof(CurrentConnectionState))]
     [NotifyPropertyChangedFor(nameof(ConnectionStatusText))]
     private bool _isGattConnected;
 
@@ -59,17 +51,12 @@ public partial class BleConnectionViewModel : ObservableObject, IDisposable
     public ObservableCollection<ServiceViewModel> Services { get; } = [];
 
     /// <summary>
-    /// Brush for the status indicator circle.
+    /// Current BLE connection state for binding to UI.
     /// </summary>
-    public ISolidColorBrush StatusIndicatorBrush =>
-        IsGattConnected ? GattConnectedBrush :
-        IsConnected ? ConnectedBrush :
-        DisconnectedBrush;
-
-    /// <summary>
-    /// Brush for the connection status text.
-    /// </summary>
-    public ISolidColorBrush StatusTextBrush => IsConnected ? ConnectedTextBrush : DisconnectedTextBrush;
+    public ConnectionState CurrentConnectionState =>
+        IsGattConnected ? ConnectionState.GattConnected :
+        IsConnected ? ConnectionState.Advertising :
+        ConnectionState.Disconnected;
 
     /// <summary>
     /// Text showing connection state.
